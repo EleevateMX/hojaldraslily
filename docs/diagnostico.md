@@ -5,7 +5,7 @@ Fecha: 2026-07-01
 ## Alcance de la auditoría
 
 El diagnóstico se hizo sobre **la base de datos Supabase real** (proyecto
-"Hojaldras Lily", ) más el código legacy de costos.
+"Hojaldras Lily") más el código legacy de costos.
 
 ✅ **Código de costos auditado**: subido a la rama `legacy-import` como
 `costosshake-main/` (README + `index.html` de 1,221 líneas; `index_2.html`
@@ -44,7 +44,7 @@ la descripción funcional.
 
 Ya existía un esquema relacional bien diseñado pero **con todas las tablas
 de catálogo vacías** (los datos siguen en el JSON): `sucursales` (1:
-Shakeaholic Mérida), `almacenes` (Bodega + Kiosko ✔), `cocinas`
+Hojaldras Lily Mérida), `almacenes` (Bodega + Kiosko ✔), `cocinas`
 (alimentos + bebidas ✔), `categorias`, `productos`, `insumos` (con
 `costo_unitario` como columna generada), `recetas`, `inventario_stock`,
 `inventario_movimientos`, `lotes`, `transferencias`, `mermas`, `ordenes`,

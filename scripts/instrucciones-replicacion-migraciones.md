@@ -1,81 +1,101 @@
-# Replicación de migraciones (instrucciones para el agente)
+# Replicar migraciones al proyecto de Hojaldras Lily (para el agente)
 
-Objetivo: copiar migraciones del proyecto Supabase de producción
-`zyjtnaystsporbuzcmqk` (SOLO LECTURA: nunca escribas ahí) al proyecto
-nuevo `fzkdgqqvfkogmxdgqsxj`, y dejar cada una como archivo en
+Copia migraciones del proyecto Supabase original `zyjtnaystsporbuzcmqk`
+(**SOLO LECTURA**: nunca escribas ahí) al proyecto de Hojaldras Lily
+`fzkdgqqvfkogmxdgqsxj`, dejando cada una como archivo en
 `/home/user/hojaldraslily/supabase/migrations/VERSION_NAME.sql`.
 
-El archivo `/home/user/hojaldraslily/supabase/migrations/orden-canonico.txt`
-tiene 132 líneas `VERSION NAME` en orden. Te asignan un rango de líneas.
-Procesa el rango en sub-lotes de 6 consecutivas, EN ORDEN ESTRICTO.
+`supabase/migrations/orden-canonico.txt` tiene 132 líneas `VERSION NAME`
+en orden. Te asignan un rango de líneas. **El orden es sagrado**: cada
+migración asume que las anteriores ya corrieron. Nunca saltes ni
+reordenes.
 
-Carga las herramientas con ToolSearch: "select:mcp__Supabase__execute_sql".
+Carga la herramienta: ToolSearch "select:mcp__Supabase__execute_sql".
 
-## Por cada sub-lote (6 versiones consecutivas V1..V6)
+## Antes de empezar
 
-### 1. Traer el SQL ya adaptado, en base64 (proyecto zyjtnaystsporbuzcmqk)
+En `fzkdgqqvfkogmxdgqsxj`:
+`select version from supabase_migrations.schema_migrations order by version;`
+
+La última registrada debe ser justo la línea anterior a tu rango. Si no
+lo es, DETENTE y repórtalo: alguien más va atrasado y aplicar lo tuyo
+rompería.
+
+## Ciclo por sub-lote (6 versiones consecutivas V1..V6)
+
+### 1. Traer el SQL ya adaptado a la marca (proyecto origen)
 
 ```sql
-select version, name, encode(convert_to(
-replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(
-  array_to_string(statements, E'\n'),
-  'zyjtnaystsporbuzcmqk','fzkdgqqvfkogmxdgqsxj'),
-  'api.shakeaholic.mx','fzkdgqqvfkogmxdgqsxj.supabase.co'),
-  'rewards.shakeaholic.mx','rewards.hojaldraslily.com'),
-  'shakeaholic.mx','hojaldraslily.com'),
-  '@shakeaholicmx','@hojaldraslily'),
-  'shakeaholicmx','hojaldraslily'),
-  'Shakeaholic Mérida','Hojaldras Lily Mérida'),
-  'SHAKEAHOLIC','HOJALDRAS LILY'),
-  'Shakeaholic','Hojaldras Lily'),
-  'shakeaholic','hojaldraslily'), 'UTF8'), 'base64') as b64
+select string_agg(
+  version || '|' || name || '|' || encode(convert_to(
+    replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(
+      array_to_string(statements, E'\n'),
+      'zyjtnaystsporbuzcmqk','fzkdgqqvfkogmxdgqsxj'),
+      'api.shakeaholic.mx','fzkdgqqvfkogmxdgqsxj.supabase.co'),
+      'rewards.shakeaholic.mx','rewards.hojaldraslily.com'),
+      'shakeaholic.mx','hojaldraslily.com'),
+      '@shakeaholicmx','@hojaldraslily'),
+      'shakeaholicmx','hojaldraslily'),
+      'Shakeaholic Mérida','Hojaldras Lily Mérida'),
+      'SHAKEAHOLIC','HOJALDRAS LILY'),
+      'Shakeaholic','Hojaldras Lily'),
+      'shakeaholic','hojaldraslily'), 'UTF8'), 'base64'),
+  E'\n@@@\n' order by version) as paquete
 from supabase_migrations.schema_migrations
-where version in ('V1','V2','V3','V4','V5','V6')
-order by version;
+where version in ('V1','V2','V3','V4','V5','V6');
 ```
 
-### 2. Escribir los archivos (un solo Bash por sub-lote)
+### 2. Escribir los archivos (un solo Bash)
 
-Para cada fila, con un heredoc: guarda el b64 en un temporal, quita los
-saltos escapados y decodifica:
+Pega el `paquete` en un heredoc y deja que Python lo parta. El valor
+viene de JSON, así que trae `\n` escapados: hay que quitarlos.
 
 ```bash
-cat > /tmp/m.b64 <<'B64EOF'
-<pega aquí el b64 de la fila, tal cual>
-B64EOF
-sed 's/\\n//g' /tmp/m.b64 | tr -d '\n' | base64 -d > /home/user/hojaldraslily/supabase/migrations/VERSION_NAME.sql
-head -2 /home/user/hojaldraslily/supabase/migrations/VERSION_NAME.sql
+python3 - <<'PYEOF'
+paquete = r"""<pega aquí el valor de paquete, tal cual>"""
+import base64, os
+dest = "/home/user/hojaldraslily/supabase/migrations"
+for bloque in paquete.split("\n@@@\n"):
+    bloque = bloque.strip()
+    if not bloque:
+        continue
+    version, nombre, b64 = bloque.split("|", 2)
+    sql = base64.b64decode(b64.replace("\\n", "").replace("\n", "")).decode("utf-8")
+    ruta = os.path.join(dest, f"{version}_{nombre}.sql")
+    open(ruta, "w").write(sql)
+    print(version, nombre, len(sql), "bytes", repr(sql[:60]))
+PYEOF
 ```
 
-(El `head -2` es la única verificación: debe verse SQL legible. Si sale
-basura binaria, el b64 quedó mal pegado: reintenta esa fila.)
+Revisa la salida: cada línea debe mostrar SQL legible. Si sale basura,
+vuelve a pedir esa versión.
 
-Al final del sub-lote concatena en orden:
+### 3. Aplicar el sub-lote (proyecto de Hojaldras Lily)
+
+Concatena EN ORDEN y lee el resultado una sola vez:
 
 ```bash
-cat archivo1.sql archivo2.sql ... > /tmp/lote.sql && wc -c /tmp/lote.sql
+cd /home/user/hojaldraslily/supabase/migrations && cat V1_*.sql V2_*.sql V3_*.sql V4_*.sql V5_*.sql V6_*.sql > /tmp/lote.sql && wc -c /tmp/lote.sql
 ```
 
-### 3. Aplicar el sub-lote (proyecto fzkdgqqvfkogmxdgqsxj)
-
-Lee /tmp/lote.sql y ejecútalo con mcp__Supabase__execute_sql en el
-proyecto `fzkdgqqvfkogmxdgqsxj`, agregando AL FINAL del mismo script:
+Un solo `mcp__Supabase__execute_sql` en `fzkdgqqvfkogmxdgqsxj` con el
+contenido de `/tmp/lote.sql` y, AL FINAL del mismo script:
 
 ```sql
 insert into supabase_migrations.schema_migrations(version, name, statements) values
   ('V1','NAME1', array['-- replicado; SQL en repo supabase/migrations/']),
-  ('V2','NAME2', array['-- replicado; SQL en repo supabase/migrations/']),
   ...
 on conflict (version) do nothing;
 ```
 
-### 4. Si algo falla
+### 4. Ante un error
 
-Si execute_sql devuelve error: DETENTE (no proceses más sub-lotes) y
-reporta la versión/lote que falló y el error completo. No improvises
-arreglos.
+DETENTE. No proceses más sub-lotes, no improvises arreglos. Reporta la
+versión, el error completo y qué sub-lotes sí quedaron aplicados. Todo el
+sub-lote se revierte junto (es una transacción), así que el estado queda
+consistente.
 
 ## Reporte final
 
-Texto plano: rango procesado, número de migraciones aplicadas, lista de
-versiones OK, error si lo hubo. Solo lo que las herramientas devolvieron.
+Texto plano: rango, versiones aplicadas, error si lo hubo. Solo lo que
+las herramientas devolvieron; no inventes resultados.
