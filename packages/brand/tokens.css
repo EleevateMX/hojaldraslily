@@ -1,0 +1,55 @@
+/* Hojaldras Lily — Brand Tokens
+ * Valores del Manual de Identidad v1.0 (sección 08 · Sistema POS).
+ * Los NOMBRES de los tokens se conservan del sistema original (sa-*):
+ * las 9 apps los leen tal cual; cambiar los valores re-viste todo.
+ * No editar valores aquí sin actualizar el manual de marca. */
+
+@import url('https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Dúo principal — antes verde/crema, hoy coral/crema. No se reemplaza. */
+  --sa-green:       #C4463C;  /* Coral Lily · acción y marca */
+  --sa-green-deep:  #A2372F;  /* Coral oscuro · superficies plenas y presionado */
+  --sa-green-ink:   #2E2420;  /* Cacao · texto */
+  --sa-cream:       #F8EDD5;  /* Crema hojaldre */
+  --sa-cream-soft:  #FCF6EA;  /* Crema suave */
+  --sa-cream-paper: #FFFDF8;  /* Blanco harina · fondo de las apps */
+  --sa-cream-warm:  #EDE3D2;  /* Borde / crema cálida */
+
+  /* Acentos de sabor — uno por superficie, nunca compiten con el coral */
+  --sa-strawberry: #C2186B;  /* Magenta vitrina · promociones */
+  --sa-banana:     #C98A4B;  /* Dorado horneado */
+  --sa-chocolate:  #5C3825;  /* Cacao profundo */
+  --sa-mango:      #D97B3F;  /* Terracota suave */
+  --sa-blueberry:  #8A6BA0;  /* Lila profundo */
+  --sa-mint:       #4E7A56;  /* Verde pagado · estados en verde */
+  --sa-coconut:    #F6D8CD;  /* Rosa suave */
+  --sa-coffee:     #3F2A1F;  /* Café */
+
+  /* Líneas y sombras */
+  --sa-line:     rgba(248, 237, 213, 0.26);
+  --sa-line-ink: rgba(46, 36, 32, 0.12);
+  --sa-shadow:   0 2px 8px rgba(46, 36, 32, 0.10);
+
+  /* Tipografía — Jost para titulares, Karla para todo lo operativo.
+   * Yellowtail es exclusiva del logotipo (script), nunca texto corrido. */
+  --sa-ff-display: "Jost", "Segoe UI", system-ui, sans-serif;
+  --sa-ff-body:    "Karla", "Segoe UI", system-ui, sans-serif;
+  --sa-ff-mono:    "DM Mono", "JetBrains Mono", ui-monospace, monospace;
+  --sa-ff-script:  "Yellowtail", cursive;
+}
+
+/* Estilos base — se activan con `class="sa-base"` en body o root */
+.sa-base {
+  background: var(--sa-cream);
+  color: var(--sa-green-ink);
+  font-family: var(--sa-ff-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Superficie oscura (héroe del kiosko, KDS, etc.) — coral pleno con negativo */
+.sa-dark {
+  background: var(--sa-green-deep);
+  color: var(--sa-cream-paper);
+}

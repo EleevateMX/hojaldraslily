@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: sin esto, en iPhone con notch la barra de
+         pestañas queda debajo del indicador de inicio. Con esto, las
+         env(safe-area-inset-*) del CSS tienen valores de verdad. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#1A2E26" />
+    <meta name="description" content="Tu tarjeta de mancuernas, el menú de la barra y tus compras en Hojaldras Lily." />
+
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" type="image/png" href="/icono-192.png" />
+
+    <!-- iOS no lee el manifest: necesita las suyas para abrirse sin la
+         barra de Safari cuando la agregan a la pantalla de inicio. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hojaldras Lily" />
+    <link rel="apple-touch-icon" href="/icono-192.png" />
+
+    <meta property="og:title" content="Hojaldras Lily Rewards" />
+    <meta property="og:description" content="Acumula mancuernas con cada compra y gana shakes gratis." />
+    <meta property="og:type" content="website" />
+
+    <title>Hojaldras Lily Rewards</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,24 @@
+[
+  {
+    "id": "bebidas",
+    "descripcion": "Etiquetadora de Barra (bebidas) — 3nstar / TSC",
+    "token": "PEGA-AQUI-EL-agente_token-DE-LA-IMPRESORA-EN-ADMIN",
+    "interface": "tcp://192.168.1.95:9100",
+    "lenguaje": "tspl",
+    "anchoPapel": "80mm",
+    "copias": 1,
+    "corteAutomatico": false,
+    "buzzer": false
+  },
+  {
+    "id": "alimentos",
+    "descripcion": "Etiquetadora de Cocina (alimentos) — 3nstar / TSC",
+    "token": "PEGA-AQUI-EL-agente_token-DE-LA-IMPRESORA-EN-ADMIN",
+    "interface": "tcp://192.168.1.96:9100",
+    "lenguaje": "tspl",
+    "anchoPapel": "80mm",
+    "copias": 1,
+    "corteAutomatico": false,
+    "buzzer": false
+  }
+]

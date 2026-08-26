@@ -1,36 +1,83 @@
-# Hojaldras Lily · Punto de venta
+# hojaldraslily-pos-ecosistema
 
-Demostración visual del sistema de punto de venta para Hojaldras Lily
-(Mérida, Yucatán), construida con los colores, tipografías y componentes
-del **Manual de Identidad v1.0**.
+Ecosistema de punto de venta + costos de **Hojaldras Lily** sobre Supabase
+(fuente única de verdad). Monorepo pnpm. Réplica del sistema probado de
+Shakeaholic (`docs/replicar-el-sistema.md`): mismo motor, identidad y
+catálogo de Hojaldras Lily. Los demos visuales de venta viven en `demo/`.
 
-## Qué hay aquí
+```
+apps/costos            ✅ costeo (insumos, productos, recetas, parámetros)      :5180
+apps/pos               ✅ caja: catálogo, cobro 2 pasos, corte                 :5181
+apps/cocina-alimentos  ✅ KDS estación alimentos (realtime)                    :5182
+apps/cocina-bebidas    ✅ KDS estación bebidas (realtime)                      :5183
+apps/cliente-display   ✅ pantalla pública de folios (preparando/listo)        :5184
+apps/admin             ✅ menú CRUD + ventas + inventario                      :5185
+apps/kiosko            ✅ autoservicio + Clip + lealtad (canal kiosko)         :5186
+apps/cliente-pwa       ✅ PWA cliente: login Google, mancuernas, QR, cupones   :5187
+packages/{types,supabase,utils,ui}                 código compartido
+supabase/{migrations,seed,functions}               SQL versionado, ETL, edge functions
+docs/                                              diagnóstico, arquitectura, flujos, plan
+```
 
-| Archivo | Qué es |
-|---|---|
-| `index.html` | Demo interactiva completa: la propuesta, la vitrina (inventario) y el kiosko con cobro. Se abre directo en el navegador, sin instalar nada. |
-| `shakeaholic.html` | El mismo motor vestido de **Shakeaholic** (The Harbor, Mérida): shakes que se arman al gusto con sobreprecios, proteína descontada por porción y el mismo flujo de cobro. Demuestra que replicar el sistema en otro negocio es cambiar un bloque de tokens. |
-| `identidad/tokens.css` | Los tokens de marca del manual (sección 08). Toda app del sistema debe importar este archivo y leer los tokens, nunca el hex directo. |
-| `docs/replicar-el-sistema.md` | El paso a paso y las decisiones de diseño para construir el sistema completo. |
+Todas las apps consumen el mismo Supabase (fuente de verdad) vía
+`@shake/supabase`. Empieza por **`docs/diagnostico.md`**,
+**`docs/diagnostico-pos.md`** y **`docs/plan-fases.md`**.
 
-## La demo, en tres pestañas
+## Correr las apps
 
-1. **La idea** — el argumento de venta: el precio se captura una vez, el
-   cambio lo calcula la caja, y si un producto se acaba su botón se apaga solo.
-2. **La vitrina** — el inventario explicado sin decirle inventario: la
-   pantalla es un espejo de la vitrina de cristal. Se toca dos veces al día
-   (conteo de la mañana y corte de la tarde); el resto del día se descuenta
-   sola con cada venta.
-3. **El kiosko** — la venta en tres toques: escoja, revise, cobre. Con
-   cobro en efectivo (cambio calculado en grande) o tarjeta, y ticket de
-   80 mm según la sección 11 del manual.
+Cada app necesita su `.env` (copia el `.env.example` de la app y pon la
+anon key). Luego:
 
-Las dos pestañas están conectadas en vivo: una venta en el kiosko baja la
-cuenta de la vitrina, que es exactamente lo que hace el sistema real.
+```bash
+pnpm install
+pnpm dev:pos       # caja        → http://localhost:5181
+pnpm dev:kiosko    # autoservicio → :5186
+pnpm dev:admin     # admin        → :5185
+pnpm dev:cocina-alimentos   # :5182
+pnpm dev:cocina-bebidas     # :5183
+pnpm dev:display   # cliente-display → :5184
+pnpm dev:pwa       # PWA cliente (Rewards) → :5187
+pnpm dev:costos    # costeo      → :5180
+```
 
-## Reglas que la demo ilustra y el sistema real cumple
+`pnpm build` compila todas; `pnpm typecheck` valida el monorepo completo.
 
-- El dinero se calcula en el servidor; el navegador nunca manda precios.
-- Una orden no se puede cobrar dos veces (cobro idempotente).
-- Un solo catálogo: el costeo es la fuente de la verdad.
-- Los avisos de existencia hablan con palabras, no solo con colores.
+## Publicar / desplegar
+
+Guía completa (hosting, subdominios por pantalla, modo kiosco en las PCs de la
+sucursal, Clip, checklist): **`docs/despliegue.md`**.
+
+## Correr en local
+
+Requisitos: Node ≥ 20 y pnpm (`corepack enable`).
+
+```bash
+pnpm install
+
+# Variables de la app de costos (anon key: Supabase Dashboard → Settings → API)
+cp .env.example apps/costos/.env
+#   → llenar VITE_SUPABASE_ANON_KEY
+
+pnpm dev:costos          # http://localhost:5180
+```
+
+### Migrar los datos legacy (una vez)
+
+```bash
+cp .env.example .env     # → llenar SUPABASE_SERVICE_ROLE_KEY (raíz, NUNCA se commitea)
+pnpm etl:dry             # simulación + reporte de conciliación
+pnpm etl:aplicar         # migra app_data → insumos/productos/recetas
+```
+
+Detalles y advertencias: `supabase/seed/README.md` y
+`docs/reporte-conciliacion.md`.
+
+## Reglas de oro
+
+- `app_data` y `app_users` **no se tocan** (legacy intacto).
+- Migraciones SQL **solo aditivas**, versionadas en `supabase/migrations/`.
+- `service_role` **jamás** en `apps/` — solo scripts/edge functions.
+- Toda query a Supabase vive en `packages/supabase` — cero queries sueltas
+  en componentes.
+- La lógica transaccional (pago → inventario → cocina) vive en la base
+  (triggers); los frontends no la duplican.

@@ -1,0 +1,12 @@
+@import '@shake/brand/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--sa-ff-body);
+  background: var(--sa-cream-paper);
+  color: var(--sa-green-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

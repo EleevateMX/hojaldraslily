@@ -1,0 +1,117 @@
+# Despliega las 8 apps de Hojaldras Lily a Cloudflare Pages.
+#
+# Qué necesitas configurar UNA sola vez en GitHub
+# (repo → Settings → Secrets and variables → Actions):
+#
+#   Secrets (pestaña "Secrets"):
+#     CLOUDFLARE_API_TOKEN    -> token de Cloudflare con permiso "Cloudflare Pages: Edit"
+#     CLOUDFLARE_ACCOUNT_ID   -> tu Account ID de Cloudflare (Dashboard → Workers & Pages → panel derecho)
+#
+#   (Opcional) Variables (pestaña "Variables") para sobreescribir sin tocar este archivo:
+#     VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
+#
+# La URL y la anon key de Supabase son PÚBLICAS por diseño (viajan en el
+# bundle del navegador de todas formas). Van aquí como valor por defecto para
+# que funcione sin configurar nada más; puedes sobreescribirlas con Variables.
+#
+# El service_role NUNCA va aquí.
+
+name: Deploy a Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}   # permite lanzarlo a mano desde la pestaña Actions
+
+concurrency:
+  group: deploy-cloudflare
+  cancel-in-progress: false
+
+jobs:
+  # Gate único antes de desplegar nada: si el código no pasa lint/typecheck,
+  # ninguna app se despliega (evita subir a producción un frontend roto).
+  # El build de cada app abajo YA corre `tsc --noEmit` individualmente; este
+  # job además corre eslint (detecta cosas que el compilador no, ej. hooks
+  # de React mal usados) una sola vez para las 8 apps, en vez de 8 veces.
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint
+
+  deploy:
+    needs: lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false      # si una app falla, las demás igual se despliegan
+      matrix:
+        include:
+          - app: pos
+            project: lily-pos
+          - app: kiosko
+            project: lily-kiosko
+          - app: admin
+            project: lily-admin
+          - app: cocina-alimentos
+            project: lily-cocina-alimentos
+          - app: cocina-bebidas
+            project: lily-cocina-bebidas
+          - app: cliente-display
+            project: lily-cliente-display
+          - app: cliente-pwa
+            project: lily-cliente-pwa
+          - app: costos
+            project: lily-costeo
+          # La pagina publica del negocio. Faltaba en esta lista, y por eso
+          # `lily-web` no existia en Cloudflare: la app estaba lista y
+          # compilando desde hace semanas, pero nadie la desplegaba.
+          - app: web
+            project: lily-web
+
+    name: ${{ matrix.app }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        # La versión la toma de "packageManager" (pnpm@9.15.0) en package.json.
+        # No pongas 'version' aquí: chocaría con packageManager y aborta el step.
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      - name: Build ${{ matrix.app }}
+        env:
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://fzkdgqqvfkogmxdgqsxj.supabase.co' }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5anRuYXlzdHNwb3JidXpjbXFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzMxNDksImV4cCI6MjA5Njg0OTE0OX0.USpCrgpCLMXcpWhA60mKmgMchrxCR3_kybIPIyas7iA' }}
+        run: pnpm --filter @shake/${{ matrix.app }} build
+
+      - name: Ensure Cloudflare Pages project exists
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@3 pages project create ${{ matrix.project }} --production-branch=main || true
+
+      - name: Deploy ${{ matrix.app }} to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx wrangler@3 pages deploy apps/${{ matrix.app }}/dist --project-name=${{ matrix.project }} --branch=main

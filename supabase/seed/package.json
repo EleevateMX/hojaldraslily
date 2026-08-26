@@ -1,0 +1,19 @@
+{
+  "name": "@shake/seed",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "migrar": "tsx migrar-app-data.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@shake/supabase": "workspace:*",
+    "@shake/types": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,25 @@
+# Cabeceras de seguridad para Cloudflare Pages.
+#
+# Sin esto el navegador no tiene forma de saber que puede confiar y que no.
+# Cada linea tapa un hueco concreto, no es adorno:
+#
+#   X-Frame-Options        Nadie puede meter la caja dentro de un iframe suyo
+#                          para robar toques (clickjacking): un boton "Cobrar"
+#                          invisible encima de otra pagina.
+#   X-Content-Type-Options El navegador deja de adivinar el tipo de un archivo.
+#                          Sin esto, algo subido como imagen puede acabar
+#                          ejecutandose como script.
+#   Referrer-Policy        Al salir a otro sitio no se filtra la ruta completa
+#                          —que puede llevar folios o ids de orden.
+#   Permissions-Policy     Camara, microfono y ubicacion apagados. Estas
+#                          pantallas no los usan; si un dia hace falta la
+#                          camara para el lector de QR, se abre solo esa.
+#   HSTS                   El navegador se niega a hablar por HTTP aunque le
+#                          insistan. Cloudflare ya redirige, pero la redireccion
+#                          se puede interceptar y esto no.
+/*
+  X-Frame-Options: DENY
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+  Strict-Transport-Security: max-age=31536000; includeSubDomains

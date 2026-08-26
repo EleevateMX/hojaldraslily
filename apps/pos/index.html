@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: en iPad con esquinas redondeadas evita que la barra
+         inferior del sistema tape los botones de cobro. El zoom NO se bloquea a
+         propósito: si el cajero necesita acercar para leer, debe poder. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Con esto, al agregarla a la pantalla de inicio del iPad se abre a
+         pantalla completa como app, sin las barras de Safari. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Hojaldras Lily Caja" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+    <link rel="icon" href="/logo.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#14241D" />
+
+    <title>Hojaldras Lily — POS Caja</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

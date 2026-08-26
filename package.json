@@ -1,0 +1,40 @@
+{
+  "name": "hojaldraslily-pos-ecosistema",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Ecosistema POS + Costos de Hojaldras Lily sobre Supabase",
+  "packageManager": "pnpm@9.15.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev:costos": "pnpm --filter @shake/costos dev",
+    "dev:pos": "pnpm --filter @shake/pos dev",
+    "dev:kiosko": "pnpm --filter @shake/kiosko dev",
+    "dev:admin": "pnpm --filter @shake/admin dev",
+    "dev:cocina-alimentos": "pnpm --filter @shake/cocina-alimentos dev",
+    "dev:cocina-bebidas": "pnpm --filter @shake/cocina-bebidas dev",
+    "dev:display": "pnpm --filter @shake/cliente-display dev",
+    "dev:pwa": "pnpm --filter @shake/cliente-pwa dev",
+    "dev:web": "pnpm --filter @shake/web dev",
+    "build": "pnpm -r --if-present build",
+    "build:costos": "pnpm --filter @shake/costos build",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "lint": "eslint .",
+    "test": "pnpm -r --if-present test",
+    "test:integration": "echo 'Sin suite de integración automatizada todavía — ver docs/auditoria-produccion.md §7 (deuda técnica) y las pruebas SQL documentadas en docs/checklist-produccion.md.' && exit 0",
+    "test:e2e": "echo 'Sin suite e2e automatizada todavía — ver docs/auditoria-produccion.md §7.' && exit 0",
+    "scripts:ascii": "node scripts/verificar-scripts-ascii.mjs",
+    "audit:production": "pnpm lint && pnpm typecheck && pnpm test && pnpm scripts:ascii && pnpm build",
+    "etl:dry": "pnpm --filter @shake/seed migrar -- --dry-run",
+    "etl:aplicar": "pnpm --filter @shake/seed migrar -- --aplicar"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.15.0",
+    "eslint": "^9.15.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.14",
+    "typescript-eslint": "^8.15.0"
+  }
+}

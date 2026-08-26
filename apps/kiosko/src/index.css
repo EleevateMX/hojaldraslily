@@ -1,0 +1,42 @@
+@import '@shake/brand/tokens.css';
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: var(--sa-ff-body);
+  background: var(--sa-cream-paper);
+  color: var(--sa-green-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* La barra de scroll no se pinta en el kiosko.
+
+   Es una pantalla táctil: nadie va a arrastrar la barra, se desliza con el
+   dedo. Dibujarla solo mete una franja gris al lado del menú. Se oculta pero
+   el contenido SIGUE desplazándose — no es `overflow: hidden`.
+
+   Para que no se pierda la señal de "hay más abajo", el contenedor lleva un
+   degradado al pie (ver `.con-fondo-degradado`): sin barra y sin pista, la
+   gente no sabe que la lista continúa. */
+.sin-barra {
+  scrollbar-width: none;        /* Firefox */
+  -ms-overflow-style: none;     /* Edge viejo */
+}
+.sin-barra::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* El kiosko es una pantalla de tienda, no un navegador.
+
+   Mantener presionada una imagen (Milo, la foto de un shake) sacaba el menú
+   de Chrome — "buscar imagen", "abrir en otra pestaña" — y arrastrarla se
+   la llevaba como fantasma. Nada de eso tiene sentido frente a un cliente:
+   aquí las imágenes son dibujos fijos de la interfaz. */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+}

@@ -1,0 +1,9 @@
+{
+  "name": "@shake/costos",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "rm -rf dist && mkdir -p dist && cp index.html dist/index.html",
+    "typecheck": "true"
+  }
+}

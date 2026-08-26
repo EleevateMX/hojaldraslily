@@ -1,0 +1,66 @@
+================================================================
+ HOJALDRAS LILY - dejar una PC lista
+================================================================
+
+ OPCION A (la facil): el archivo instalar-todo.bat
+ -------------------------------------------------
+ Doble clic NORMAL. Windows pide permiso una vez, acepta, y ya:
+ instala el agente de impresion, deja "Hojaldras Lily" en el
+ arranque y en el escritorio con su icono, y abre todo.
+
+ Solo pide la llave publica de Supabase la primera vez.
+
+ IMPORTANTE: doble clic normal, NO "ejecutar como
+ administrador". El instalador se eleva solo para la parte que
+ lo necesita. Si se abre elevado desde el principio, Windows
+ puede cambiar de usuario y el arranque automatico termina
+ guardado en el perfil del administrador - un perfil que nadie
+ abre. Eso ya paso una vez: la PC se prendia y no abria nada.
+
+
+ OPCION B: si no se puede pasar el archivo a esa PC
+ --------------------------------------------------
+ 1. Tecla Windows -> escribir:  powershell
+ 2. Enter (ventana NORMAL, sin "como administrador")
+ 3. Pegar esta linea y Enter:
+
+----------------------------------------------------------------
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/EleevateMX/ventashake/main/scripts/instalar-todo.bat' -OutFile "$env:TEMP\shake.bat"; & "$env:TEMP\shake.bat"
+----------------------------------------------------------------
+
+
+ DESPUES DE ESTO
+ ---------------
+ * Al prender la PC se abre todo solo, con el logo mientras carga.
+ * El agente de impresion arranca ANTES que las pantallas, y se
+   actualiza al final: una actualizacion pendiente ya no puede
+   dejar la tienda sin abrir.
+ * Cambios de precios o productos: boton "Actualizar pantallas"
+   en Admin - En vivo. NO hay que tocar esa computadora.
+
+
+ SI ALGO ABRE EN EL MONITOR EQUIVOCADO
+ -------------------------------------
+ El reparto es automatico: la pantalla mas grande es la del
+ cliente (kiosko) y las dos chicas son las estaciones, bebidas a
+ la izquierda y cocina a la derecha.
+
+ Si esta PC no encaja en eso, se corrige sin tocar el programa.
+ Abrir  C:\Hojaldras Lily\ultimo-arranque.log : ahi dice que
+ monitores vio Windows y con que numero (1 = el de mas a la
+ izquierda). Despues crear  C:\Hojaldras Lily\pantallas.txt  con
+ tres lineas, poniendo el numero que corresponda:
+
+     kiosko=1
+     bebidas=2
+     cocina=3
+
+ Ese archivo manda sobre el reparto automatico. Volver a abrir
+ el icono de Hojaldras Lily y listo.
+
+
+ PARA COMPROBAR QUE QUEDO
+ ------------------------
+ Pedir una kombucha. La etiqueta debe decir "KOMBUCHA - <sabor>"
+ y NO traer el recuadro de onzas. Y en Admin - En vivo, junto a
+ cada impresora, debe decir v1.1.0 en verde.

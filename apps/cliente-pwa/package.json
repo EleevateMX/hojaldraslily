@@ -1,0 +1,42 @@
+{
+  "name": "@shake/cliente-pwa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "app:sync": "pnpm build && cap sync",
+    "app:ios": "pnpm build && cap sync ios && cap open ios",
+    "app:android": "pnpm build && cap sync android && cap open android",
+    "app:iconos": "npx --yes @capacitor/assets generate --iconBackgroundColor \"#1A2E26\" --splashBackgroundColor \"#1A2E26\" --splashBackgroundColorDark \"#1A2E26\""
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/browser": "^8.0.4",
+    "@capacitor/core": "^8.5.0",
+    "@shake/brand": "workspace:*",
+    "@shake/supabase": "workspace:*",
+    "@shake/types": "workspace:*",
+    "@shake/utils": "workspace:*",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.0",
+    "@capacitor/cli": "^8.5.0",
+    "@capacitor/ios": "^8.5.0",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.7.0",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,26 @@
+node_modules/
+dist/
+build/
+*.local
+
+# variables de entorno: NUNCA subir claves
+.env
+.env.*
+!.env.example
+
+# reportes generados por el ETL
+supabase/seed/reportes/
+
+.DS_Store
+*.log
+
+# Respaldos de costosshake: llevan costos de compra, proveedores y margenes.
+# Este repositorio es publico — no entran aqui ni por accidente.
+respaldo-costosshake-*.json
+
+# La app nativa se REGENERA, no se versiona. El proyecto de Xcode y el de
+# Android salen de capacitor.config.ts + scripts/app-nativa-preparar.sh en
+# cada compilacion. Versionarlos invita a arreglar algo a mano en Xcode y
+# perderlo en el siguiente `cap sync`, sin ningun error que lo delate.
+apps/cliente-pwa/ios/
+apps/cliente-pwa/android/
