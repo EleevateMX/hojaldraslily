@@ -9,6 +9,7 @@ del **Manual de Identidad v1.0**.
 | Archivo | Qué es |
 |---|---|
 | `index.html` | Demo interactiva completa: la propuesta, la vitrina (inventario) y el kiosko con cobro. Se abre directo en el navegador, sin instalar nada. |
+| `shakeaholic.html` | El mismo motor vestido de **Shakeaholic** (The Harbor, Mérida): shakes que se arman al gusto con sobreprecios, proteína descontada por porción y el mismo flujo de cobro. Demuestra que replicar el sistema en otro negocio es cambiar un bloque de tokens. |
 | `identidad/tokens.css` | Los tokens de marca del manual (sección 08). Toda app del sistema debe importar este archivo y leer los tokens, nunca el hex directo. |
 | `docs/replicar-el-sistema.md` | El paso a paso y las decisiones de diseño para construir el sistema completo. |
 
