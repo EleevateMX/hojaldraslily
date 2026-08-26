@@ -47,8 +47,14 @@ where version in ('V1','V2','V3','V4','V5','V6');
 
 ### 2. Escribir los archivos (un solo Bash)
 
-Pega el `paquete` en un heredoc y deja que Python lo parta. El valor
-viene de JSON, así que trae `\n` escapados: hay que quitarlos.
+**Truco que ahorra muchísimo**: si el resultado es grande, la herramienta
+lo persiste en un archivo en vez de devolverlo inline, y te dice la ruta.
+Para forzarlo, agrega una columna de relleno a la consulta del paso 1
+(por ejemplo `, repeat('x', 200000) as pad`). Entonces no transcribes
+nada: dejas que Python lea el `paquete` desde ese archivo. Si aun así
+llega inline, pégalo en el heredoc de abajo.
+
+El valor viene de JSON, así que trae `\n` escapados: hay que quitarlos.
 
 ```bash
 python3 - <<'PYEOF'
