@@ -243,7 +243,7 @@
       <div class="auth-switch">¿Ya tienes cuenta? <a id="toLogin">Iniciar sesión</a></div>
     </div>
     <div class="auth-msg" id="auth_msg"></div>
-    <div class="auth-note">Acceso interno. Tus datos se sincronizan en la nube (Supabase).<br>Usuario inicial: <b>admin</b> / <b>hojaldraslily</b> — cámbialo.</div>
+    <div class="auth-note">Acceso interno. Aquí viven los costos: la cuenta la habilita gerencia.<br>Demostración: <b>lily</b> / <b>hojaldras2026</b> — cámbiala antes de abrir.</div>
   </div>
 </div>
 
@@ -273,7 +273,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const SB_URL="https://fzkdgqqvfkogmxdgqsxj.supabase.co";
-const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5anRuYXlzdHNwb3JidXpjbXFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzMxNDksImV4cCI6MjA5Njg0OTE0OX0.USpCrgpCLMXcpWhA60mKmgMchrxCR3_kybIPIyas7iA";
+// OJO: esta llave lleva el proyecto DENTRO del JWT (campo `ref`), en
+// base64. Cuando se replico el sistema, el buscar-y-reemplazar cambio la
+// URL de arriba pero no pudo entrar aqui: quedo la URL de Lily con la
+// llave del proyecto original, y Supabase respondia "Invalid API key".
+// Le paso lo mismo al cron de Clip. Si algun dia se rota la llave, hay
+// que verificar el `ref` decodificado, no que "se vea distinta".
+const SB_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6a2RncXF2ZmtvZ214ZGdxc3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MTAxMzgsImV4cCI6MjEwMzI4NjEzOH0.9QiYq8_Ue9egUun6aSNAf3o15AVgg3EzvhHRHHoBhKU";
 const DOC_ID="hojaldraslily", SESS="hojaldraslily_session_v1", CACHE="hojaldraslily_cache_v2";
 const sb=(window.supabase&&window.supabase.createClient)?window.supabase.createClient(SB_URL,SB_KEY):null;
 let currentUser=null;
@@ -327,7 +333,7 @@ async function doLogin(){const user=document.getElementById("li_user").value.tri
   const r=await sb.rpc('fn_costos_login',{p_usuario:user,p_contrasena:pass});
   if(r.error){authMsg("Error de conexión. Revisa tu internet.","err");return;}
   const res=Array.isArray(r.data)?r.data[0]:r.data;
-  if(res&&res.ok){lsSet(SESS,{user:user});showApp(user);}
+  if(res&&res.ok){lsSet(SESS,{user:user,token:res.token});showApp(user);}
   else authMsg((res&&res.mensaje)||"Usuario o contraseña incorrectos.","err");}
 async function doRegister(){const user=document.getElementById("rg_user").value.trim(),p1=document.getElementById("rg_pass").value,p2=document.getElementById("rg_pass2").value;
   if(!user||!p1){authMsg("Completa los campos.","err");return;} if(p1!==p2){authMsg("Las contraseñas no coinciden.","err");return;}
@@ -345,6 +351,9 @@ function wireAuth(){
   document.getElementById("li_pass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
   document.getElementById("rg_pass2").addEventListener("keydown",e=>{if(e.key==="Enter")doRegister();});}
 function logout(){localStorage.removeItem(SESS);location.reload();}
+/* El token que entrego el login. Dura 12 horas; si vencio, guardar avisa y
+   manda a entrar de nuevo en vez de fallar en silencio. */
+function tokenSesion(){const s=lsGet(SESS);return (s&&s.token)||null;}
 
 /* ---------------- ESTADO ---------------- */
 let state=null,saveTimer=null;
@@ -432,9 +441,13 @@ let lastLocalSave=0, realtimeReady=false;
 async function load(){
   if(!sb){let c=lsGet(CACHE);state=(c&&c.params)?migrate(c):defaultState();return;}
   try{
-    const r=await sb.from('app_data').select('data').eq('id',DOC_ID).maybeSingle();
+    /* Ya no se lee la tabla directo: app_data guarda COSTOS, MARGENES y
+       PROVEEDORES, y estaba abierta a la llave publica -- cualquiera con la
+       URL podia leerlos. Ahora pasa por fn_costos_cargar, que exige el token
+       de esta sesion. */
+    const r=await sb.rpc('fn_costos_cargar',{p_token:tokenSesion()});
     if(r.error)throw r.error;
-    const d=r.data&&r.data.data;
+    const d=r.data;
     if(d&&d.params){state=migrate(d);}else{state=defaultState();await dbWrite();}
     lsSet(CACHE,state);
   }catch(e){let c=lsGet(CACHE);state=(c&&c.params)?migrate(c):defaultState();setSaved("⚠ Sin conexión (local)");}
@@ -459,8 +472,18 @@ async function dbWrite(){
   lsSet(CACHE,state);
   if(!sb){setSaved("⚠ Guardado local");return;}
   lastLocalSave=Date.now();
-  const r=await sb.from('app_data').update({data:state,updated_at:new Date().toISOString(),updated_by:currentUser}).eq('id',DOC_ID);
-  setSaved(r.error?"⚠ Error al guardar":"Guardado ✓");
+  /* Tampoco se escribe la tabla directo. El trigger de app_data corre como
+     DEFINER y reescribe productos, insumos y recetas: dejar ese UPDATE
+     abierto a `anon` era una puerta de atras para cambiar precios sin tocar
+     `productos`. fn_costos_guardar exige el token. */
+  const r=await sb.rpc('fn_costos_guardar',{p_token:tokenSesion(),p_data:state});
+  if(r.error){
+    const vencida=(r.error.message||"").indexOf("Sesi")>=0;
+    setSaved(vencida?"⚠ Sesión vencida — vuelve a entrar":"⚠ Error al guardar");
+    if(vencida){localStorage.removeItem(SESS);setTimeout(()=>location.reload(),1500);}
+    return;
+  }
+  setSaved("Guardado ✓");
 }
 function persist(){dbWrite();}
 /* Cada guardado corre fn_sync_app_data, que da de alta un producto y un
@@ -1747,6 +1770,11 @@ async function showApp(user){
   refrescarPendientes();
   subscribeRealtime();
 }
+/* Ojo: desde que app_data dejo de ser legible por `anon`, Realtime ya no
+   entrega estos cambios (aplica RLS igual que una consulta). Se deja el
+   suscriptor porque no estorba y vuelve solo si algun dia Costeos abre
+   sesion de Supabase Auth; mientras, "actualizado desde otro dispositivo"
+   simplemente no se dispara. Recargar la pagina trae lo ultimo. */
 function subscribeRealtime(){
   if(!sb||realtimeReady)return; realtimeReady=true;
   sb.channel('app_data_rt').on('postgres_changes',{event:'UPDATE',schema:'public',table:'app_data'},payload=>{
@@ -1761,7 +1789,11 @@ function subscribeRealtime(){
 (async function(){
   await wireAuth();
   const sess=lsGet(SESS);
-  if(sess&&sess.user)showApp(sess.user);
+  /* Se exige el token, no solo el nombre: una sesion guardada de antes del
+     token entraria a una pantalla que no puede ni cargar ni guardar. Mejor
+     pedir la contrasena una vez mas. */
+  if(sess&&sess.user&&sess.token)showApp(sess.user);
+  else localStorage.removeItem(SESS);
 })();
 </script>
 </body>
