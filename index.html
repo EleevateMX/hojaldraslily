@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Demos · Hojaldras Lily POS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;700&display=swap">
+<style>
+  :root{
+    --coral:#C4463C; --coral-dark:#A2372F; --bg:#FFFDF8; --crema:#F8EDD5;
+    --rosa:#F6D8CD; --lila:#F0E4EF; --borde:#EDE3D2; --texto:#2E2420; --suave:#6B5F58;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--texto);font-family:"Karla","Segoe UI",sans-serif;font-size:17px;line-height:1.55}
+  main{max-width:860px;margin:0 auto;padding:56px 20px 96px}
+  .logo{display:flex;align-items:baseline;color:var(--coral);justify-content:center}
+  .logo .palabra{font-family:"Jost",sans-serif;font-weight:300;font-size:44px}
+  .logo .script{font-family:"Yellowtail",cursive;font-size:50px;margin-left:-8px;transform:translateY(10px)}
+  p.lead{text-align:center;color:var(--suave);max-width:34em;margin:14px auto 48px;text-wrap:balance}
+  .tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+  a.tarjeta{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:var(--texto);
+    border:1px solid var(--borde);border-radius:18px;padding:26px 24px;background:#fff}
+  a.tarjeta:hover{border-color:var(--coral)}
+  .chip{font-family:"Jost",sans-serif;font-weight:500;font-size:11px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--suave)}
+  a.tarjeta h2{font-family:"Jost",sans-serif;font-weight:500;font-size:24px;margin:0;line-height:1.2}
+  a.tarjeta p{margin:0;font-size:15.5px;color:var(--suave)}
+  .boton{align-self:flex-start;margin-top:8px;background:var(--coral);color:#fff;font-weight:700;
+    border-radius:12px;padding:12px 22px}
+  .tarjeta.lily{background:var(--crema)}
+  .tarjeta.shk{background:var(--lila)}
+  footer{margin-top:64px;text-align:center;font-size:13.5px;color:var(--suave)}
+</style>
+</head>
+<body>
+<main>
+  <div class="logo" aria-label="Hojaldras Lily"><span class="palabra">Hojaldras</span><span class="script">Lily</span></div>
+  <p class="lead">Demostraciones del punto de venta. Todo funciona al tacto: vitrina que se descuenta sola, kiosko de cobro en tres toques y ticket como el de la impresora.</p>
+  <div class="tarjetas">
+    <a class="tarjeta lily" href="hojaldras-lily-demo.html">
+      <span class="chip">Panadería · Mérida</span>
+      <h2>Hojaldras Lily</h2>
+      <p>La idea para venderlo, la vitrina explicada paso a paso y el kiosko cobrando en efectivo o tarjeta.</p>
+      <span class="boton">Abrir demo</span>
+    </a>
+    <a class="tarjeta shk" href="shakeaholic-demo.html">
+      <span class="chip">Protein bar · The Harbor</span>
+      <h2>Shakeaholic</h2>
+      <p>El mismo motor con otra marca: arma tu shake con extras y la proteína descontándose por porción.</p>
+      <span class="boton">Abrir demo</span>
+    </a>
+  </div>
+  <footer>Hojaldras Lily · Mérida, Yucatán — El sistema completo vive en este mismo repositorio.</footer>
+</main>
+</body>
+</html>
