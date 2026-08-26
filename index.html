@@ -1,0 +1,916 @@
+<meta charset="utf-8">
+<title>Hojaldras Lily POS</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Karla:wght@400;500;700&family=Jost:wght@300;400;500&family=Yellowtail&display=swap">
+
+<style>
+  /* == Tokens · Manual de Identidad v1.0, sección 08 ======================= */
+  :root {
+    --lily-coral:        #C4463C;
+    --lily-coral-dark:   #A2372F;
+    --lily-magenta:      #C2186B;
+    --lily-dorado:       #C98A4B;
+    --lily-bg:           #FFFDF8;
+    --lily-surface:      #FFFFFF;
+    --lily-surface-alt:  #F8EDD5;
+    --lily-surface-pink: #F6D8CD;
+    --lily-surface-lila: #F0E4EF;
+    --lily-border:       #EDE3D2;
+    --lily-text:         #2E2420;
+    --lily-text-soft:    #6B5F58;
+    --lily-text-invert:  #FFFDF8;
+    --lily-ok:           #4E7A56;
+    --lily-warn:         #C98A4B;
+    --lily-danger:       #8E2A1E;
+    --lily-font-ui:     "Karla", "Segoe UI", sans-serif;
+    --lily-font-title:  "Jost", "Segoe UI", sans-serif;
+    --lily-font-script: "Yellowtail", cursive;
+    --lily-radius-sm:    8px;
+    --lily-radius:       12px;
+    --lily-radius-lg:    18px;
+    --lily-touch-min:    56px;
+    --lily-shadow: 0 2px 8px rgba(46,36,32,.10);
+  }
+
+  /* La marca vive en un solo mundo cálido y claro; todos los colores se
+     pintan explícitos para que la página se sostenga sobre cualquier fondo. */
+  html { background: var(--lily-bg); }
+  body {
+    margin: 0;
+    background: var(--lily-bg);
+    color: var(--lily-text);
+    font-family: var(--lily-font-ui);
+    font-size: 17px;
+    line-height: 1.55;
+  }
+  * { box-sizing: border-box; }
+  button { font-family: var(--lily-font-ui); cursor: pointer; }
+  :focus-visible { outline: 3px solid var(--lily-coral); outline-offset: 2px; border-radius: 4px; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { transition: none !important; animation: none !important; }
+  }
+
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* == Cabecera ============================================================ */
+  header.top {
+    position: sticky; top: 0; z-index: 40;
+    background: var(--lily-bg);
+    border-bottom: 1px solid var(--lily-border);
+  }
+  .top-inner {
+    max-width: 1080px; margin: 0 auto; padding: 14px 20px 0;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px 28px;
+  }
+  .logo { display: flex; align-items: baseline; text-decoration: none; color: var(--lily-coral); }
+  .logo .palabra { font-family: var(--lily-font-title); font-weight: 300; font-size: 30px; letter-spacing: .01em; }
+  .logo .script  { font-family: var(--lily-font-script); font-size: 34px; margin-left: -6px; transform: translateY(7px); }
+  .demo-chip {
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase;
+    color: var(--lily-text-soft); border: 1px solid var(--lily-border);
+    border-radius: 999px; padding: 4px 12px;
+  }
+  nav.tabs { display: flex; gap: 4px; margin-left: auto; }
+  nav.tabs button {
+    border: 0; background: none; color: var(--lily-text-soft);
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 14px;
+    letter-spacing: .12em; text-transform: uppercase;
+    padding: 14px 16px 12px; border-bottom: 4px solid transparent;
+    min-height: 48px;
+  }
+  nav.tabs button[aria-selected="true"] {
+    color: var(--lily-coral); border-bottom-color: var(--lily-coral);
+  }
+  @media (max-width: 720px) {
+    nav.tabs { margin-left: 0; width: 100%; justify-content: space-between; }
+    nav.tabs button { padding: 12px 6px 10px; font-size: 12.5px; }
+  }
+
+  main { max-width: 1080px; margin: 0 auto; padding: 0 20px 96px; }
+  section.panel[hidden] { display: none; }
+
+  /* == Tipos comunes ======================================================= */
+  .eyebrow {
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 12px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--lily-coral);
+    margin: 56px 0 10px;
+  }
+  h1, h2, h3 { font-family: var(--lily-font-title); font-weight: 400; text-wrap: balance; margin: 0; }
+  h1 { font-size: clamp(34px, 5.5vw, 52px); line-height: 1.12; letter-spacing: -.01em; }
+  h2 { font-size: clamp(26px, 4vw, 34px); line-height: 1.18; }
+  h3 { font-size: 20px; font-weight: 500; line-height: 1.3; }
+  p.lead { font-size: clamp(18px, 2.4vw, 21px); color: var(--lily-text-soft); max-width: 34em; }
+  p { max-width: 38em; }
+  .soft { color: var(--lily-text-soft); }
+
+  /* == La idea ============================================================= */
+  .hero { padding-top: 40px; }
+  .hero .eyebrow { margin-top: 40px; }
+  .puntos {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 16px; margin-top: 40px;
+  }
+  .punto {
+    border-radius: var(--lily-radius-lg); padding: 24px 22px 26px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .punto.crema { background: var(--lily-surface-alt); }
+  .punto.rosa  { background: var(--lily-surface-pink); }
+  .punto.lila  { background: var(--lily-surface-lila); }
+  .punto p { margin: 0; font-size: 16px; color: var(--lily-text); }
+  .punto .mini-label {
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--lily-text-soft);
+  }
+
+  .flujo {
+    margin-top: 24px; border: 1px solid var(--lily-border);
+    border-radius: var(--lily-radius-lg); background: var(--lily-surface);
+    padding: 26px 22px;
+    display: flex; flex-wrap: wrap; align-items: stretch; gap: 10px;
+  }
+  .flujo .paso-flujo {
+    flex: 1 1 150px; display: flex; flex-direction: column; gap: 6px;
+    padding: 4px 6px;
+  }
+  .flujo .paso-flujo strong { font-family: var(--lily-font-title); font-weight: 500; font-size: 17px; }
+  .flujo .paso-flujo span { font-size: 14.5px; color: var(--lily-text-soft); }
+  .flujo .flecha {
+    align-self: center; color: var(--lily-coral); flex: 0 0 auto;
+    font-size: 20px; padding: 0 2px; font-family: var(--lily-font-title);
+  }
+  .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; }
+
+  /* == Botones ============================================================= */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-height: var(--lily-touch-min); padding: 0 28px;
+    border-radius: var(--lily-radius); border: 0;
+    font-size: 17px; font-weight: 700;
+  }
+  .btn-coral { background: var(--lily-coral); color: #FFFFFF; }
+  .btn-coral:active { background: var(--lily-coral-dark); }
+  .btn-linea {
+    background: var(--lily-surface); color: var(--lily-coral);
+    border: 2px solid var(--lily-coral);
+  }
+  .btn-suave { background: var(--lily-surface-alt); color: var(--lily-text); }
+  .btn[disabled] { background: var(--lily-border); color: var(--lily-text-soft); cursor: not-allowed; }
+
+  /* == Pasos numerados (secuencias reales) ================================= */
+  .pasos { display: grid; gap: 14px; margin: 28px 0 8px; }
+  .paso {
+    display: grid; grid-template-columns: 56px 1fr; gap: 16px; align-items: start;
+    background: var(--lily-surface); border: 1px solid var(--lily-border);
+    border-radius: var(--lily-radius-lg); padding: 20px;
+  }
+  .paso .n {
+    width: 56px; height: 56px; border-radius: 50%;
+    background: var(--lily-surface-pink); color: var(--lily-coral-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 24px;
+  }
+  .paso h3 { margin-bottom: 4px; }
+  .paso p { margin: 0; color: var(--lily-text-soft); font-size: 16px; }
+  .paso p strong { color: var(--lily-text); }
+
+  /* == Demo vitrina ======================================================== */
+  .marco-demo {
+    border: 1px solid var(--lily-border); border-radius: var(--lily-radius-lg);
+    background: var(--lily-surface); overflow: hidden; margin-top: 20px;
+  }
+  .marco-demo > .barra {
+    background: var(--lily-surface-alt); padding: 12px 20px;
+    display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline;
+  }
+  .marco-demo > .barra strong { font-family: var(--lily-font-title); font-weight: 500; font-size: 16px; }
+  .marco-demo > .barra span { font-size: 13.5px; color: var(--lily-text-soft); }
+  .vitrina-lista { padding: 10px 20px 20px; display: grid; gap: 10px; }
+
+  .fila-prod {
+    display: grid; grid-template-columns: 64px 1fr auto; gap: 14px; align-items: center;
+    border: 1px solid var(--lily-border); border-radius: var(--lily-radius);
+    padding: 10px 14px;
+  }
+  .fila-prod .foto {
+    width: 64px; height: 64px; border-radius: var(--lily-radius);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .fila-prod .datos { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .fila-prod .datos .nombre { font-weight: 700; font-size: 16.5px; }
+  .estado { display: inline-flex; align-items: center; gap: 7px; font-size: 14px; }
+  .estado .punto-color { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 auto; }
+  .estado.ok    { color: var(--lily-ok); }     .estado.ok .punto-color    { background: var(--lily-ok); }
+  .estado.warn  { color: #8a5a2b; }            .estado.warn .punto-color  { background: var(--lily-warn); }
+  .estado.fuera { color: var(--lily-danger); } .estado.fuera .punto-color { background: var(--lily-danger); }
+
+  .contador { display: flex; align-items: center; gap: 6px; }
+  .contador button {
+    width: var(--lily-touch-min); height: var(--lily-touch-min);
+    border-radius: var(--lily-radius); border: 2px solid var(--lily-coral);
+    background: var(--lily-surface); color: var(--lily-coral);
+    font-size: 26px; font-weight: 700; line-height: 1;
+  }
+  .contador button:active { background: var(--lily-surface-pink); }
+  .contador button[disabled] { border-color: var(--lily-border); color: var(--lily-border); }
+  .contador .cifra {
+    min-width: 58px; text-align: center;
+    font-size: 26px; font-weight: 700;
+  }
+  @media (max-width: 560px) {
+    .fila-prod { grid-template-columns: 48px 1fr; }
+    .fila-prod .foto { width: 48px; height: 48px; }
+    .fila-prod .contador { grid-column: 1 / -1; justify-content: flex-end; }
+  }
+
+  .nota-viva {
+    margin-top: 16px; border-radius: var(--lily-radius);
+    background: var(--lily-surface-lila); padding: 16px 20px;
+    font-size: 16px; max-width: none;
+  }
+  .nota-viva strong { font-weight: 700; }
+
+  /* Corte de la tarde */
+  .corte {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px; padding: 10px 20px 20px;
+  }
+  .corte .celda {
+    border: 1px solid var(--lily-border); border-radius: var(--lily-radius);
+    padding: 16px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+  }
+  .corte .celda .mini-label {
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 11px;
+    letter-spacing: .16em; text-transform: uppercase; color: var(--lily-text-soft);
+  }
+  .corte .grande { font-size: 34px; font-weight: 700; line-height: 1; }
+  .veredicto { border-radius: var(--lily-radius); padding: 16px; font-weight: 700; font-size: 17px; display: flex; align-items: center; }
+  .veredicto.ok    { background: #EAF1EB; color: var(--lily-ok); }
+  .veredicto.warn  { background: var(--lily-surface-alt); color: #8a5a2b; }
+  .veredicto.fuera { background: #F6E4E0; color: var(--lily-danger); }
+
+  /* == Kiosko ============================================================== */
+  .kiosko {
+    margin-top: 20px; border: 1px solid var(--lily-border);
+    border-radius: var(--lily-radius-lg); background: var(--lily-surface); overflow: hidden;
+  }
+  .kiosko-top {
+    background: var(--lily-surface-alt); padding: 12px 20px;
+    display: flex; flex-wrap: wrap; gap: 4px 16px; align-items: baseline;
+  }
+  .kiosko-top .mini-logo { display: flex; align-items: baseline; color: var(--lily-coral); }
+  .kiosko-top .mini-logo .palabra { font-family: var(--lily-font-title); font-weight: 300; font-size: 20px; }
+  .kiosko-top .mini-logo .script { font-family: var(--lily-font-script); font-size: 22px; margin-left: -4px; transform: translateY(4px); }
+  .kiosko-top span { font-size: 13.5px; color: var(--lily-text-soft); }
+  .kiosko-top .turno { margin-left: auto; color: var(--lily-ok); font-weight: 700; font-size: 13.5px; }
+
+  .kiosko-cuerpo { display: grid; grid-template-columns: 150px 1fr 300px; min-height: 460px; }
+  @media (max-width: 900px) { .kiosko-cuerpo { grid-template-columns: 1fr; } }
+
+  .cats { background: var(--lily-surface-alt); padding: 14px 10px; display: flex; flex-direction: column; gap: 8px; }
+  @media (max-width: 900px) { .cats { flex-direction: row; overflow-x: auto; } }
+  .cats button {
+    border: 0; border-radius: var(--lily-radius);
+    min-height: var(--lily-touch-min); padding: 8px 12px;
+    background: transparent; color: var(--lily-text);
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 13px;
+    letter-spacing: .12em; text-transform: uppercase; text-align: left; white-space: nowrap;
+  }
+  .cats button[aria-selected="true"] { background: var(--lily-coral); color: #FFFFFF; }
+
+  .grid-prod {
+    padding: 18px; display: grid; gap: 12px; align-content: start;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .card-prod {
+    border: 1px solid var(--lily-border); border-radius: var(--lily-radius);
+    background: var(--lily-surface); padding: 10px 10px 12px;
+    display: flex; flex-direction: column; gap: 8px; align-items: stretch;
+    min-height: 168px; position: relative; text-align: left;
+  }
+  .card-prod .foto {
+    border-radius: var(--lily-radius-sm); height: 84px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+  }
+  .card-prod .nombre { font-size: 15.5px; font-weight: 400; line-height: 1.25; }
+  .card-prod .precio { font-weight: 700; font-size: 17px; }
+  .card-prod .en-orden {
+    position: absolute; top: 6px; right: 6px;
+    min-width: 28px; height: 28px; border-radius: 50%;
+    background: var(--lily-coral); color: #FFFFFF;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 15px;
+  }
+  .card-prod.agotado { background: var(--lily-bg); }
+  .card-prod.agotado .foto { filter: grayscale(1); opacity: .45; }
+  .card-prod.agotado .nombre, .card-prod.agotado .precio { color: var(--lily-text-soft); }
+  .sello-agotado {
+    font-family: var(--lily-font-title); font-weight: 500; font-size: 11px;
+    letter-spacing: .14em; text-transform: uppercase;
+    color: var(--lily-danger); border: 1px solid var(--lily-danger);
+    border-radius: 999px; padding: 2px 10px; align-self: flex-start;
+  }
+  .pocas-aviso { font-size: 13px; color: #8a5a2b; }
+
+  .orden {
+    background: var(--lily-bg); border-left: 1px solid var(--lily-border);
+    padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  }
+  @media (max-width: 900px) { .orden { border-left: 0; border-top: 1px solid var(--lily-border); } }
+  .orden h3 { font-size: 17px; display: flex; justify-content: space-between; align-items: baseline; }
+  .orden h3 .num { color: var(--lily-text-soft); font-family: var(--lily-font-ui); font-size: 14px; font-weight: 400; }
+  .orden-lineas { display: flex; flex-direction: column; gap: 8px; min-height: 90px; }
+  .linea {
+    display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center;
+    font-size: 15.5px;
+  }
+  .linea .quitar {
+    width: 44px; height: 44px; border-radius: var(--lily-radius-sm);
+    border: 1px solid var(--lily-border); background: var(--lily-surface);
+    color: var(--lily-text-soft); font-size: 18px; line-height: 1;
+  }
+  .orden-vacia { color: var(--lily-text-soft); font-size: 15px; margin: 8px 0; }
+  .totales { border-top: 1px dashed var(--lily-border); padding-top: 10px; display: flex; flex-direction: column; gap: 4px; }
+  .totales .r { display: flex; justify-content: space-between; font-size: 15px; color: var(--lily-text-soft); }
+  .totales .total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 4px; }
+  .totales .total .palabra-total { font-family: var(--lily-font-title); font-weight: 500; font-size: 15px; letter-spacing: .12em; }
+  .totales .total .cifra-total { font-size: 32px; font-weight: 700; line-height: 36px; }
+  .orden .btn { width: 100%; }
+
+  /* Cobro */
+  .pago-panel { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+  .pago-panel h3 { font-size: 22px; }
+  .opciones-pago { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .billetes { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; }
+  .cambio-caja {
+    border-radius: var(--lily-radius); background: var(--lily-surface-alt);
+    padding: 16px 20px; display: flex; justify-content: space-between; align-items: baseline;
+  }
+  .cambio-caja .palabra-total { font-family: var(--lily-font-title); font-weight: 500; letter-spacing: .12em; font-size: 15px; }
+  .cambio-caja .cifra-total { font-size: 34px; font-weight: 700; }
+
+  .msj {
+    border-radius: var(--lily-radius); padding: 14px 18px; font-size: 16px;
+    display: flex; flex-direction: column; gap: 2px; max-width: none;
+  }
+  .msj strong { font-size: 17px; }
+  .msj.ok   { background: #EAF1EB; color: var(--lily-ok); }
+  .msj.warn { background: var(--lily-surface-alt); color: #8a5a2b; }
+
+  /* Ticket */
+  .ticket-zona { display: flex; justify-content: center; padding: 10px 18px 24px; }
+  .ticket {
+    width: 300px; max-width: 100%; background: #FFFFFF;
+    border: 1px solid var(--lily-border); border-radius: 4px;
+    padding: 18px 16px; font-family: "Courier New", monospace; font-size: 12.5px;
+    color: #1a1a1a; line-height: 1.5;
+  }
+  .ticket .t-logo { text-align: center; color: #1a1a1a; margin-bottom: 4px; }
+  .ticket .t-logo .palabra { font-family: var(--lily-font-title); font-weight: 300; font-size: 20px; }
+  .ticket .t-logo .script { font-family: var(--lily-font-script); font-size: 22px; margin-left: -4px; }
+  .ticket .centro { text-align: center; }
+  .ticket .sep { border: 0; border-top: 1px dashed #999; margin: 8px 0; }
+  .ticket .fila-t { display: flex; justify-content: space-between; gap: 8px; }
+  .ticket .grande-t { font-size: 17px; font-weight: 700; }
+
+  .pie {
+    border-top: 1px solid var(--lily-border); margin-top: 72px; padding: 24px 0 8px;
+    display: flex; flex-wrap: wrap; gap: 8px 24px; justify-content: space-between;
+    font-size: 13.5px; color: var(--lily-text-soft);
+  }
+</style>
+
+<header class="top">
+  <div class="top-inner">
+    <a class="logo" href="#" onclick="return false" aria-label="Hojaldras Lily">
+      <span class="palabra">Hojaldras</span><span class="script">Lily</span>
+    </a>
+    <span class="demo-chip">Demostración del sistema</span>
+    <nav class="tabs" role="tablist" aria-label="Secciones">
+      <button role="tab" id="tab-idea" aria-selected="true" aria-controls="panel-idea" onclick="verTab('idea')">La idea</button>
+      <button role="tab" id="tab-vitrina" aria-selected="false" aria-controls="panel-vitrina" onclick="verTab('vitrina')">La vitrina</button>
+      <button role="tab" id="tab-kiosko" aria-selected="false" aria-controls="panel-kiosko" onclick="verTab('kiosko')">El kiosko</button>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= LA IDEA ================= -->
+  <section class="panel" id="panel-idea" role="tabpanel" aria-labelledby="tab-idea">
+    <div class="hero">
+      <p class="eyebrow">Punto de venta · Hojaldras Lily</p>
+      <h1>La vitrina se cuenta sola.<br>Cobrar toma tres toques.</h1>
+      <p class="lead">Un sistema hecho a la medida del mostrador: usted anota en la mañana lo que salió del horno, y de ahí en adelante cada venta descuenta su pieza sin que nadie haga cuentas.</p>
+    </div>
+
+    <div class="puntos">
+      <div class="punto crema">
+        <span class="mini-label">Sin dobles capturas</span>
+        <h3>El precio se escribe una sola vez</h3>
+        <p>La hojaldra de guayaba cuesta lo mismo en el kiosko, en el ticket y en el corte. Se captura una vez y el sistema la reparte a todas las pantallas.</p>
+      </div>
+      <div class="punto rosa">
+        <span class="mini-label">Sin cuentas de cabeza</span>
+        <h3>El cambio lo calcula la caja</h3>
+        <p>Usted marca con cuánto paga el cliente y la pantalla dice el cambio en grande. El corte de la tarde cuadra solo, pieza por pieza y peso por peso.</p>
+      </div>
+      <div class="punto lila">
+        <span class="mini-label">Sin vender lo que no hay</span>
+        <h3>Si se acaba, el botón se apaga</h3>
+        <p>Cuando la última hojaldra de ceviche sale de la vitrina, su botón se apaga solo en el kiosko. Nadie promete al cliente lo que ya no está.</p>
+      </div>
+    </div>
+
+    <p class="eyebrow">Así corre el día</p>
+    <h2>Del horno al ticket, sin papelitos</h2>
+    <div class="flujo" aria-label="Flujo del día">
+      <div class="paso-flujo"><strong>Horno</strong><span>Sale la charola de la mañana.</span></div>
+      <span class="flecha" aria-hidden="true">&#8594;</span>
+      <div class="paso-flujo"><strong>Vitrina</strong><span>Se anota cuántas piezas entran. Son dos minutos.</span></div>
+      <span class="flecha" aria-hidden="true">&#8594;</span>
+      <div class="paso-flujo"><strong>Kiosko</strong><span>El cliente pide, la caja cobra. Cada venta descuenta su pieza.</span></div>
+      <span class="flecha" aria-hidden="true">&#8594;</span>
+      <div class="paso-flujo"><strong>Ticket y corte</strong><span>El papel sale solo y la tarde cierra con las cuentas claras.</span></div>
+    </div>
+
+    <div class="cta-row">
+      <button class="btn btn-coral" onclick="verTab('vitrina')">Ver cómo se cuenta la vitrina</button>
+      <button class="btn btn-linea" onclick="verTab('kiosko')">Probar el kiosko y cobrar</button>
+    </div>
+  </section>
+
+  <!-- ================= LA VITRINA ================= -->
+  <section class="panel" id="panel-vitrina" role="tabpanel" aria-labelledby="tab-vitrina" hidden>
+    <p class="eyebrow">Inventario, sin decirle inventario</p>
+    <h2>La pantalla es un espejo de la vitrina</h2>
+    <p class="lead">Lo que hay en el cristal es lo que hay en la pantalla. Usted solo la toca dos veces al día: al abrir y al cerrar. El resto del día, ella se cuenta sola.</p>
+
+    <div class="pasos">
+      <div class="paso">
+        <div class="n" aria-hidden="true">1</div>
+        <div>
+          <h3>En la mañana: anote lo que salió del horno</h3>
+          <p>Con los botones de <strong>más</strong> y <strong>menos</strong>, como contar pan con los dedos. Doce de jamón y queso, ocho de guayaba. Dos minutos y ya.</p>
+        </div>
+      </div>
+      <div class="paso">
+        <div class="n" aria-hidden="true">2</div>
+        <div>
+          <h3>Durante el día: usted no hace nada</h3>
+          <p>Cada vez que la caja cobra una hojaldra, <strong>la pantalla descuenta esa pieza solita</strong>. Si van quedando pocas, avisa con letras, para que le hable al horno a tiempo.</p>
+        </div>
+      </div>
+      <div class="paso">
+        <div class="n" aria-hidden="true">3</div>
+        <div>
+          <h3>En la tarde: cuente lo que quedó</h3>
+          <p>Usted cuenta las piezas del cristal y el sistema le dice si <strong>cuadra</strong>, si sobra o si falta. Sin sumas de cabeza y sin discusiones.</p>
+        </div>
+      </div>
+    </div>
+
+    <p class="eyebrow">Pruébelo usted</p>
+    <h2>El conteo de la mañana</h2>
+    <p class="soft">Toque más o menos en cada producto. Fíjese cómo el letrero de cada fila le habla con palabras, no solo con colores.</p>
+
+    <div class="marco-demo">
+      <div class="barra">
+        <strong>Vitrina · Sucursal Miguel Alemán</strong>
+        <span>Martes, 7:05 de la mañana · Rosa M.</span>
+      </div>
+      <div class="vitrina-lista" id="lista-vitrina"></div>
+    </div>
+
+    <div class="nota-viva">
+      <strong>Véalo en vivo:</strong> pase a la pestaña <em>El kiosko</em>, venda una hojaldra de guayaba y regrese aquí. La cuenta habrá bajado sola.
+    </div>
+
+    <p class="eyebrow">El cierre</p>
+    <h2>El corte de la tarde, sin pleito</h2>
+    <p class="soft">Ejemplo con la hojaldra de guayaba: cuente las piezas que quedaron en el cristal y compare.</p>
+
+    <div class="marco-demo">
+      <div class="barra">
+        <strong>Corte de vitrina · Hojaldra de guayaba</strong>
+        <span>Martes, 7:40 de la tarde</span>
+      </div>
+      <div class="corte">
+        <div class="celda">
+          <span class="mini-label">El sistema dice que quedan</span>
+          <span class="grande num" id="corte-sistema">8</span>
+          <span class="soft" style="font-size:13.5px">Entraron menos las vendidas.</span>
+        </div>
+        <div class="celda">
+          <span class="mini-label">Usted contó en el cristal</span>
+          <div class="contador">
+            <button type="button" onclick="ajustarConteo(-1)" aria-label="Una pieza menos">&#8722;</button>
+            <span class="cifra num" id="corte-contado">8</span>
+            <button type="button" onclick="ajustarConteo(1)" aria-label="Una pieza más">+</button>
+          </div>
+        </div>
+        <div class="veredicto ok" id="corte-veredicto">Cuadra perfecto. Buenas noches.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= EL KIOSKO ================= -->
+  <section class="panel" id="panel-kiosko" role="tabpanel" aria-labelledby="tab-kiosko" hidden>
+    <p class="eyebrow">La venta</p>
+    <h2>Escoja, revise, cobre</h2>
+    <p class="lead">Tres toques para una venta completa. Botones grandes, la orden siempre a la vista y el cambio calculado por la caja, no de cabeza.</p>
+
+    <div class="kiosko">
+      <div class="kiosko-top">
+        <span class="mini-logo"><span class="palabra">Hojaldras</span><span class="script">Lily</span></span>
+        <span>Caja 1 · Rosa M.</span>
+        <span class="turno">Turno abierto</span>
+      </div>
+
+      <div id="zona-venta">
+        <div class="kiosko-cuerpo">
+          <div class="cats" id="cats" role="tablist" aria-label="Categorías"></div>
+          <div class="grid-prod" id="grid-prod"></div>
+          <div class="orden">
+            <h3>Orden <span class="num" id="folio">#248</span></h3>
+            <div class="orden-lineas" id="orden-lineas"></div>
+            <div class="totales">
+              <div class="r"><span>Subtotal</span><span class="num" id="t-subtotal">$0.00</span></div>
+              <div class="r"><span>IVA incluido</span><span class="num" id="t-iva">$0.00</span></div>
+              <div class="total">
+                <span class="palabra-total">TOTAL</span>
+                <span class="cifra-total num" id="t-total">$0.00</span>
+              </div>
+            </div>
+            <button class="btn btn-coral" id="btn-cobrar" onclick="irACobro()" disabled>Cobrar</button>
+            <button class="btn btn-suave" onclick="vaciarOrden()">Empezar de nuevo</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="zona-pago" hidden>
+        <div class="pago-panel">
+          <h3>Total a cobrar: <span class="num" id="pago-total">$0.00</span></h3>
+          <p class="soft" style="margin:0">¿Cómo paga?</p>
+          <div class="opciones-pago">
+            <button class="btn btn-linea" id="btn-efectivo" onclick="elegirPago('efectivo')">Efectivo</button>
+            <button class="btn btn-linea" id="btn-tarjeta" onclick="elegirPago('tarjeta')">Tarjeta</button>
+          </div>
+          <div id="zona-efectivo" hidden>
+            <p class="soft" style="margin:0 0 10px">¿Con cuánto paga el cliente?</p>
+            <div class="billetes" id="billetes"></div>
+            <div class="cambio-caja" id="caja-cambio" hidden style="margin-top:14px">
+              <span class="palabra-total">SU CAMBIO</span>
+              <span class="cifra-total num" id="cifra-cambio">$0.00</span>
+            </div>
+          </div>
+          <div id="zona-tarjeta" hidden>
+            <div class="msj warn"><strong>Acerque o inserte la tarjeta en la terminal.</strong>La terminal cobra el total exacto; aquí no se teclea nada.</div>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap">
+            <button class="btn btn-coral" id="btn-confirmar" onclick="confirmarPago()" hidden>Confirmar pago</button>
+            <button class="btn btn-suave" onclick="volverAVenta()">Regresar</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="zona-listo" hidden>
+        <div class="pago-panel">
+          <div class="msj ok"><strong>Pago recibido.</strong>Ticket enviado a impresión. La vitrina ya descontó las piezas.</div>
+          <div class="ticket-zona">
+            <div class="ticket" id="ticket"></div>
+          </div>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center">
+            <button class="btn btn-coral" onclick="nuevaVenta()">Siguiente cliente</button>
+            <button class="btn btn-linea" onclick="verTab('vitrina')">Ver la vitrina descontada</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nota-viva" style="margin-top:20px">
+      <strong>Regla de la casa:</strong> el navegador nunca manda precios. El total se calcula y se valida en el servidor, y una orden no se puede cobrar dos veces ni queriendo.
+    </div>
+  </section>
+
+  <div class="pie">
+    <span>Hojaldras Lily · Mérida, Yucatán</span>
+    <span>Demostración visual · Colores y tipografía del Manual de Identidad v1.0</span>
+  </div>
+</main>
+
+<script>
+  /* ============================================================
+     Datos de demostración. En el sistema real esto vive en la
+     base de datos; aquí alcanza para tocar y entender.
+     ============================================================ */
+  var FONDOS = { crema: '#F8EDD5', rosa: '#F6D8CD', lila: '#F0E4EF' };
+
+  var PRODUCTOS = [
+    { id: 'jamon',   nombre: 'Jamón y Queso',   precio: 115, cat: 'hojaldras',  fondo: 'crema', relleno: '#E5A9A0', vitrina: 12 },
+    { id: 'guayaba', nombre: 'Guayaba',          precio: 115, cat: 'hojaldras',  fondo: 'rosa',  relleno: '#C0544A', vitrina: 8  },
+    { id: 'nutella', nombre: 'Nutella y Nuez',   precio: 125, cat: 'hojaldras',  fondo: 'lila',  relleno: '#6B4A33', vitrina: 3  },
+    { id: 'ceviche', nombre: 'Ceviche',          precio: 140, cat: 'hojaldras',  fondo: 'crema', relleno: '#D8C9A8', vitrina: 0  },
+    { id: 'lomo',    nombre: 'Pastelito de Lomo',precio: 140, cat: 'bocadillos', fondo: 'lila',  relleno: '#B08360', vitrina: 10 },
+    { id: 'datil',   nombre: 'Dátil y Queso',    precio: 125, cat: 'bocadillos', fondo: 'rosa',  relleno: '#8A5A3B', vitrina: 6  },
+    { id: 'cafe',    nombre: 'Café de olla',     precio: 35,  cat: 'bebidas',    fondo: 'crema', relleno: '#5C4433', vitrina: 40, bebida: true },
+    { id: 'agua',    nombre: 'Agua de horchata', precio: 30,  cat: 'bebidas',    fondo: 'lila',  relleno: '#EFE6D8', vitrina: 40, bebida: true }
+  ];
+
+  var CATEGORIAS = [
+    { id: 'hojaldras',  nombre: 'Hojaldras'  },
+    { id: 'bocadillos', nombre: 'Bocadillos' },
+    { id: 'bebidas',    nombre: 'Bebidas'    }
+  ];
+
+  var catActiva = 'hojaldras';
+  var orden = {};            /* id -> cantidad */
+  var folio = 248;
+  var metodoPago = null;
+  var pagoCon = 0;
+  var guayabaVendidasHoy = 0;
+  var corteAjuste = 0;       /* diferencia que el usuario marca al contar */
+
+  function money(n) { return '$' + n.toFixed(2); }
+
+  /* -- Ilustraciones planas (el manual prohíbe emojis y fotos con filtro) -- */
+  function svgHojaldra(relleno, fondo) {
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%" role="img" aria-hidden="true">' +
+      '<rect width="100" height="100" fill="' + fondo + '"/>' +
+      '<rect x="16" y="16" width="68" height="68" rx="10" fill="' + relleno + '"/>' +
+      '<rect x="18" y="18" width="30" height="30" rx="7" fill="#DBA05F"/>' +
+      '<rect x="52" y="18" width="30" height="30" rx="7" fill="#E4B172"/>' +
+      '<rect x="18" y="52" width="30" height="30" rx="7" fill="#E4B172"/>' +
+      '<rect x="52" y="52" width="30" height="30" rx="7" fill="#DBA05F"/>' +
+      '<circle cx="33" cy="33" r="2.4" fill="#F3D9A8"/><circle cx="67" cy="65" r="2.4" fill="#F3D9A8"/>' +
+      '<circle cx="64" cy="30" r="1.8" fill="#F3D9A8"/><circle cx="30" cy="68" r="1.8" fill="#F3D9A8"/>' +
+      '</svg>';
+  }
+  function svgBebida(liquido, fondo) {
+    return '<svg viewBox="0 0 100 100" width="100%" height="100%" role="img" aria-hidden="true">' +
+      '<rect width="100" height="100" fill="' + fondo + '"/>' +
+      '<path d="M28 30 h44 l-5 50 a6 6 0 0 1 -6 5 h-22 a6 6 0 0 1 -6 -5 z" fill="#FFFFFF"/>' +
+      '<path d="M31 40 h38 l-3.4 34 a5 5 0 0 1 -5 4.5 h-21.2 a5 5 0 0 1 -5 -4.5 z" fill="' + liquido + '"/>' +
+      '<rect x="24" y="24" width="52" height="8" rx="4" fill="#DBA05F"/>' +
+      '</svg>';
+  }
+  function fotoDe(p) {
+    var fondo = FONDOS[p.fondo];
+    return p.bebida ? svgBebida(p.relleno, fondo) : svgHojaldra(p.relleno, fondo);
+  }
+
+  /* -- Pestañas ---------------------------------------------------------- */
+  function verTab(cual) {
+    ['idea', 'vitrina', 'kiosko'].forEach(function (t) {
+      document.getElementById('panel-' + t).hidden = (t !== cual);
+      document.getElementById('tab-' + t).setAttribute('aria-selected', t === cual ? 'true' : 'false');
+    });
+    window.scrollTo({ top: 0 });
+    if (cual === 'vitrina') { pintarVitrina(); pintarCorte(); }
+    if (cual === 'kiosko') { pintarKiosko(); }
+  }
+
+  /* -- Estado de cada producto ------------------------------------------- */
+  function estadoDe(p) {
+    if (p.vitrina <= 0) return { clase: 'fuera', texto: 'Se acabó. El kiosko ya no la vende.' };
+    if (p.vitrina <= 3) return { clase: 'warn', texto: 'Quedan ' + p.vitrina + '. Avise al horno.' };
+    return { clase: 'ok', texto: 'Alcanza para el día.' };
+  }
+
+  /* -- Vitrina (conteo de la mañana) ------------------------------------- */
+  function pintarVitrina() {
+    var cont = document.getElementById('lista-vitrina');
+    var html = '';
+    PRODUCTOS.filter(function (p) { return !p.bebida; }).forEach(function (p) {
+      var e = estadoDe(p);
+      html +=
+        '<div class="fila-prod">' +
+          '<div class="foto">' + fotoDe(p) + '</div>' +
+          '<div class="datos">' +
+            '<span class="nombre">' + p.nombre + '</span>' +
+            '<span class="estado ' + e.clase + '"><span class="punto-color"></span>' + e.texto + '</span>' +
+          '</div>' +
+          '<div class="contador">' +
+            '<button type="button" onclick="ajustarVitrina(\'' + p.id + '\',-1)" aria-label="Una pieza menos de ' + p.nombre + '"' + (p.vitrina <= 0 ? ' disabled' : '') + '>&#8722;</button>' +
+            '<span class="cifra num" aria-live="polite">' + p.vitrina + '</span>' +
+            '<button type="button" onclick="ajustarVitrina(\'' + p.id + '\',1)" aria-label="Una pieza más de ' + p.nombre + '">+</button>' +
+          '</div>' +
+        '</div>';
+    });
+    cont.innerHTML = html;
+  }
+
+  function ajustarVitrina(id, delta) {
+    var p = PRODUCTOS.find(function (x) { return x.id === id; });
+    p.vitrina = Math.max(0, p.vitrina + delta);
+    pintarVitrina();
+    pintarCorte();
+  }
+
+  /* -- Corte de la tarde -------------------------------------------------- */
+  function ajustarConteo(delta) { corteAjuste += delta; pintarCorte(); }
+
+  function pintarCorte() {
+    var p = PRODUCTOS.find(function (x) { return x.id === 'guayaba'; });
+    var sistema = p.vitrina;
+    var contado = Math.max(0, sistema + corteAjuste);
+    corteAjuste = contado - sistema;
+    document.getElementById('corte-sistema').textContent = sistema;
+    document.getElementById('corte-contado').textContent = contado;
+    var v = document.getElementById('corte-veredicto');
+    if (contado === sistema) {
+      v.className = 'veredicto ok';
+      v.textContent = 'Cuadra perfecto. Buenas noches.';
+    } else if (contado > sistema) {
+      v.className = 'veredicto warn';
+      v.textContent = 'Sobran ' + (contado - sistema) + '. ¿Se anotó de menos en la mañana?';
+    } else {
+      v.className = 'veredicto fuera';
+      v.textContent = 'Faltan ' + (sistema - contado) + '. Hay que revisar antes de cerrar.';
+    }
+  }
+
+  /* -- Kiosko: catálogo y orden ------------------------------------------ */
+  function pintarKiosko() {
+    var cats = document.getElementById('cats');
+    cats.innerHTML = CATEGORIAS.map(function (c) {
+      return '<button role="tab" aria-selected="' + (c.id === catActiva) + '" onclick="verCat(\'' + c.id + '\')">' + c.nombre + '</button>';
+    }).join('');
+
+    var grid = document.getElementById('grid-prod');
+    grid.innerHTML = PRODUCTOS.filter(function (p) { return p.cat === catActiva; }).map(function (p) {
+      var enOrden = orden[p.id] || 0;
+      var agotado = p.vitrina - enOrden <= 0;
+      var quedan = p.vitrina - enOrden;
+      var extra = '';
+      if (agotado) extra = '<span class="sello-agotado">Agotado</span>';
+      else if (!p.bebida && quedan <= 3) extra = '<span class="pocas-aviso">Quedan ' + quedan + ' piezas</span>';
+      return '<button type="button" class="card-prod' + (agotado ? ' agotado' : '') + '"' +
+        (agotado ? ' disabled aria-disabled="true"' : '') +
+        ' onclick="agregar(\'' + p.id + '\')" aria-label="Agregar ' + p.nombre + ', ' + money(p.precio) + '">' +
+        (enOrden > 0 ? '<span class="en-orden num" aria-hidden="true">' + enOrden + '</span>' : '') +
+        '<span class="foto">' + fotoDe(p) + '</span>' +
+        '<span class="nombre">' + p.nombre + '</span>' +
+        '<span class="precio num">' + money(p.precio) + '</span>' +
+        extra +
+        '</button>';
+    }).join('');
+
+    pintarOrden();
+  }
+
+  function verCat(id) { catActiva = id; pintarKiosko(); }
+
+  function agregar(id) {
+    var p = PRODUCTOS.find(function (x) { return x.id === id; });
+    var enOrden = orden[id] || 0;
+    if (p.vitrina - enOrden <= 0) return;
+    orden[id] = enOrden + 1;
+    pintarKiosko();
+  }
+
+  function quitar(id) {
+    if (!orden[id]) return;
+    orden[id] -= 1;
+    if (orden[id] === 0) delete orden[id];
+    pintarKiosko();
+  }
+
+  function totalOrden() {
+    return Object.keys(orden).reduce(function (s, id) {
+      var p = PRODUCTOS.find(function (x) { return x.id === id; });
+      return s + p.precio * orden[id];
+    }, 0);
+  }
+
+  function pintarOrden() {
+    var zona = document.getElementById('orden-lineas');
+    var ids = Object.keys(orden);
+    if (ids.length === 0) {
+      zona.innerHTML = '<p class="orden-vacia">Toque un producto para empezar la orden.</p>';
+    } else {
+      zona.innerHTML = ids.map(function (id) {
+        var p = PRODUCTOS.find(function (x) { return x.id === id; });
+        return '<div class="linea">' +
+          '<span>' + orden[id] + ' × ' + p.nombre + '</span>' +
+          '<span class="num">' + money(p.precio * orden[id]) + '</span>' +
+          '<button type="button" class="quitar" onclick="quitar(\'' + id + '\')" aria-label="Quitar una pieza de ' + p.nombre + '">&#8722;</button>' +
+          '</div>';
+      }).join('');
+    }
+    var total = totalOrden();
+    var iva = total - total / 1.16;
+    document.getElementById('t-subtotal').textContent = money(total);
+    document.getElementById('t-iva').textContent = money(iva);
+    document.getElementById('t-total').textContent = money(total);
+    document.getElementById('folio').textContent = '#' + folio;
+    document.getElementById('btn-cobrar').disabled = total === 0;
+  }
+
+  function vaciarOrden() { orden = {}; pintarKiosko(); }
+
+  /* -- Kiosko: cobro ------------------------------------------------------ */
+  function irACobro() {
+    metodoPago = null; pagoCon = 0;
+    document.getElementById('zona-venta').hidden = true;
+    document.getElementById('zona-pago').hidden = false;
+    document.getElementById('zona-listo').hidden = true;
+    document.getElementById('pago-total').textContent = money(totalOrden());
+    document.getElementById('zona-efectivo').hidden = true;
+    document.getElementById('zona-tarjeta').hidden = true;
+    document.getElementById('caja-cambio').hidden = true;
+    document.getElementById('btn-confirmar').hidden = true;
+    document.getElementById('btn-efectivo').className = 'btn btn-linea';
+    document.getElementById('btn-tarjeta').className = 'btn btn-linea';
+  }
+
+  function elegirPago(m) {
+    metodoPago = m; pagoCon = 0;
+    document.getElementById('btn-efectivo').className = m === 'efectivo' ? 'btn btn-coral' : 'btn btn-linea';
+    document.getElementById('btn-tarjeta').className = m === 'tarjeta' ? 'btn btn-coral' : 'btn btn-linea';
+    document.getElementById('zona-efectivo').hidden = m !== 'efectivo';
+    document.getElementById('zona-tarjeta').hidden = m !== 'tarjeta';
+    document.getElementById('caja-cambio').hidden = true;
+    document.getElementById('btn-confirmar').hidden = m !== 'tarjeta';
+    if (m === 'efectivo') pintarBilletes();
+  }
+
+  function pintarBilletes() {
+    var total = totalOrden();
+    var opciones = [total, 100, 200, 500, 1000]
+      .filter(function (v, i, arr) { return v >= total && arr.indexOf(v) === i; });
+    document.getElementById('billetes').innerHTML = opciones.map(function (v, i) {
+      var etiqueta = (i === 0 && v === total) ? 'Pago exacto' : money(v).replace('.00', '');
+      return '<button type="button" class="btn btn-suave num" onclick="pagarCon(' + v + ')">' + etiqueta + '</button>';
+    }).join('');
+  }
+
+  function pagarCon(v) {
+    pagoCon = v;
+    var cambio = v - totalOrden();
+    document.getElementById('caja-cambio').hidden = false;
+    document.getElementById('cifra-cambio').textContent = money(cambio);
+    document.getElementById('btn-confirmar').hidden = false;
+  }
+
+  function volverAVenta() {
+    document.getElementById('zona-venta').hidden = false;
+    document.getElementById('zona-pago').hidden = true;
+    document.getElementById('zona-listo').hidden = true;
+  }
+
+  function confirmarPago() {
+    var total = totalOrden();
+    var lineas = Object.keys(orden).map(function (id) {
+      var p = PRODUCTOS.find(function (x) { return x.id === id; });
+      return { nombre: p.nombre, cant: orden[id], importe: p.precio * orden[id] };
+    });
+
+    /* Descontar de vitrina: esto es lo que en el sistema real hace el servidor. */
+    Object.keys(orden).forEach(function (id) {
+      var p = PRODUCTOS.find(function (x) { return x.id === id; });
+      p.vitrina = Math.max(0, p.vitrina - orden[id]);
+    });
+
+    var iva = total - total / 1.16;
+    var t = '';
+    t += '<div class="t-logo"><span class="palabra">Hojaldras</span><span class="script">Lily</span></div>';
+    t += '<div class="centro">Calle 29-A #183 por Av. 22<br>Col. Miguel Alemán, Mérida, Yuc.<br>999 926 71 51</div>';
+    t += '<hr class="sep"><div class="fila-t"><span>Orden ' + folio + '</span><span>Caja 1 · Rosa M.</span></div><hr class="sep">';
+    lineas.forEach(function (l) {
+      t += '<div class="fila-t"><span>' + l.cant + ' ' + l.nombre + '</span><span>' + l.importe.toFixed(2) + '</span></div>';
+    });
+    t += '<hr class="sep">';
+    t += '<div class="fila-t"><span>Subtotal</span><span>' + (total - iva).toFixed(2) + '</span></div>';
+    t += '<div class="fila-t"><span>IVA 16%</span><span>' + iva.toFixed(2) + '</span></div>';
+    t += '<div class="fila-t grande-t"><span>TOTAL</span><span>' + total.toFixed(2) + '</span></div>';
+    if (metodoPago === 'efectivo') {
+      t += '<div class="fila-t"><span>Efectivo</span><span>' + pagoCon.toFixed(2) + '</span></div>';
+      t += '<div class="fila-t"><span>Cambio</span><span>' + (pagoCon - total).toFixed(2) + '</span></div>';
+    } else {
+      t += '<div class="fila-t"><span>Tarjeta</span><span>' + total.toFixed(2) + '</span></div>';
+    }
+    t += '<hr class="sep"><div class="centro">Gracias por su compra.<br>Consérvelo en refrigeración.<br>Pedidos al 999 926 71 51</div>';
+    document.getElementById('ticket').innerHTML = t;
+
+    folio += 1;
+    orden = {};
+    document.getElementById('zona-venta').hidden = true;
+    document.getElementById('zona-pago').hidden = true;
+    document.getElementById('zona-listo').hidden = false;
+  }
+
+  function nuevaVenta() {
+    document.getElementById('zona-venta').hidden = false;
+    document.getElementById('zona-pago').hidden = true;
+    document.getElementById('zona-listo').hidden = true;
+    pintarKiosko();
+  }
+
+  /* Arranque */
+  pintarVitrina();
+  pintarCorte();
+  pintarKiosko();
+</script>
