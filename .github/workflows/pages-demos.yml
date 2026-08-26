@@ -1,12 +1,20 @@
-# Mantiene GitHub Pages al día: cada cambio en demo/ se publica a la rama
-# gh-pages (Pages sirve esa rama en modo clásico).
+# Publica en GitHub Pages las apps del POS ya compiladas, para poder ENSENAR
+# el sistema funcionando desde cualquier navegador:
 #   https://eleevatemx.github.io/hojaldraslily/
+#
+# Ojo: esto es la vitrina de demostracion. La tienda de verdad va a Cloudflare
+# Pages con sus dominios propios (ver deploy-cloudflare.yml).
 name: Demos a GitHub Pages
 
 on:
   push:
     branches: [claude/pos-venta-inventario-visual-u8l1rj, main]
-    paths: ['demo/**', '.github/workflows/pages-demos.yml']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'demo/**'
+      - 'scripts/publicar-demo-pages.sh'
+      - '.github/workflows/pages-demos.yml'
   workflow_dispatch:
 
 permissions:
@@ -22,10 +30,30 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Publicar demo/ a gh-pages
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install deps
+        run: pnpm install --frozen-lockfile
+
+      # Compila las 9 apps con el base path del subdirectorio de Pages.
+      # La URL y la llave publicable salen de los .env.example (son publicas).
+      - name: Compilar las apps
+        run: bash scripts/publicar-demo-pages.sh
+
+      - name: Publicar a gh-pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./demo
           publish_branch: gh-pages
-          commit_message: 'Actualizar demos en Pages'
+          commit_message: 'Actualizar la vitrina de demostracion'

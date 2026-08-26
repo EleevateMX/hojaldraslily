@@ -2,50 +2,156 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Demos · Hojaldras Lily POS</title>
+<title>Sistema Hojaldras Lily</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
   :root{
     --coral:#C4463C; --coral-dark:#A2372F; --bg:#FFFDF8; --crema:#F8EDD5;
     --rosa:#F6D8CD; --lila:#F0E4EF; --borde:#EDE3D2; --texto:#2E2420; --suave:#6B5F58;
+    --ok:#4E7A56; --dorado:#C98A4B;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--texto);font-family:"Karla","Segoe UI",sans-serif;font-size:17px;line-height:1.55}
-  main{max-width:860px;margin:0 auto;padding:56px 20px 96px}
+  html{background:var(--bg)}
+  body{margin:0;background:var(--bg);color:var(--texto);
+       font-family:"Karla","Segoe UI",sans-serif;font-size:17px;line-height:1.55}
+  a{color:inherit}
+  main{max-width:1000px;margin:0 auto;padding:52px 20px 100px}
+
   .logo{display:flex;align-items:baseline;color:var(--coral);justify-content:center}
-  .logo .palabra{font-family:"Jost",sans-serif;font-weight:300;font-size:44px}
-  .logo .script{font-family:"Yellowtail",cursive;font-size:50px;margin-left:-8px;transform:translateY(10px)}
-  p.lead{text-align:center;color:var(--suave);max-width:34em;margin:14px auto 48px;text-wrap:balance}
-  .tarjetas{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
-  a.tarjeta{display:flex;flex-direction:column;gap:10px;text-decoration:none;color:var(--texto);
-    border:1px solid var(--borde);border-radius:18px;padding:26px 24px;background:#fff}
-  a.tarjeta:hover{border-color:var(--coral)}
-  .chip{font-family:"Jost",sans-serif;font-weight:500;font-size:11px;letter-spacing:.16em;
-    text-transform:uppercase;color:var(--suave)}
-  a.tarjeta h2{font-family:"Jost",sans-serif;font-weight:500;font-size:24px;margin:0;line-height:1.2}
-  a.tarjeta p{margin:0;font-size:15.5px;color:var(--suave)}
-  .boton{align-self:flex-start;margin-top:8px;background:var(--coral);color:#fff;font-weight:700;
-    border-radius:12px;padding:12px 22px}
-  .tarjeta.lily{background:var(--crema)}
-  .tarjeta.shk{background:var(--lila)}
-  footer{margin-top:64px;text-align:center;font-size:13.5px;color:var(--suave)}
+  .logo .palabra{font-family:"Jost",sans-serif;font-weight:300;font-size:clamp(34px,6vw,46px)}
+  .logo .script{font-family:"Yellowtail",cursive;font-size:clamp(38px,7vw,52px);
+                margin-left:-8px;transform:translateY(10px)}
+  p.lead{text-align:center;color:var(--suave);max-width:36em;margin:16px auto 8px;text-wrap:balance}
+
+  .estado{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:26px 0 46px}
+  .chip{font-family:"DM Mono",monospace;font-size:12.5px;letter-spacing:.04em;
+        border:1px solid var(--borde);border-radius:999px;padding:6px 14px;background:#fff}
+  .chip b{color:var(--ok);font-weight:500}
+
+  .eyebrow{font-family:"Jost",sans-serif;font-weight:500;font-size:12px;letter-spacing:.16em;
+           text-transform:uppercase;color:var(--coral);margin:44px 0 4px}
+  .eyebrow-nota{color:var(--suave);font-size:14.5px;margin:0 0 18px}
+
+  .rejilla{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+  a.app{display:flex;flex-direction:column;gap:7px;text-decoration:none;
+        border:1px solid var(--borde);border-radius:16px;padding:20px 20px 22px;background:#fff}
+  a.app:hover{border-color:var(--coral)}
+  a.app:focus-visible{outline:3px solid var(--coral);outline-offset:2px}
+  a.app h3{font-family:"Jost",sans-serif;font-weight:500;font-size:20px;margin:0;line-height:1.2}
+  a.app p{margin:0;font-size:14.5px;color:var(--suave)}
+  a.app .quien{font-family:"DM Mono",monospace;font-size:11.5px;letter-spacing:.08em;
+               text-transform:uppercase;color:var(--suave)}
+  a.app .pin{font-family:"DM Mono",monospace;font-size:12.5px;color:var(--coral-dark);
+             background:var(--rosa);border-radius:6px;padding:2px 8px;align-self:flex-start;margin-top:2px}
+  .app.crema{background:var(--crema)}
+  .app.lila{background:var(--lila)}
+
+  .aviso{margin-top:44px;border-radius:14px;background:var(--crema);
+         border-left:4px solid var(--dorado);padding:18px 22px;font-size:15.5px}
+  .aviso b{font-weight:700}
+  .aviso ul{margin:8px 0 0;padding-left:20px}
+  .aviso li{margin:4px 0}
+
+  footer{margin-top:50px;text-align:center;font-size:13.5px;color:var(--suave)}
 </style>
 </head>
 <body>
 <main>
-  <div class="logo" aria-label="Hojaldras Lily"><span class="palabra">Hojaldras</span><span class="script">Lily</span></div>
-  <p class="lead">Demostraciones del punto de venta. Todo funciona al tacto: vitrina que se descuenta sola, kiosko de cobro en tres toques y ticket como el de la impresora.</p>
-  <div class="tarjetas">
-    <a class="tarjeta lily" href="hojaldras-lily-demo.html">
-      <span class="chip">Panadería · Mérida</span>
-      <h2>Hojaldras Lily</h2>
-      <p>La idea para venderlo, la vitrina explicada paso a paso y el kiosko cobrando en efectivo o tarjeta.</p>
-      <span class="boton">Abrir demo</span>
+  <div class="logo" aria-label="Hojaldras Lily">
+    <span class="palabra">Hojaldras</span><span class="script">Lily</span>
+  </div>
+  <p class="lead">El punto de venta completo, corriendo de verdad contra la base del negocio. Cada app se abre y opera; lo que se pida en el kiosko llega a las pantallas de estación y al corte de caja.</p>
+
+  <div class="estado">
+    <span class="chip"><b>✔</b> 132 migraciones aplicadas</span>
+    <span class="chip"><b>✔</b> venta de punta a punta probada</span>
+    <span class="chip"><b>✔</b> 29 productos a la venta</span>
+  </div>
+
+  <p class="eyebrow">La barra</p>
+  <p class="eyebrow-nota">Lo que ve el cliente y lo que toca la caja.</p>
+  <div class="rejilla">
+    <a class="app crema" href="app/kiosko/">
+      <span class="quien">Cliente y cajero</span>
+      <h3>Kiosko</h3>
+      <p>Pedir y cobrar. Cinco toques a la hojaldra abren el turno.</p>
+    </a>
+    <a class="app crema" href="app/pos/">
+      <span class="quien">Caja</span>
+      <h3>POS</h3>
+      <p>Abrir turno, cobros manuales y corte de caja.</p>
+      <span class="pin">PIN de caja: 1357</span>
+    </a>
+    <a class="app" href="app/cliente-display/">
+      <span class="quien">TV del local</span>
+      <h3>Pantalla de folios</h3>
+      <p>Qué se está preparando y qué ya está listo.</p>
     </a>
   </div>
-  <footer>Hojaldras Lily · Mérida, Yucatán — El sistema completo vive en este mismo repositorio.</footer>
+
+  <p class="eyebrow">Las estaciones</p>
+  <p class="eyebrow-nota">Las comandas caen aquí solas cuando se cobra: las hojaldras a cocina, el café a la barra.</p>
+  <div class="rejilla">
+    <a class="app" href="app/cocina-alimentos/">
+      <span class="quien">Cocina</span>
+      <h3>Estación de cocina</h3>
+      <p>Hojaldras, bocadillos y pan.</p>
+    </a>
+    <a class="app" href="app/cocina-bebidas/">
+      <span class="quien">Barra</span>
+      <h3>Estación de barra</h3>
+      <p>Cafés y bebidas.</p>
+    </a>
+  </div>
+
+  <p class="eyebrow">La trastienda</p>
+  <p class="eyebrow-nota">Donde se decide qué se vende y a cuánto.</p>
+  <div class="rejilla">
+    <a class="app lila" href="app/admin/">
+      <span class="quien">Gerencia</span>
+      <h3>Admin</h3>
+      <p>Ventas, catálogo, clientes, panel en vivo y diagnóstico.</p>
+      <span class="pin">PIN de gerencia: 2468</span>
+    </a>
+    <a class="app lila" href="app/costos/">
+      <span class="quien">Quien cuesta el menú</span>
+      <h3>Costeos</h3>
+      <p>La fuente de la verdad del catálogo: insumos, recetas y precios.</p>
+      <span class="pin">Clave: 1234</span>
+    </a>
+    <a class="app" href="app/web/">
+      <span class="quien">El público</span>
+      <h3>Página del negocio</h3>
+      <p>Menú vivo, sacado de la misma base que la caja.</p>
+    </a>
+    <a class="app" href="app/cliente-pwa/">
+      <span class="quien">Celular del cliente</span>
+      <h3>Rewards</h3>
+      <p>Tarjeta de lealtad, monedero y sellos.</p>
+    </a>
+  </div>
+
+  <p class="eyebrow">Cómo se vendió la idea</p>
+  <p class="eyebrow-nota">La demostración con la que se explica el sistema sin entrar a las apps.</p>
+  <div class="rejilla">
+    <a class="app" href="hojaldras-lily-demo.html">
+      <h3>Demostración de venta</h3>
+      <p>La vitrina que se cuenta sola y el kiosko cobrando, paso a paso.</p>
+    </a>
+  </div>
+
+  <div class="aviso">
+    <b>Esto es una demostración, todavía no la tienda.</b> Antes de abrir hay que:
+    <ul>
+      <li><b>Cambiar los PIN</b> de esta página: aquí están a la vista para poder enseñar el sistema.</li>
+      <li><b>Mover las apps a Cloudflare Pages</b> con los dominios propios (`caja.hojaldraslily.com`, etc.). Aquí están en una URL pública.</li>
+      <li><b>Conectar la terminal de cobro</b> con tarjeta y capturar la lista de precios real en Costeos.</li>
+    </ul>
+  </div>
+
+  <footer>Hojaldras Lily · Calle 29-A #183 por Av. 22, Col. Miguel Alemán, Mérida, Yucatán</footer>
 </main>
 </body>
 </html>

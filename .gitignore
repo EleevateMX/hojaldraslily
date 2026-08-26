@@ -24,3 +24,6 @@ respaldo-costosshake-*.json
 # perderlo en el siguiente `cap sync`, sin ningun error que lo delate.
 apps/cliente-pwa/ios/
 apps/cliente-pwa/android/
+
+# Artefactos de build publicados en GitHub Pages (los compila el workflow)
+demo/app/
