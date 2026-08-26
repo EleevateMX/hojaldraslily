@@ -50,7 +50,7 @@ export function CorteCaja() {
   if (cortado && resumen) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-sa-green-deep text-sa-cream gap-6 px-6">
-        <img src="/milo-transparent.png" alt="Hojaldra de la casa" className="w-48 h-48 drop-shadow-2xl" />
+        <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="w-48 h-48 drop-shadow-2xl" />
         <div className="text-center">
           <h1 className="font-display text-5xl text-sa-cream leading-tight">Buen turno, campeón</h1>
           <p className="font-mono text-sm uppercase tracking-widest text-sa-cream/60 mt-3">Total cobrado</p>

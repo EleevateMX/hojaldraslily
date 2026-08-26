@@ -88,7 +88,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
       <div className="flex-1 overflow-y-auto">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-sa-green-ink/40 gap-3 pb-10 px-6">
-            <img src="/milo-transparent.png" alt="Hojaldra de la casa" className="w-32 h-32 opacity-80" />
+            <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="w-32 h-32 opacity-80" />
             <p className="font-display text-lg text-sa-green-ink/60 text-center leading-tight">
               Aún no hay nada en la orden
             </p>

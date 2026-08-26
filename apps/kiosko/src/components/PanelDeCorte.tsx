@@ -16,7 +16,7 @@ interface Props {
 type Fase = 'pin' | 'cargando' | 'abrir' | 'cerrar' | 'listo'
 
 /**
- * El pasadizo secreto del kiosko: cinco toques a Milo abren el corte de caja.
+ * El pasadizo secreto del kiosko: cinco toques a la hojaldra abren el corte de caja.
  *
  * Existe porque el turno arranca y cambia frente a ESTA pantalla, no frente
  * al POS. Antes había que ir a la otra ventana solo para abrir la caja;
@@ -24,7 +24,7 @@ type Fase = 'pin' | 'cargando' | 'abrir' | 'cerrar' | 'listo'
  * PIN, y la apertura queda registrada a su nombre. Sin botón visible: el
  * cliente que usa el kiosko jamás debe descubrir que esto está ahí.
  */
-export function CorteMilo({ abierto, onCerrar }: Props) {
+export function PanelDeCorte({ abierto, onCerrar }: Props) {
   const [fase, setFase] = useState<Fase>('cargando')
   const [pin, setPin] = useState('')
   const [verificando, setVerificando] = useState(false)
@@ -318,7 +318,7 @@ export function CorteMilo({ abierto, onCerrar }: Props) {
           {/* ---- Resultado ---- */}
           {fase === 'listo' && (
             <div className="flex flex-col items-center text-center">
-              <img src="/milo-transparent.png" alt="" className="h-28 drop-shadow-xl" />
+              <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="" className="h-28 drop-shadow-xl" />
               {resultado === 'abierto' ? (
                 <>
                   <h3 className="font-display text-3xl text-sa-green-ink mt-3">Caja abierta</h3>

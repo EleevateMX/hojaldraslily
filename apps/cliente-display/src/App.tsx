@@ -1,4 +1,4 @@
-import milo from '@shake/brand/milo.png'
+import hojaldra from '@shake/brand/hojaldra.png'
 import { useEffect, useMemo, useState } from 'react'
 import { sb } from './lib/sb'
 import { listarPedidosActivos, suscribirPedidosCocina } from '@shake/supabase'
@@ -90,7 +90,7 @@ export default function App() {
       {/* Header */}
       <header className="relative flex-shrink-0 flex items-center justify-between gap-6 px-10 md:px-14 py-6 border-b-2 border-sa-cream/15">
         <div className="flex items-center gap-5">
-          <img src={milo} alt="Hojaldra de la casa" className="h-16 w-auto drop-shadow-[0_10px_24px_rgba(0,0,0,0.35)]" />
+          <img src={hojaldra} alt="Hojaldra de la casa" className="h-16 w-auto drop-shadow-[0_10px_24px_rgba(0,0,0,0.35)]" />
           <h1 className="font-display text-[clamp(28px,3.4vw,54px)] leading-none text-sa-cream">
             Hojaldras Lily
             <span className="block font-body font-medium text-sa-mint text-[clamp(13px,1vw,18px)] tracking-[0.25em] uppercase mt-2">

@@ -4,7 +4,7 @@ import { mxn } from '@shake/utils'
 import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import { ModalPersonalizar } from './ModalPersonalizar'
-import { nombreParaOrdenar } from '@shake/supabase'
+import { nombreParaOrdenar, partirNombreDeVenta } from '@shake/supabase'
 
 interface Props {
   productos: ProductoVenta[]
@@ -160,24 +160,20 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                 onClick={() => tocar(p)}
                 className="flex flex-col items-center p-3 bg-white rounded-sa shadow-sa-sm border border-sa-green-ink/5 hover:border-sa-green/30 hover:-translate-y-0.5 active:scale-95 transition-all text-left group"
               >
-                {p.imagen_url ? (
+                {/* Sin foto la tarjeta se cierra, igual que en el kiosko:
+                    el cajero busca por sabor, no por dibujo, y un hueco de
+                    relleno por producto solo estorba la busqueda. */}
+                {p.imagen_url && (
                   <img src={p.imagen_url} alt={nombreParaOrdenar(p.nombre)} className="w-16 h-16 rounded-sa object-cover mb-2" />
-                ) : (
-                  /* Sin foto: Milo, igual que en el kiosko — mismo lenguaje en
-                     las dos pantallas, y de paso se ve de un vistazo a qué
-                     productos les falta subir la imagen. */
-                  <div className="w-16 h-16 rounded-sa bg-sa-cream-soft border border-sa-green-ink/5 flex items-center justify-center mb-2">
-                    <img src="/milo-transparent.png" alt="" className="h-12 opacity-80" />
-                  </div>
-                )}
-                {!p.imagen_url && (
-                  <p className="font-mono text-[9px] uppercase tracking-wide text-sa-green-ink/35 -mt-1 mb-1">
-                    Se lo comió Milo
-                  </p>
                 )}
                 <p className="font-display text-sm text-sa-green-ink text-center leading-tight line-clamp-2 w-full">
-                  {nombreParaOrdenar(p.nombre)}
+                  {partirNombreDeVenta(p.nombre).sabor}
                 </p>
+                {partirNombreDeVenta(p.nombre).medida && (
+                  <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/55 text-center mt-1">
+                    {partirNombreDeVenta(p.nombre).medida}
+                  </p>
+                )}
                 {/* Los ingredientes del shake, para que el cajero conteste
                     "¿qué trae?" sin salirse de la pantalla ni preguntar. */}
                 {p.descripcion && (

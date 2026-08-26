@@ -6,9 +6,10 @@
   "exports": {
     "./tailwind-preset": "./tailwind-preset.js",
     "./tokens.css": "./tokens.css",
-    "./milo.png": "./assets/milo-transparent.png",
-    "./milo-solid.png": "./assets/milo.png",
-    "./logo.png": "./assets/logo.png"
+    "./hojaldra.png": "./assets/hojaldra.png",
+    "./hojaldra-solida.png": "./assets/hojaldra-solida.png",
+    "./logo.png": "./assets/logo.png",
+    "./logo-negativo.png": "./assets/logo-negativo.png"
   },
   "files": [
     "tailwind-preset.js",

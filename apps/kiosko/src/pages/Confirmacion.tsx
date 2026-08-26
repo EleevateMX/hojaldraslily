@@ -89,7 +89,7 @@ export function Confirmacion() {
         Hojaldras Lily
       </span>
 
-      <img src="/milo.png" alt="Hojaldra de la casa" className="h-44 w-auto drop-shadow-2xl mb-3" />
+      <img src={`${import.meta.env.BASE_URL}hojaldra-solida.png`} alt="Hojaldra de la casa" className="h-44 w-auto drop-shadow-2xl mb-3" />
 
       <h1 className="font-display text-5xl leading-none text-center text-sa-cream">
         ¡Listo, campeón!

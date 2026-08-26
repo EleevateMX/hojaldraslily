@@ -46,7 +46,7 @@ export function Carrito() {
   if (totalItems() === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-sa-cream-paper gap-6 px-8 text-center">
-        <img src="/milo-transparent.png" alt="Hojaldra de la casa" className="h-56" />
+        <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="h-56" />
         <p className="font-display text-4xl text-sa-green-ink">
           La coctelera está vacía
         </p>
@@ -97,7 +97,7 @@ export function Carrito() {
                   />
                 ) : (
                   <div className="w-20 h-20 rounded-sa bg-sa-cream-warm flex items-center justify-center">
-                    <img src="/milo-transparent.png" alt="" className="h-16 opacity-80" />
+                    <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="" className="h-16 opacity-80" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">

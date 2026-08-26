@@ -158,11 +158,15 @@ que heredan la marca sin hacer nada.
 
 - **Jost** (display/titulares) · **Karla** (cuerpo e interfaz) · **DM
   Mono** (cifras y etiquetas chicas) · **Yellowtail** solo en el logotipo.
-- Coral `#C4463C`, coral oscuro `#A2372F`, cacao `#2E2420`, crema hojaldre
-  `#F8EDD5`, y los acentos (dorado `#C98A4B`, magenta `#C2186B`, rosa
-  `#F6D8CD`…) **uno por superficie**, nunca varios. Los nombres de los
-  tokens (`--sa-*`) se conservaron del motor original a propósito: las
-  apps los leen tal cual y solo cambiaron los valores.
+- Carmín `#D81B4A`, carmín profundo `#A8123A`, morado hojaldra `#4A3A52`
+  (**todo** el texto), crema `#FDF6E3`, y los acentos (rosa salmón
+  `#F49CAC`, dorado `#D9944B`…) **uno por superficie**, nunca varios. Los
+  valores salieron de su propia web y de sus menús impresos. Los nombres
+  de los tokens (`--sa-*`) se conservaron del motor original a propósito:
+  las apps los leen tal cual y solo cambiaron los valores.
+- **Sobre carmín pleno va `logo-negativo.png`**, no `logo.png`: el
+  logotipo en carmín se perdía contra su propio fondo. Pasa en la cabecera
+  del kiosko, en la barra lateral de Admin y en las pantallas del POS.
 
 **La regla de tamaños, tomada del kiosko**: la display se usa de **18 px
 para arriba** (títulos y cifras grandes); abajo de eso va Karla, y los
@@ -213,8 +217,9 @@ empaquetador y se desvían solas:
 | Situación | Qué hacer |
 |---|---|
 | Abrir la tienda | Nada: la PC arranca todo sola |
-| Abrir/cerrar caja o cambiar turno | **5 toques a Milo** en el kiosko → PIN |
+| Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
+| Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
@@ -264,7 +269,7 @@ empaquetador y se desvían solas:
   error: si algo se recupera con un reintento, reintenta en silencio
   (fue el rojo del login de Rewards).
 - En el kiosko, las imágenes van como fondo CSS y el menú contextual está
-  apagado: si no, mantener el dedo sobre Milo abre "buscar imagen".
+  apagado: si no, mantener el dedo sobre la hojaldra abre "buscar imagen".
 
 **Este entorno**
 
@@ -307,6 +312,21 @@ Para retomar solo Rewards en otra sesión, el mapa está en
   en el chat. El `service_role` jamás dentro de SQL (quedaría legible).
 - La llave publicable y el JWT anon **son públicos por diseño** (viven en
   el frontend). La seguridad real está en RLS y en las funciones.
+  Y por eso hay que revisar RLS de verdad: el motor original venía con
+  `for update using (true)` para el rol `public` **y** el GRANT de `anon`
+  en 17 tablas. Con las dos cosas juntas, cualquiera con la llave podía
+  `update productos set precio = 1`. Comprobado y arreglado aquí
+  (`20260826213000`): **escribir el catálogo exige `fn_rol_staff()`**.
+  Ojo con la lección: "el dinero se calcula en el servidor" era cierto
+  —`fn_crear_orden` sí recalcula— pero recalcula **desde
+  `productos.precio`**, así que alterar la tabla bastaba para que el
+  servidor cobrara $1 y todo cuadrara. La garantía valía un piso más abajo
+  de donde se creía.
+  **Sigue abierto**: `pedidos_cocina`, `cocina_items` y `caja_cortes`, que
+  el kiosko y las estaciones escriben **sin sesión**. Se cierran haciendo
+  que esas pantallas abran sesión real (ya existe `staff-login`), no
+  quitándoles el permiso: eso deja la tienda sin marcar comandas ni abrir
+  caja.
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.

@@ -1,4 +1,4 @@
-import milo from '@shake/brand/milo.png'
+import hojaldra from '@shake/brand/hojaldra.png'
 import { useEffect, useState } from 'react'
 import { sb } from './lib/sb'
 import {
@@ -184,7 +184,7 @@ export default function App() {
         <div className="flex items-center justify-between gap-6">
           <div className="flex items-center gap-4 shrink-0">
             <img
-              src={milo}
+              src={hojaldra}
               alt="Hojaldras Lily"
               className="h-14 w-auto drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)]"
             />
@@ -227,7 +227,7 @@ export default function App() {
         {pedidos.length === 0 && !error ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6 text-center">
             <img
-              src={milo}
+              src={hojaldra}
               alt="Hojaldra de la casa"
               className="w-[240px] h-auto opacity-90 drop-shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
             />

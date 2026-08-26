@@ -66,7 +66,7 @@ export function CandadoCajero({ onEntrar }: Props) {
 
   return (
     <div className="flex flex-col h-screen items-center justify-center bg-sa-green-deep text-sa-cream px-8">
-      <img src="/logo.png" alt="Hojaldras Lily" className="h-24 w-auto mb-6" />
+      <img src={`${import.meta.env.BASE_URL}logo.png`} alt="Hojaldras Lily" className="h-24 w-auto mb-6" />
       <h1 className="font-display text-3xl">Turno de caja</h1>
       <p className="font-body text-sa-cream/60 mt-2 text-center max-w-xs">
         Ingresa tu PIN para levantar pedidos desde esta pantalla.

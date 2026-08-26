@@ -1,4 +1,4 @@
-import milo from '@shake/brand/milo.png'
+import hojaldra from '@shake/brand/hojaldra.png'
 import { useEffect, useState } from 'react'
 import {
   sesionActual, usuarioActual, iniciarSesionGoogle, cerrarSesion, onCambioSesion,
@@ -126,7 +126,7 @@ export default function App() {
   if (cargando) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 px-5 bg-sa-green-deep font-body text-sa-cream/70">
-        <img src={milo} alt="" className="w-24 h-auto animate-pulse" />
+        <img src={hojaldra} alt="" className="w-24 h-auto animate-pulse" />
         <p>Cargando…</p>
       </div>
     )
@@ -208,7 +208,7 @@ function Bienvenida({ error }: { error: string | null }) {
   return (
     <div className="min-h-[100dvh] flex items-center justify-center px-5 bg-sa-green-deep font-body">
       <div className="text-center max-w-[340px] w-full">
-        <img src={milo} alt="Hojaldra de la casa" className="w-[132px] h-auto mx-auto" />
+        <img src={hojaldra} alt="Hojaldra de la casa" className="w-[132px] h-auto mx-auto" />
         <h1 className="font-display text-3xl text-sa-cream mt-3 mb-2 leading-tight">
           Hojaldras Lily Rewards
         </h1>
@@ -298,7 +298,7 @@ function Pase({
 }) {
   return (
     <section className="relative overflow-hidden rounded-sa-lg mb-3 text-sa-cream shadow-sa bg-gradient-to-br from-sa-green to-sa-green-deep">
-      <img src={milo} alt="" className="absolute -right-6 top-6 h-36 opacity-15 pointer-events-none" />
+      <img src={hojaldra} alt="" className="absolute -right-6 top-6 h-36 opacity-15 pointer-events-none" />
 
       <div className="px-5 pt-4 relative z-10 flex items-center gap-3">
         <Avatar foto={cliente.foto} nombre={cliente.nombre} tam={44} />
@@ -775,7 +775,7 @@ function Actividad({ datos }: { datos: ResumenLealtad | null }) {
   if (historial.length === 0 && movimientos.length === 0) {
     return (
       <div className="text-center py-12">
-        <img src={milo} alt="" className="h-24 mx-auto opacity-60" />
+        <img src={hojaldra} alt="" className="h-24 mx-auto opacity-60" />
         <p className="font-display text-xl text-sa-cream mt-3">Aún no hay nada por aquí</p>
         <p className="text-sm text-sa-cream/60 mt-1 max-w-[260px] mx-auto">
           En tu próxima compra, muestra tu código en caja y aquí verás tus

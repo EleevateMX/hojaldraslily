@@ -1,4 +1,4 @@
-import milo from '@shake/brand/milo.png'
+import hojaldra from '@shake/brand/hojaldra.png'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { reciboPublico, type ReciboPublico } from '@shake/supabase'
@@ -72,7 +72,7 @@ export function Recibo() {
   if (estado === 'no_existe' || !recibo) {
     return (
       <div className="min-h-[100dvh] flex flex-col items-center justify-center gap-3 px-8 bg-sa-green-deep font-body text-center">
-        <img src={milo} alt="" className="w-24 h-auto opacity-80" />
+        <img src={hojaldra} alt="" className="w-24 h-auto opacity-80" />
         <p className="font-display text-2xl text-sa-cream">No encontramos ese recibo</p>
         <p className="text-sa-cream/60 text-sm max-w-xs">
           Puede que el pago siga en proceso. Si acabas de comprar, espera un momento y recarga.
@@ -87,7 +87,7 @@ export function Recibo() {
         <div className="rounded-sa-lg overflow-hidden shadow-sa bg-sa-cream-paper text-sa-green-ink">
           {/* Encabezado del ticket */}
           <div className="bg-sa-green-deep text-sa-cream text-center px-5 pt-5 pb-4">
-            <img src={milo} alt="" className="w-16 h-auto mx-auto" />
+            <img src={hojaldra} alt="" className="w-16 h-auto mx-auto" />
             <p className="font-display text-2xl mt-1">Hojaldras Lily</p>
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana mt-1">
               Orden #{recibo.folio}

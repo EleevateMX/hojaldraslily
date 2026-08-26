@@ -1,38 +1,42 @@
 /* Hojaldras Lily — Brand Tokens
- * Valores del Manual de Identidad v1.0 (sección 08 · Sistema POS).
- * Los NOMBRES de los tokens se conservan del sistema original (sa-*):
- * las 9 apps los leen tal cual; cambiar los valores re-viste todo.
- * No editar valores aquí sin actualizar el manual de marca. */
+ * Tomados de la identidad viva del negocio: hojaldraslily.com y sus menús
+ * impresos (carmín, crema, rosa salmón y morado para el texto).
+ *
+ * Los NOMBRES de los tokens se conservan del motor original (sa-*): las 9
+ * apps los leen tal cual, así que cambiar los valores re-viste todo.
+ *
+ * Contraste verificado (WCAG): morado sobre crema 9.6:1 · blanco sobre
+ * carmín 5.0:1 · crema sobre carmín 4.7:1. El coral y el dorado son
+ * DECORATIVOS: 2.3:1, nunca texto chico encima de crema. */
 
 @import url('https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
-  /* Dúo principal — antes verde/crema, hoy coral/crema. No se reemplaza. */
-  --sa-green:       #C4463C;  /* Coral Lily · acción y marca */
-  --sa-green-deep:  #A2372F;  /* Coral oscuro · superficies plenas y presionado */
-  --sa-green-ink:   #2E2420;  /* Cacao · texto */
-  --sa-cream:       #F8EDD5;  /* Crema hojaldre */
-  --sa-cream-soft:  #FCF6EA;  /* Crema suave */
-  --sa-cream-paper: #FFFDF8;  /* Blanco harina · fondo de las apps */
-  --sa-cream-warm:  #EDE3D2;  /* Borde / crema cálida */
+  /* Dúo principal — el carmín de los botones de su web y la crema del menú */
+  --sa-green:       #D81B4A;  /* Carmín Lily · acción, cabeceras, precios */
+  --sa-green-deep:  #A8123A;  /* Carmín profundo · superficies plenas, presionado */
+  --sa-green-ink:   #4A3A52;  /* Morado hojaldra · TODO el texto */
+  --sa-cream:       #FDF6E3;  /* Crema del menú */
+  --sa-cream-soft:  #FFFBF2;  /* Crema clara */
+  --sa-cream-paper: #FFFCF5;  /* Fondo de las apps */
+  --sa-cream-warm:  #F3E3CE;  /* Borde / crema cálida */
 
-  /* Acentos de sabor — uno por superficie, nunca compiten con el coral */
-  --sa-strawberry: #C2186B;  /* Magenta vitrina · promociones */
-  --sa-banana:     #C98A4B;  /* Dorado horneado */
-  --sa-chocolate:  #5C3825;  /* Cacao profundo */
-  --sa-mango:      #D97B3F;  /* Terracota suave */
-  --sa-blueberry:  #8A6BA0;  /* Lila profundo */
+  /* Acentos — uno por superficie, nunca varios a la vez */
+  --sa-strawberry: #F49CAC;  /* Rosa salmón de las bandas del menú */
+  --sa-banana:     #D9944B;  /* Dorado horneado */
+  --sa-chocolate:  #6B4A33;  /* Cacao */
+  --sa-mango:      #E88B5A;  /* Terracota */
+  --sa-blueberry:  #8A6BA0;  /* Lila */
   --sa-mint:       #4E7A56;  /* Verde pagado · estados en verde */
-  --sa-coconut:    #F6D8CD;  /* Rosa suave */
-  --sa-coffee:     #3F2A1F;  /* Café */
+  --sa-coconut:    #FAD9CE;  /* Rosa suave */
+  --sa-coffee:     #4A3A52;  /* Café / morado */
 
   /* Líneas y sombras */
-  --sa-line:     rgba(248, 237, 213, 0.26);
-  --sa-line-ink: rgba(46, 36, 32, 0.12);
-  --sa-shadow:   0 2px 8px rgba(46, 36, 32, 0.10);
+  --sa-line:     rgba(253, 246, 227, 0.28);
+  --sa-line-ink: rgba(74, 58, 82, 0.14);
+  --sa-shadow:   0 2px 10px rgba(74, 58, 82, 0.12);
 
-  /* Tipografía — Jost para titulares, Karla para todo lo operativo.
-   * Yellowtail es exclusiva del logotipo (script), nunca texto corrido. */
+  /* Tipografía — Jost titula, Karla opera, Yellowtail solo el logotipo */
   --sa-ff-display: "Jost", "Segoe UI", system-ui, sans-serif;
   --sa-ff-body:    "Karla", "Segoe UI", system-ui, sans-serif;
   --sa-ff-mono:    "DM Mono", "JetBrains Mono", ui-monospace, monospace;
@@ -48,8 +52,8 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Superficie oscura (héroe del kiosko, KDS, etc.) — coral pleno con negativo */
+/* Superficie plena (héroe del kiosko, KDS): carmín con texto en crema */
 .sa-dark {
   background: var(--sa-green-deep);
-  color: var(--sa-cream-paper);
+  color: var(--sa-cream);
 }

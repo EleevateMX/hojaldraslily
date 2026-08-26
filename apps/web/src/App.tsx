@@ -83,7 +83,7 @@ export default function App() {
       {/* ============ NAV ============ */}
       <header className="nav">
         <a className="wordmark" href="#top">
-          <img src="/logo.png" alt="" />
+          <img src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           Hojaldras Lily
         </a>
         <nav className="links">
@@ -124,7 +124,7 @@ export default function App() {
         <div className="hero-img">
           <div className="badge">Desde<br />$70</div>
           <div className="frame">
-            <img className="milo" src="/milo-transparent.png" alt="Hojaldra de Hojaldras Lily" />
+            <img className="hojaldra" src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de Hojaldras Lily" />
           </div>
         </div>
       </section>
@@ -230,8 +230,8 @@ export default function App() {
           </div>
         </div>
         <div className="about-img">
-          <img className="logo" src="/logo.png" alt="Logotipo de Hojaldras Lily" />
-          <img className="milo" src="/milo-transparent.png" alt="" />
+          <img className="logo" src={`${import.meta.env.BASE_URL}logo.png`} alt="Logotipo de Hojaldras Lily" />
+          <img className="hojaldra" src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="" />
         </div>
       </section>
 

@@ -3111,6 +3111,19 @@ export type Database = {
         Returns: undefined
       }
       fn_imprimir_latido: { Args: { p_token: string }; Returns: undefined }
+      fn_menus_del_dia: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          activa: boolean
+          cocina: string
+          id: string
+          importe_hoy: number
+          nombre: string
+          orden: number
+          productos: number
+          vendidos_hoy: number
+        }[]
+      }
       fn_imprimir_liberar_vencidos: { Args: never; Returns: number }
       fn_imprimir_prueba: {
         Args: { p_token: string }

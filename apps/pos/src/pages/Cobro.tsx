@@ -7,13 +7,36 @@ import { imprimirTicket, type TicketData } from '@shake/ui'
 import { mxn, mensajeDeError } from '@shake/utils'
 import type { MetodoPago } from '@shake/types'
 
-const METODOS: { key: MetodoPago; label: string; icon: string; pideRef?: boolean }[] = [
-  { key: 'efectivo', label: 'Efectivo', icon: '💵' },
-  { key: 'tarjeta', label: 'Tarjeta', icon: '💳' },
-  { key: 'clip', label: 'Clip', icon: '📟', pideRef: true },
-  { key: 'cortesia', label: 'Cortesía', icon: '🎁' },
-  { key: 'otro', label: 'Otro', icon: '•', pideRef: true },
+/* Dos formas de cobro y ya: efectivo o terminal. Cuantas menos opciones,
+   menos se equivoca quien cobra con gente esperando.
+   La terminal se guarda como `tarjeta` en la base —el enum de metodos no
+   cambia— y la referencia (folio del voucher) queda opcional, para poder
+   conciliar el corte con lo que reporte la terminal que se contrate.
+   Los iconos son SVG, no emoji: el emoji se ve distinto en cada equipo y no
+   se puede tenir (esta escrito en docs/replicar-el-sistema.md). */
+const METODOS: { key: MetodoPago; label: string; icono: 'efectivo' | 'terminal'; pideRef?: boolean }[] = [
+  { key: 'efectivo', label: 'Efectivo', icono: 'efectivo' },
+  { key: 'tarjeta', label: 'Terminal', icono: 'terminal', pideRef: true },
 ]
+
+function IconoMetodo({ tipo }: { tipo: 'efectivo' | 'terminal' }) {
+  return tipo === 'efectivo' ? (
+    <svg viewBox="0 0 32 24" className="h-8 w-11" aria-hidden="true">
+      <rect x="1" y="3" width="30" height="18" rx="3" fill="currentColor" opacity=".16" />
+      <rect x="1.5" y="3.5" width="29" height="17" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="16" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 32" className="h-8 w-7" aria-hidden="true">
+      <rect x="3" y="1" width="18" height="30" rx="3" fill="currentColor" opacity=".16" />
+      <rect x="3.5" y="1.5" width="17" height="29" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="6.5" y="5" width="11" height="7" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="8.5" cy="17" r="1.4" fill="currentColor" /><circle cx="12" cy="17" r="1.4" fill="currentColor" />
+      <circle cx="15.5" cy="17" r="1.4" fill="currentColor" /><circle cx="8.5" cy="21.5" r="1.4" fill="currentColor" />
+      <circle cx="12" cy="21.5" r="1.4" fill="currentColor" /><circle cx="15.5" cy="21.5" r="1.4" fill="currentColor" />
+    </svg>
+  )
+}
 
 const CAMBIO_RAPIDO = [50, 100, 200, 500]
 
@@ -143,17 +166,20 @@ export function Cobro() {
       <div className="flex-1 flex overflow-hidden">
         {/* Izquierda: método de pago */}
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="grid grid-cols-5 gap-3 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-5">
             {METODOS.map((m) => (
               <button
                 key={m.key}
                 onClick={() => setMetodo(m.key)}
-                className={`flex flex-col items-center gap-2 py-5 rounded-sa bg-sa-cream-soft transition-all ${
-                  metodo === m.key ? 'ring-4 ring-sa-green shadow-sa-sm' : 'hover:bg-sa-cream-warm'
+                aria-pressed={metodo === m.key}
+                className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
+                  metodo === m.key
+                    ? 'bg-sa-green text-white shadow-sa'
+                    : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
                 }`}
               >
-                <span className="text-3xl">{m.icon}</span>
-                <span className="font-display text-sm text-sa-green-ink">{m.label}</span>
+                <IconoMetodo tipo={m.icono} />
+                <span className="font-display text-lg">{m.label}</span>
               </button>
             ))}
           </div>
@@ -204,21 +230,19 @@ export function Cobro() {
           {metodoSel.pideRef && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
               <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
-                {metodo === 'clip' ? 'Referencia / folio del voucher Clip' : 'Referencia'}
+                Folio del voucher (opcional)
               </label>
               <input
                 type="text"
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
-                placeholder={metodo === 'clip' ? 'Cobra en el Stand 2 y captura el folio' : ''}
+                placeholder="Para cuadrar el corte con la terminal"
                 className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-sm text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
               />
-              {metodo === 'clip' && (
-                <p className="font-mono text-xs text-sa-green-ink/50 mt-2 leading-relaxed">
-                  Cobra el monto en la terminal Clip Stand 2 y confirma aquí con la referencia del
-                  voucher. (La confirmación automática por webhook es una fase posterior.)
-                </p>
-              )}
+              <p className="font-mono text-xs text-sa-green-ink/50 mt-2 leading-relaxed">
+                Cobre el monto en la terminal y, si quiere, anote aquí el folio del
+                voucher. Puede dejarlo vacío.
+              </p>
             </div>
           )}
 
@@ -226,7 +250,7 @@ export function Cobro() {
           {cliente && (
             <div className="bg-sa-green/10 border border-sa-green/30 rounded-sa px-4 py-2.5 mb-4">
               <p className="font-mono text-xs text-sa-green-ink leading-tight">
-                🏋️ {cliente.nombre} ganará ~{Math.min(100, Math.floor(totalNeto / 10))} mancuernas con esta compra
+                {cliente.nombre} ganará ~{Math.min(100, Math.floor(totalNeto / 10))} mancuernas con esta compra
               </p>
             </div>
           )}

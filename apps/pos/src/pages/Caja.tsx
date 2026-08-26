@@ -75,7 +75,7 @@ export function Caja() {
   if (!corte) {
     return (
       <div className="min-h-screen bg-sa-green-deep flex flex-col items-center justify-center px-4 py-8">
-        <img src="/logo.png" alt="Hojaldras Lily" className="w-[160px] h-auto mb-6 drop-shadow-2xl" />
+        <img src={`${import.meta.env.BASE_URL}logo-negativo.png`} alt="Hojaldras Lily" className="w-[190px] h-auto mb-6 drop-shadow-2xl" />
         <div className="bg-sa-cream-soft rounded-sa-lg shadow-sa w-full max-w-md p-8">
           {cargandoCtx ? (
             <p className="text-center font-mono text-sm text-sa-green-ink/50 animate-pulse py-8">
@@ -131,7 +131,7 @@ export function Caja() {
     <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
       <header className="flex items-center justify-between px-5 py-2.5 bg-sa-green-deep text-sa-cream flex-shrink-0 border-b border-sa-cream/10">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="Hojaldras Lily" className="h-[110px] w-auto -my-6" />
+          <img src={`${import.meta.env.BASE_URL}logo-negativo.png`} alt="Hojaldras Lily" className="h-[110px] w-auto -my-6" />
           <span className="font-mono text-xs uppercase tracking-widest text-sa-cream/50">
             {almacen?.nombre ?? 'Caja'}
           </span>

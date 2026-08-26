@@ -154,8 +154,28 @@ export interface ProductoVenta extends Producto {
     id: string
     nombre: string
     orden: number
+    /** Interruptor del dia: ver `menuApagado`. */
+    activa?: boolean
     cocinas: { id: string; nombre: string; slug: string } | null
   } | null
+}
+
+/**
+ * ¿Este producto pertenece a un menu que hoy esta apagado?
+ *
+ * `categorias.activa` es el interruptor con el que la gerencia abre y cierra
+ * un menu completo desde Admin ("Por encargo" prendido solo cuando hay quien
+ * lo hornee, "Temporada" solo en su temporada). Es la UNICA bandera del
+ * catalogo que fn_sync_app_data no toca, asi que sobrevive a cada guardado de
+ * Costeos: apagar por producto no serviria de nada porque el siguiente
+ * guardado lo revive (ver CLAUDE.md, seccion 4).
+ *
+ * Falla ABIERTO a proposito: un producto sin categoria, o una categoria que
+ * la consulta no trajo, se vende. Esconder producto por un dato que falta es
+ * peor que mostrarlo de mas.
+ */
+export function menuApagado(p: ProductoVenta): boolean {
+  return p.categorias?.activa === false
 }
 
 /**
@@ -166,13 +186,15 @@ export interface ProductoVenta extends Producto {
 export async function listarProductosParaVenta(sb: ShakeClient): Promise<ProductoVenta[]> {
   const { data, error } = await sb
     .from('productos')
-    .select('*, categorias(id, nombre, orden, cocinas(id, nombre, slug))')
+    .select('*, categorias(id, nombre, orden, activa, cocinas(id, nombre, slug))')
     .eq('activo', true)
     .eq('es_extra', false)
     .order('orden')
     .order('nombre')
   if (error) throw error
-  return data as unknown as ProductoVenta[]
+  // El filtro va aqui y no en la consulta: con `categorias!inner` un producto
+  // sin categoria desapareceria del menu sin que nadie lo apagara.
+  return (data as unknown as ProductoVenta[]).filter((p) => !menuApagado(p))
 }
 
 /** Catálogo activo de una estación de cocina ('alimentos' | 'bebidas'). */
@@ -182,12 +204,12 @@ export async function listarProductosPorCocina(
 ): Promise<ProductoVenta[]> {
   const { data, error } = await sb
     .from('productos')
-    .select('*, categorias!inner(id, nombre, orden, cocinas!inner(id, nombre, slug))')
+    .select('*, categorias!inner(id, nombre, orden, activa, cocinas!inner(id, nombre, slug))')
     .eq('activo', true)
     .eq('categorias.cocinas.slug', cocinaSlug)
     .order('nombre')
   if (error) throw error
-  return data as unknown as ProductoVenta[]
+  return (data as unknown as ProductoVenta[]).filter((p) => !menuApagado(p))
 }
 
 // ------------------------------ recetas ------------------------------
@@ -810,5 +832,66 @@ export async function pedirRecargaPantallas(
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_pantallas_recargar', {
     p_pantalla: pantalla,
   })
+  if (error) throw error
+}
+
+/**
+ * Parte el nombre de una hojaldra en sabor y medida.
+ *
+ * El catalogo de Lily nombra cada pieza `Sabor · Tamaño · N cuadros`
+ * (asi es como viene del menu impreso y asi la sincroniza Costeos). En la
+ * pantalla eso se lee mal: los tres pedazos compiten y el sabor, que es lo
+ * unico que el cliente busca, queda enterrado en una linea de tres renglones.
+ *
+ * Aqui se separan para poder titular con el sabor y poner la medida como
+ * etiqueta. Si el nombre no trae ' · ' (un cafe, un refresco) regresa el
+ * nombre entero como sabor y la medida vacia: nada que mostrar, nada que
+ * romper.
+ */
+export function partirNombreDeVenta(nombre: string): { sabor: string; medida: string } {
+  const limpio = nombreParaOrdenar(nombre)
+  const partes = limpio.split('·').map((p) => p.trim()).filter(Boolean)
+  if (partes.length < 2) return { sabor: limpio, medida: '' }
+  return { sabor: partes[0], medida: partes.slice(1).join(' · ') }
+}
+
+// --------------------- el interruptor de cada menu ---------------------
+
+export interface MenuDelDia {
+  id: string
+  nombre: string
+  orden: number
+  activa: boolean
+  cocina: string
+  /** Piezas a la venta dentro del menu (productos activos, sin extras). */
+  productos: number
+  /** Piezas vendidas hoy de ese menu: para saber si vale la pena tenerlo abierto. */
+  vendidos_hoy: number
+  importe_hoy: number
+}
+
+/**
+ * Los menus tal como se prenden y apagan desde Admin.
+ *
+ * A diferencia de `listarCategorias`, este SI trae las apagadas: si no, un
+ * menu cerrado desapareceria de la pantalla desde la que hay que volver a
+ * abrirlo, y quedaria cerrado para siempre.
+ *
+ * Las cuentas del dia van en la misma consulta porque la decision ("¿dejo
+ * abierto Por encargo?") se toma mirando las dos cosas juntas.
+ */
+export async function listarMenusDelDia(sb: ShakeClient): Promise<MenuDelDia[]> {
+  const { data, error } = await sb.rpc('fn_menus_del_dia')
+  if (error) throw error
+  return (data ?? []) as MenuDelDia[]
+}
+
+/** Abre o cierra un menu completo. Sobrevive al siguiente guardado de Costeos. */
+export async function cambiarMenuActivo(
+  sb: ShakeClient,
+  categoriaId: string,
+  activa: boolean,
+): Promise<void> {
+  const { error } = await sb.from('categorias').update({ activa }).eq('id', categoriaId)
   if (error) throw error
 }

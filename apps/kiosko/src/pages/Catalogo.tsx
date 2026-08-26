@@ -4,12 +4,12 @@ import { Spinner } from '@shake/ui'
 import { useCarrito } from '@/store/carritoStore'
 import {
   listarProductosParaVenta, listarExtras, listarProductosExtra, listarObservaciones,
-  nombreParaOrdenar, agruparCategorias,
+  nombreParaOrdenar, partirNombreDeVenta, agruparCategorias,
 } from '@shake/supabase'
 import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
 import { sb } from '@/lib/sb'
 import { ModalExtras } from '@/components/ModalExtras'
-import { CorteMilo } from '@/components/CorteMilo'
+import { PanelDeCorte } from '@/components/PanelDeCorte'
 import { HistorialPedidos } from '@/components/HistorialPedidos'
 
 interface Categoria {
@@ -35,18 +35,18 @@ export function Catalogo() {
    */
   const [observaciones, setObservaciones] = useState<Record<string, string[]>>({})
   /**
-   * Pasadizo del corte de caja: cinco toques a Milo en menos de cuatro
+   * Pasadizo del corte de caja: cinco toques a la hojaldra en menos de cuatro
    * segundos. Sin botón visible a propósito — el personal lo sabe, el
    * cliente no tiene por qué.
    */
   const [modalCorte, setModalCorte] = useState(false)
   const [verHistorial, setVerHistorial] = useState(false)
-  const toquesMilo = React.useRef<number[]>([])
-  function tocarMilo() {
+  const toquesHojaldra = React.useRef<number[]>([])
+  function tocarHojaldra() {
     const ahora = Date.now()
-    toquesMilo.current = [...toquesMilo.current.filter((t) => ahora - t < 4000), ahora]
-    if (toquesMilo.current.length >= 5) {
-      toquesMilo.current = []
+    toquesHojaldra.current = [...toquesHojaldra.current.filter((t) => ahora - t < 4000), ahora]
+    if (toquesHojaldra.current.length >= 5) {
+      toquesHojaldra.current = []
       setModalCorte(true)
     }
   }
@@ -195,17 +195,17 @@ export function Catalogo() {
     <div className="flex flex-col h-screen bg-sa-cream-paper">
       {/* Hero strip */}
       <header className="relative bg-sa-green-deep text-sa-cream px-8 pt-8 pb-10 overflow-hidden">
-        {/* Toca a Milo 5 veces: abre el corte de caja (ver CorteMilo).
+        {/* Toca la hojaldra 5 veces: abre el corte de caja (ver PanelDeCorte).
             Va como fondo CSS y no como <img>: una imagen de verdad, al
             mantenerla presionada, saca el menú del navegador ("buscar
             imagen", arrastrar) — como fondo es un dibujo estático que solo
             cuenta toques. */}
         <div
-          onClick={tocarMilo}
+          onClick={tocarHojaldra}
           onContextMenu={(e) => e.preventDefault()}
           className="absolute -right-6 -bottom-10 opacity-90 select-none h-56 w-[242px] drop-shadow-2xl"
           style={{
-            backgroundImage: 'url(/milo-transparent.png)',
+            backgroundImage: `url(${import.meta.env.BASE_URL}hojaldra.png)`,
             backgroundSize: 'contain',
             backgroundRepeat: 'no-repeat',
             backgroundPosition: 'center',
@@ -215,10 +215,12 @@ export function Catalogo() {
         />
         <div className="relative z-10 flex items-start justify-between gap-6">
           <div className="flex items-center gap-5">
+            {/* Sobre el carmin pleno va el logotipo en NEGATIVO: la version
+                en carmin se perdia contra el fondo (manual, seccion 02). */}
             <img
-              src="/logo.png"
+              src={`${import.meta.env.BASE_URL}logo-negativo.png`}
               alt="Hojaldras Lily"
-              className="h-20 w-auto drop-shadow-lg"
+              className="h-24 w-auto drop-shadow-lg"
             />
             <div>
               <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">
@@ -344,15 +346,16 @@ export function Catalogo() {
           </div>
         ) : productosFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-5 text-center">
-            <img src="/milo-transparent.png" alt="Hojaldra de la casa" className="h-40 opacity-80" />
+            <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="h-40 opacity-80" />
             <p className="font-display text-3xl text-sa-green-ink">
-              Aún no hay nada en la charola
+              Se están horneando
             </p>
             <p className="font-body text-sa-green-ink/70 max-w-sm">
-              Conecta Supabase para llenar la vitrina con hojaldras, bocadillos y pan de verdad.
+              Estas hojaldras están en el horno. En cuanto salgan aparecen aquí;
+              mientras, pregunte en la barra qué hay listo.
             </p>
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-green/70 mt-2">
-              · recién horneado ·
+              · del horno a la vitrina ·
             </p>
           </div>
         ) : (
@@ -371,36 +374,33 @@ export function Catalogo() {
                 key={producto.id}
                 className="group relative bg-sa-cream-soft rounded-sa-lg overflow-hidden shadow-sa-sm hover:shadow-sa transition-all active:scale-[0.98]"
               >
-                <div className="relative">
-                  {producto.imagen_url ? (
-                    /* object-contain, no cover: las fotos son vasos verticales
-                       sobre fondo blanco y `cover` les cortaba la tapa y el
-                       popote. Se sube la altura porque al no recortar, la
-                       imagen ocupa menos ancho. */
-                    <div className="w-full h-56 bg-white flex items-center justify-center">
-                      <img
-                        src={producto.imagen_url}
-                        alt={nombreParaOrdenar(producto.nombre)}
-                        className="max-h-full max-w-full object-contain"
-                      />
-                    </div>
-                  ) : (
-                    /* Sin foto: en vez de un hueco gris, Milo se la comió. */
-                    <div className="w-full h-56 bg-sa-cream-warm flex flex-col items-center justify-center gap-1">
-                      <img src="/milo-transparent.png" alt="" className="h-24 opacity-80" />
-                      <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 text-center px-2">
-                        Ups, se lo ha comido Milo
-                      </p>
-                    </div>
-                  )}
-                  <span className="absolute top-3 left-3 font-mono text-[10px] uppercase tracking-widest bg-sa-green-deep text-sa-cream px-2 py-1 rounded-full">
-                    #{producto.id.slice(0, 4)}
-                  </span>
-                </div>
+                {/* La foto es OPCIONAL y hoy casi ningun producto la trae.
+                    Antes el hueco se llenaba con un dibujo y un "se lo comio
+                    el perro": 18 tarjetas identicas de relleno beige donde lo
+                    unico que el cliente busca -- el sabor -- quedaba hasta
+                    abajo en letra chica. Sin foto, la tarjeta se cierra y el
+                    sabor pasa a ser el titulo. */}
+                {producto.imagen_url && (
+                  <div className="w-full h-56 bg-white flex items-center justify-center">
+                    <img
+                      src={producto.imagen_url}
+                      alt={nombreParaOrdenar(producto.nombre)}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                )}
                 <div className="p-4">
+                  {/* Sabor arriba y grande, medida como etiqueta: es la
+                      pregunta que de verdad se hace en la barra ("de que" y
+                      luego "de que tamano"), en ese orden. */}
                   <p className="font-display text-xl leading-tight text-sa-green-ink line-clamp-2">
-                    {nombreParaOrdenar(producto.nombre)}
+                    {partirNombreDeVenta(producto.nombre).sabor}
                   </p>
+                  {partirNombreDeVenta(producto.nombre).medida && (
+                    <span className="inline-block mt-2 font-mono text-[11px] uppercase tracking-wide bg-sa-cream-warm text-sa-green-ink/75 px-2.5 py-1 rounded-full">
+                      {partirNombreDeVenta(producto.nombre).medida}
+                    </span>
+                  )}
                   {producto.descripcion && (
                     <p className="font-body text-xs text-sa-green-ink/60 mt-1 line-clamp-2">
                       {producto.descripcion}
@@ -451,7 +451,7 @@ export function Catalogo() {
         </button>
       )}
 
-      <CorteMilo abierto={modalCorte} onCerrar={() => setModalCorte(false)} />
+      <PanelDeCorte abierto={modalCorte} onCerrar={() => setModalCorte(false)} />
       <HistorialPedidos abierto={verHistorial} onCerrar={() => setVerHistorial(false)} />
     </div>
   )

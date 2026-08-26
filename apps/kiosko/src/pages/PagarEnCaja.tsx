@@ -92,7 +92,7 @@ export function PagarEnCaja() {
 
       {yaSePago ? (
         <>
-          <img src="/milo.png" alt="Hojaldra de la casa" className="h-40 w-auto drop-shadow-2xl mb-3" />
+          <img src={`${import.meta.env.BASE_URL}hojaldra-solida.png`} alt="Hojaldra de la casa" className="h-40 w-auto drop-shadow-2xl mb-3" />
           <h1 className="font-display text-5xl leading-none text-center">¡Ya se cobró!</h1>
           <p className="font-body text-base mt-3 text-center text-sa-cream/80 max-w-sm">
             Tu pedido va en camino a preparación. Espera tu folio en pantalla.

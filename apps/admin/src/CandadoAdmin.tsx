@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import logo from '@shake/brand/logo.png'
+// El logotipo va sobre carmin pleno (barra lateral): version en negativo.
+import logo from '@shake/brand/logo-negativo.png'
 import { entrarConPin, empleadoDeLaSesion, salirDeSesion, type EmpleadoSesion } from '@shake/supabase'
 import { sb } from './lib/sb'
 
