@@ -1,0 +1,44 @@
+/* ============================================================
+   Hojaldras Lily · Tokens de identidad
+   Fuente: Manual de Identidad v1.0 (sección 08 · Sistema POS)
+   Todos los componentes leen estos tokens, nunca el hex directo.
+   ============================================================ */
+
+:root {
+  /* Marca */
+  --lily-coral:        #C4463C;
+  --lily-coral-dark:   #A2372F;
+  --lily-magenta:      #C2186B;
+  --lily-dorado:       #C98A4B;
+
+  /* Superficies */
+  --lily-bg:           #FFFDF8;
+  --lily-surface:      #FFFFFF;
+  --lily-surface-alt:  #F8EDD5;
+  --lily-surface-pink: #F6D8CD;
+  --lily-surface-lila: #F0E4EF;
+  --lily-border:       #EDE3D2;
+
+  /* Texto */
+  --lily-text:         #2E2420;
+  --lily-text-soft:    #6B5F58;
+  --lily-text-invert:  #FFFDF8;
+
+  /* Estados */
+  --lily-ok:           #4E7A56;
+  --lily-warn:         #C98A4B;
+  --lily-danger:       #8E2A1E;
+
+  /* Tipografía */
+  --lily-font-ui:     "Karla", sans-serif;
+  --lily-font-title:  "Jost", sans-serif;
+  --lily-font-script: "Yellowtail", cursive;
+
+  /* Forma y ritmo */
+  --lily-radius-sm:    8px;
+  --lily-radius:       12px;
+  --lily-radius-lg:    18px;
+  --lily-space:        8px;
+  --lily-touch-min:    56px;
+  --lily-shadow: 0 2px 8px rgba(46,36,32,.10);
+}
