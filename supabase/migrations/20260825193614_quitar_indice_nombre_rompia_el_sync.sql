@@ -1,0 +1,15 @@
+-- Marcha atras inmediata.
+--
+-- El indice unico por nombre hacia FALLAR fn_sync_app_data completo, no
+-- solo el insert: hay otra sentencia dentro (un update que reactiva o
+-- renombra) que tambien puede chocar, y `on conflict do nothing` solo
+-- cubria el insert.
+--
+-- Con el indice puesto, el siguiente guardado en Costeos habria reventado
+-- y la tienda se habria quedado sin poder guardar precios. Eso es peor que
+-- el duplicado que se queria evitar, asi que el indice se va hasta
+-- entender exactamente que sentencia choca.
+--
+-- La limpieza de las 6 filas duplicadas se queda: esa parte era correcta
+-- y no depende del indice.
+drop index if exists productos_un_nombre_activo;
