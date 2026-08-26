@@ -1,0 +1,79 @@
+{
+  "name": "Hojaldras Lily Rewards",
+  "short_name": "Hojaldras Lily",
+  "description": "Tu tarjeta de lealtad, el menu de la panaderia y tus compras.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "lang": "es-MX",
+  "dir": "ltr",
+  "categories": [
+    "food",
+    "lifestyle",
+    "shopping"
+  ],
+  "background_color": "#F8EDD5",
+  "theme_color": "#C4463C",
+  "icons": [
+    {
+      "src": "/icono-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icono-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icono-1024.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mi codigo",
+      "short_name": "Codigo",
+      "description": "El codigo que muestras en caja",
+      "url": "/?ir=inicio"
+    },
+    {
+      "name": "Menu de hoy",
+      "short_name": "Menu",
+      "description": "Lo que hay en la barra",
+      "url": "/?ir=menu"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/captura-tarjeta.png",
+      "sizes": "585x1266",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tu tarjeta, con el codigo que muestras en caja"
+    },
+    {
+      "src": "/captura-menu.png",
+      "sizes": "585x1266",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "El menu vivo de la barra"
+    }
+  ]
+}
