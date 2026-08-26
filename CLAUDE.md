@@ -28,6 +28,20 @@ Lo que falta para abrir, todo fuera del código:
    verosímil, no la lista de precios de la casa.
 4. **PIN del personal y hardware del local** (ver `docs/dia-de-instalacion.md`).
 
+**La vitrina para enseñar el sistema** vive en
+<https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
+la base real, para mostrarlas desde cualquier navegador sin instalar nada.
+La arma sola `.github/workflows/pages-demos.yml` con
+`scripts/publicar-demo-pages.sh` en cada push; los artefactos no se
+versionan (`demo/app/` está en `.gitignore`).
+
+**Ojo con eso antes de abrir**: esa portada trae los PIN a la vista a
+propósito, porque su razón de ser es enseñar el sistema. Son PIN de
+demostración (gerencia y caja) y hay que **cambiarlos** —y bajar la
+vitrina, o al menos el Admin y la caja— el día que la tienda tenga ventas
+de verdad. El despliegue serio es el de Cloudflare Pages con dominios
+propios, que es otro workflow.
+
 Nota de mantenimiento: `packages/types/src/database.ts` sigue vigente. Las
 cinco migraciones de adaptación no cambian estructura (solo datos,
 reloptions y `search_path`), así que no hubo que regenerarlo.
