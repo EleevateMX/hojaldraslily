@@ -8,9 +8,12 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
 <style>
   :root{
-    --coral:#C4463C; --coral-dark:#A2372F; --bg:#FFFDF8; --crema:#F8EDD5;
-    --rosa:#F6D8CD; --lila:#F0E4EF; --borde:#EDE3D2; --texto:#2E2420; --suave:#6B5F58;
-    --ok:#4E7A56; --dorado:#C98A4B;
+    /* Copiados a mano de packages/brand/tokens.css: esta portada es HTML
+       plano, no pasa por el empaquetador, asi que si alla cambian los
+       valores hay que traerlos aqui (igual que apps/costos). */
+    --coral:#D81B4A; --coral-dark:#A8123A; --bg:#FFFCF5; --crema:#FDF6E3;
+    --rosa:#FAD9CE; --lila:#F3E3CE; --borde:#EFE2CC; --texto:#4A3A52; --suave:#7A6A80;
+    --ok:#4E7A56; --dorado:#D9944B;
   }
   *{box-sizing:border-box}
   html{background:var(--bg)}
@@ -65,9 +68,10 @@
   <p class="lead">El punto de venta completo, corriendo de verdad contra la base del negocio. Cada app se abre y opera; lo que se pida en el kiosko llega a las pantallas de estación y al corte de caja.</p>
 
   <div class="estado">
-    <span class="chip"><b>✔</b> 132 migraciones aplicadas</span>
+    <span class="chip"><b>✔</b> 141 migraciones aplicadas</span>
     <span class="chip"><b>✔</b> venta de punta a punta probada</span>
-    <span class="chip"><b>✔</b> 29 productos a la venta</span>
+    <span class="chip"><b>✔</b> 39 productos a la venta</span>
+    <span class="chip"><b>✔</b> el menú real de Lily, cargado</span>
   </div>
 
   <p class="eyebrow">La barra</p>
@@ -112,7 +116,7 @@
     <a class="app lila" href="app/admin/">
       <span class="quien">Gerencia</span>
       <h3>Admin</h3>
-      <p>Ventas, catálogo, clientes, panel en vivo y diagnóstico.</p>
+      <p>Menús del día (prender y apagar lo que hoy se vende), ventas, catálogo, clientes, panel en vivo y diagnóstico.</p>
       <span class="pin">PIN de gerencia: 2468</span>
     </a>
     <a class="app lila" href="app/costos/">
