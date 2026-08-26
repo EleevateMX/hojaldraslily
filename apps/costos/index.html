@@ -379,7 +379,7 @@ function defaultState(){
   const emp=(nombre,costo,ex={})=>Object.assign({codigo:"",nombre,proveedor:"",presentacion:"",costo,ultimaCompra:"",stock:"",stockMin:""},ex);
   const empaque=[emp("Caja de viaje grande",8.5),emp("Caja de viaje chica",5.5),emp("Bolsa kraft",1.2),
     emp("Papel encerado",0.6),emp("Servilleta",0.2),emp("Vaso cafe 12 oz",2.8),emp("Tapa vaso cafe",1.1),emp("Etiqueta de producto",0.4)];
-  const sh=(nombre,codigo,ex={})=>Object.assign({codigo,nombre,protein:"",scoops:"",ings:[],empaques:[],precio:"",merma:"",ivaIncluido:true},ex);
+  const sh=(nombre,codigo,ex={})=>Object.assign({codigo,nombre,categoria:"Hojaldras",protein:"",scoops:"",ings:[],empaques:[],precio:"",merma:"",ivaIncluido:true},ex);
   const shakeRecipes=[
     sh("Jamon y Queso Mini","Hojaldra 1",{precio:115,ings:[["Harina de trigo",120],["Mantequilla",60],["Jamon de pierna",60],["Queso de bola",50]],empaques:[["Bolsa kraft",1]]}),
     sh("Guayaba Mini","Hojaldra 2",{precio:115,ings:[["Harina de trigo",120],["Mantequilla",60],["Pasta de guayaba",80]],empaques:[["Bolsa kraft",1]]}),
@@ -392,16 +392,19 @@ function defaultState(){
     sh("Jamon y Queso Grande 24 cuadros","Hojaldra 9",{precio:440,empaques:[["Caja de viaje grande",1]]}),
     sh("Guayaba Grande 24 cuadros","Hojaldra 10",{precio:440,empaques:[["Caja de viaje grande",1]]}),
   ];
-  const fo=(nombre,codigo,ex={})=>Object.assign({codigo,nombre,ings:[],empaques:[],precio:"",merma:"",ivaIncluido:true},ex);
+  const fo=(nombre,codigo,ex={})=>Object.assign({codigo,nombre,categoria:"Bocadillos",ings:[],empaques:[],precio:"",merma:"",ivaIncluido:true},ex);
   const foodRecipes=[
     fo("Pastelito de Lomo","Alimento 1",{precio:140}),
     fo("Bocadillo de Datil y Queso","Alimento 2",{precio:125}),
-    fo("Empanada de temporada","Alimento 3",{precio:45}),
+    fo("Empanada de temporada","Alimento 3",{precio:45,categoria:"Temporada"}),
   ];
   const rs=(nombre,ex={})=>Object.assign({codigo:"",nombre,proveedor:"",ultimaCompra:"",caducidad:"",costo:"",precio:"",presOriginal:"",equivPiezas:"",invOriginal:"",minOriginal:"",invIndividual:"",minIndividual:""},ex);
+  const cafes=["Cafe de olla","Americano","Cafe con leche","Chocolate caliente"];
   const bebidas=["Cafe de olla","Americano","Cafe con leche","Chocolate caliente","Agua de horchata","Refresco","Agua embotellada"]
-    .map(n=> n==="Refresco"? rs(n,{presOriginal:"Caja 24",equivPiezas:24,invOriginal:1,precio:30}) : rs(n));
-  const snacks=["Pan dulce de temporada","Galletas de mantequilla (3 pzas)","Rosca individual"].map(n=>rs(n));
+    .map(n=> n==="Refresco"
+      ? rs(n,{presOriginal:"Caja 24",equivPiezas:24,invOriginal:1,precio:30,categoria:"Bebidas"})
+      : rs(n,{categoria: cafes.includes(n) ? "Café" : "Bebidas"}));
+  const snacks=["Pan dulce de temporada","Galletas de mantequilla (3 pzas)","Rosca individual"].map(n=>rs(n,{categoria:"Panadería"}));
   return {params:{foodCost:0.30,iva:0.16,merma:0.08,mano:0,clave:"1234",claveCompras:"1234"},proteins,shakeIngs,foodIngs,empaque,shakeRecipes,foodRecipes,bebidas,snacks};
 }
 function fill(arr,defs){(arr||[]).forEach(o=>{for(const k in defs)if(o[k]===undefined)o[k]=defs[k];});}

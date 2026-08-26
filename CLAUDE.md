@@ -10,10 +10,27 @@ Cambió la identidad (`packages/brand`), los textos visibles, el proyecto
 Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
-**Estado: pre-apertura.** La base `fzkdgqqvfkogmxdgqsxj` ya tiene el
-esquema completo replicado; falta capturar el catálogo real en Costos,
-configurar Cloudflare Pages/dominios, la terminal Clip de Lily y el
-hardware del local (ver `docs/dia-de-instalacion.md`).
+**Estado: pre-apertura, con el motor ya probado.** La base
+`fzkdgqqvfkogmxdgqsxj` tiene las 132 migraciones del historial canónico
+aplicadas en orden, más cinco de adaptación al giro. Ya corrió una venta
+de punta a punta contra ella (total calculado en el servidor, monto falso
+rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
+el catálogo semilla de hojaldras está sembrado y las Edge Functions
+desplegadas.
+
+Lo que falta para abrir, todo fuera del código:
+
+1. **Secretos de Clip** en Supabase (`CLIP_API_KEY`, `CLIP_WEBHOOK_SECRET`,
+   `CLIP_TERMINAL_SERIAL`) — sin ellos el cobro con tarjeta no opera.
+2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
+   en el primer push a `main` con los secretos del workflow puestos.
+3. **Capturar el catálogo real en Costeos** — el sembrado es una base
+   verosímil, no la lista de precios de la casa.
+4. **PIN del personal y hardware del local** (ver `docs/dia-de-instalacion.md`).
+
+Nota de mantenimiento: `packages/types/src/database.ts` sigue vigente. Las
+cinco migraciones de adaptación no cambian estructura (solo datos,
+reloptions y `search_path`), así que no hubo que regenerarlo.
 
 ---
 
