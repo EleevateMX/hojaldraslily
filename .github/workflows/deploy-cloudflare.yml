@@ -101,7 +101,7 @@ jobs:
       - name: Build ${{ matrix.app }}
         env:
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || 'https://fzkdgqqvfkogmxdgqsxj.supabase.co' }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp5anRuYXlzdHNwb3JidXpjbXFrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNzMxNDksImV4cCI6MjA5Njg0OTE0OX0.USpCrgpCLMXcpWhA60mKmgMchrxCR3_kybIPIyas7iA' }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ6a2RncXF2ZmtvZ214ZGdxc3hqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3MTAxMzgsImV4cCI6MjEwMzI4NjEzOH0.9QiYq8_Ue9egUun6aSNAf3o15AVgg3EzvhHRHHoBhKU' }}
         run: pnpm --filter @shake/${{ matrix.app }} build
 
       - name: Ensure Cloudflare Pages project exists

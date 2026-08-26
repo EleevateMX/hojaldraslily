@@ -5,6 +5,7 @@ import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import { ModalPersonalizar } from './ModalPersonalizar'
 import { nombreParaOrdenar, partirNombreDeVenta } from '@shake/supabase'
+import { urlDeFoto } from '@shake/utils'
 
 interface Props {
   productos: ProductoVenta[]
@@ -163,8 +164,13 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                 {/* Sin foto la tarjeta se cierra, igual que en el kiosko:
                     el cajero busca por sabor, no por dibujo, y un hueco de
                     relleno por producto solo estorba la busqueda. */}
-                {p.imagen_url && (
-                  <img src={p.imagen_url} alt={nombreParaOrdenar(p.nombre)} className="w-16 h-16 rounded-sa object-cover mb-2" />
+                {urlDeFoto(p.imagen_url, import.meta.env.BASE_URL) && (
+                  <img
+                    src={urlDeFoto(p.imagen_url, import.meta.env.BASE_URL)!}
+                    alt=""
+                    className="w-14 h-14 object-contain mb-1"
+                    draggable={false}
+                  />
                 )}
                 <p className="font-display text-sm text-sa-green-ink text-center leading-tight line-clamp-2 w-full">
                   {partirNombreDeVenta(p.nombre).sabor}

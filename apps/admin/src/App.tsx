@@ -8,6 +8,7 @@ import Metas from './pages/Metas'
 import Rewards from './pages/Rewards'
 import Menu from './pages/Menu'
 import Menus from './pages/Menus'
+import Produccion from './pages/Produccion'
 import Categorias from './pages/Categorias'
 import Combos from './pages/Combos'
 import Extras from './pages/Extras'
@@ -19,7 +20,7 @@ import Empleados from './pages/Empleados'
 import Impresoras from './pages/Impresoras'
 import Sistema from './pages/Sistema'
 
-type Tab = 'dashboard' | 'envivo' | 'menus' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'extras' | 'inventario' | 'promos' | 'ventas' | 'clientes' | 'metas' | 'rewards' | 'empleados' | 'impresoras' | 'sistema'
+type Tab = 'dashboard' | 'envivo' | 'menus' | 'produccion' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'extras' | 'inventario' | 'promos' | 'ventas' | 'clientes' | 'metas' | 'rewards' | 'empleados' | 'impresoras' | 'sistema'
 
 const w = 18
 
@@ -38,6 +39,11 @@ const IconEnVivo = () => (
 const IconDiagnostico = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+  </svg>
+)
+const IconProduccion = () => (
+  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="9" width="18" height="12" rx="3" /><path d="M7 9V6a5 5 0 0 1 10 0v3" /><line x1="7" y1="14" x2="17" y2="14" />
   </svg>
 )
 const IconMenus = () => (
@@ -117,6 +123,7 @@ const IconMetas = () => (
 const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
   { id: 'envivo', label: 'En vivo', Icon: IconEnVivo },
+  { id: 'produccion', label: 'Producción', Icon: IconProduccion },
   { id: 'menus', label: 'Menús del día', Icon: IconMenus },
   { id: 'diagnostico', label: 'Diagnóstico', Icon: IconDiagnostico },
   { id: 'menu', label: 'Menú', Icon: IconMenu },
@@ -174,6 +181,7 @@ export default function App() {
         {tab === 'diagnostico' && <Diagnostico />}
         {tab === 'metas' && <Metas />}
         {tab === 'rewards' && <Rewards />}
+        {tab === 'produccion' && <Produccion />}
         {tab === 'menus' && <Menus />}
         {tab === 'menu' && <Menu />}
         {tab === 'categorias' && <Categorias />}

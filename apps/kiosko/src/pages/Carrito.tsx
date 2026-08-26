@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listarAlmacenes } from '@shake/supabase'
 import type { ModoPagoKiosko } from '@shake/types'
+import { urlDeFoto } from '@shake/utils'
 import { useCarrito } from '@/store/carritoStore'
 import { resolverModoKiosko } from '@/lib/modoKiosko'
 import { ModalCliente } from '@/components/ModalCliente'
@@ -91,7 +92,7 @@ export function Carrito() {
               <div className="flex items-center gap-4">
                 {item.imagen_url ? (
                   <img
-                    src={item.imagen_url}
+                    src={urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)!}
                     alt={item.nombre}
                     className="w-20 h-20 rounded-sa object-cover"
                   />

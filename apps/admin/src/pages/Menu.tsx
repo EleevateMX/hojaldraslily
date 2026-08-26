@@ -16,7 +16,7 @@ import {
 } from '@shake/supabase'
 import type { Producto, Categoria, Cocina } from '@shake/types'
 import type { CategoriaPantalla } from '@shake/supabase'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
 import { Panel, PageHeader, Field, Loading, ErrorMsg, OkMsg, Chip, cx } from '../ui'
 
 interface FormProducto {
@@ -401,7 +401,7 @@ export default function Menu() {
                         <div className="flex items-center gap-2">
                           {p.imagen_url ? (
                             <img
-                              src={p.imagen_url}
+                              src={urlDeFoto(p.imagen_url, import.meta.env.BASE_URL)!}
                               alt={p.nombre}
                               className="w-12 h-12 rounded-sa object-cover border border-sa-green-ink/10"
                             />

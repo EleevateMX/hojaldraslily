@@ -77,6 +77,22 @@ propósito hasta entonces.
 
 ## 2. Las cinco cosas que hay que entender
 
+### 2.0 Hay DOS inventarios, y no son lo mismo
+
+- **Insumos** (Admin → Inventario): harina, jamón, queso, por kilo y por
+  almacén. Es el que sirve para costear, y vino del motor original.
+- **Paquetes terminados** (Admin → **Producción**): lo que sale del horno,
+  por sabor y tamaño, que es como Lily vende — cuadros en paquetes de 6, 12
+  (Mini), 24 (Chica) y 48 (Grande). `disponibles = horneado − merma −
+  vendido`, y baja solo con cada cobro.
+
+La pregunta de media mañana ("¿cuántos paquetes de guayaba chica quedan?")
+**no se contesta con kilos**: por eso existe la segunda. La primera no se
+tocó; se complementan.
+
+Ojo: Producción solo muestra los menús **abiertos** (respeta el interruptor
+de Menús del día). Un menú cerrado esconde sus existencias.
+
 ### 2.1 Costeos es la fuente de la verdad del catálogo
 
 `apps/costos` (un solo `index.html`, sin build) guarda TODO en una fila de
@@ -223,6 +239,8 @@ empaquetador y se desvían solas:
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
+| Apuntar lo que salió del horno | Admin → **Producción** → los botones +1 / +5 / +10 |
+| Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
@@ -230,6 +248,16 @@ empaquetador y se desvían solas:
 ---
 
 ## 4. Trampas que ya nos costaron (no repetir)
+
+**Llaves que llevan el proyecto adentro**
+
+- El JWT anon **trae el proyecto codificado en base64** (campo `ref`). Cuando
+  se replicó el sistema, el buscar-y-reemplazar cambió las URL pero **no pudo
+  entrar al JWT**: quedaron la URL de Lily con la llave del otro negocio, y
+  Supabase contestaba `Invalid API key`. Pasó en tres lugares distintos y en
+  momentos distintos: el cron de Clip, `apps/costos/index.html`, y los
+  workflows de Cloudflare y TestFlight. Al rotar una llave, **decodifica el
+  `ref`** — que "se vea diferente" no prueba nada.
 
 **Postgres**
 
@@ -330,6 +358,17 @@ Para retomar solo Rewards en otra sesión, el mapa está en
   que esas pantallas abran sesión real (ya existe `staff-login`), no
   quitándoles el permiso: eso deja la tienda sin marcar comandas ni abrir
   caja.
+  Y ojo con la **puerta de atrás**: cerrar `productos` no bastaba, porque
+  `app_data` seguía abierta a `anon` y su trigger (DEFINER) reescribe el
+  catálogo — se podían mover los precios dando el rodeo por Costeos. Cerrado
+  en `20260826220000`: Costeos entra con usuario y contraseña, recibe un
+  **token** de 12 h, y cargar y guardar pasan por `fn_costos_cargar` /
+  `fn_costos_guardar`. `app_data` ya no la toca `anon` — que además guardaba
+  **costos, márgenes y proveedores** a la vista de cualquiera con la llave.
+  Efecto colateral aceptado: Realtime ya no avisa "actualizado desde otro
+  dispositivo" en Costeos (Realtime aplica RLS igual que una consulta).
+  **La lección que se repite**: cerrar la puerta principal no sirve si el
+  dato entra por otro lado. Pregunta siempre *quién más escribe esta tabla*.
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.

@@ -895,3 +895,59 @@ export async function cambiarMenuActivo(
   const { error } = await sb.from('categorias').update({ activa }).eq('id', categoriaId)
   if (error) throw error
 }
+
+// ------------------- lo que hay hoy, en paquetes -------------------
+
+export interface ExistenciaDelDia {
+  producto_id: string
+  nombre: string
+  categoria: string
+  imagen_url: string | null
+  precio: number
+  horneados: number
+  mermados: number
+  vendidos: number
+  disponibles: number
+}
+
+export type MotivoProduccion = 'horneado' | 'merma' | 'ajuste'
+
+/**
+ * Paquetes horneados, vendidos y disponibles de hoy.
+ *
+ * Esto NO es el inventario de insumos (harina, jamon, queso por kilo), que
+ * sirve para costear. Es el producto TERMINADO: la pregunta que se hace a
+ * media manana es "¿cuantos paquetes de guayaba chica me quedan?", y esa no
+ * se contesta con kilos.
+ */
+export async function listarExistenciasDelDia(
+  sb: ShakeClient,
+  fecha?: string,
+): Promise<ExistenciaDelDia[]> {
+  const { data, error } = await sb.rpc('fn_existencias_del_dia', { p_fecha: fecha ?? undefined })
+  if (error) throw error
+  return (data ?? []) as ExistenciaDelDia[]
+}
+
+/**
+ * Apunta lo que salio del horno (o una merma).
+ *
+ * La merma siempre resta, aunque se capture en positivo: el servidor le pone
+ * el signo. Regresa cuantos quedan disponibles despues del movimiento.
+ */
+export async function registrarProduccion(
+  sb: ShakeClient,
+  productoId: string,
+  cantidad: number,
+  motivo: MotivoProduccion = 'horneado',
+  nota?: string,
+): Promise<number> {
+  const { data, error } = await sb.rpc('fn_produccion_registrar', {
+    p_producto_id: productoId,
+    p_cantidad: cantidad,
+    p_motivo: motivo,
+    p_nota: nota ?? undefined,
+  })
+  if (error) throw error
+  return Number(data ?? 0)
+}

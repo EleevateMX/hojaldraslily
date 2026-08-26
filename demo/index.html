@@ -51,6 +51,14 @@
   .app.crema{background:var(--crema)}
   .app.lila{background:var(--lila)}
 
+  table.llaves{width:100%;border-collapse:collapse;margin-top:6px;font-size:15px}
+  table.llaves th{text-align:left;font-family:"DM Mono",monospace;font-size:11.5px;
+                  letter-spacing:.08em;text-transform:uppercase;color:var(--suave);
+                  padding:8px 12px;border-bottom:1px solid var(--borde)}
+  table.llaves td{padding:10px 12px;border-bottom:1px solid var(--borde)}
+  table.llaves code{font-family:"DM Mono",monospace;background:var(--rosa);
+                    color:var(--coral-dark);border-radius:6px;padding:2px 8px}
+
   .aviso{margin-top:44px;border-radius:14px;background:var(--crema);
          border-left:4px solid var(--dorado);padding:18px 22px;font-size:15.5px}
   .aviso b{font-weight:700}
@@ -72,6 +80,7 @@
     <span class="chip"><b>✔</b> venta de punta a punta probada</span>
     <span class="chip"><b>✔</b> 39 productos a la venta</span>
     <span class="chip"><b>✔</b> el menú real de Lily, cargado</span>
+    <span class="chip"><b>✔</b> inventario por paquetes</span>
   </div>
 
   <p class="eyebrow">La barra</p>
@@ -116,14 +125,14 @@
     <a class="app lila" href="app/admin/">
       <span class="quien">Gerencia</span>
       <h3>Admin</h3>
-      <p>Menús del día (prender y apagar lo que hoy se vende), ventas, catálogo, clientes, panel en vivo y diagnóstico.</p>
+      <p><b>Producción de hoy</b> (cuántos paquetes salieron y cuántos quedan), <b>Menús del día</b>, ventas, catálogo, clientes y diagnóstico.</p>
       <span class="pin">PIN de gerencia: 2468</span>
     </a>
     <a class="app lila" href="app/costos/">
       <span class="quien">Quien cuesta el menú</span>
       <h3>Costeos</h3>
       <p>La fuente de la verdad del catálogo: insumos, recetas y precios.</p>
-      <span class="pin">Clave: 1234</span>
+      <span class="pin">Usuario: lily · Contraseña: hojaldras2026</span>
     </a>
     <a class="app" href="app/web/">
       <span class="quien">El público</span>
@@ -146,10 +155,22 @@
     </a>
   </div>
 
+  <p class="eyebrow">Las llaves de la demostración</p>
+  <p class="eyebrow-nota">Todo lo de abajo entra hoy. Son de demostración: hay que cambiarlas antes de abrir.</p>
+  <table class="llaves">
+    <tr><th>Dónde</th><th>Con qué se entra</th></tr>
+    <tr><td>Admin (gerencia)</td><td><code>2468</code></td></tr>
+    <tr><td>POS / caja</td><td><code>1357</code></td></tr>
+    <tr><td>Kiosko — abrir o cerrar turno</td><td>5 toques a la hojaldra, luego <code>1357</code></td></tr>
+    <tr><td>Costeos</td><td>usuario <code>lily</code> · contraseña <code>hojaldras2026</code></td></tr>
+    <tr><td>Costeos — borrar todo el costeo</td><td><code>1234</code> (esa clave <b>no</b> sirve para entrar)</td></tr>
+    <tr><td>Barra, cocina, pantalla, web, Rewards</td><td>Se abren sin clave</td></tr>
+  </table>
+
   <div class="aviso">
     <b>Esto es una demostración, todavía no la tienda.</b> Antes de abrir hay que:
     <ul>
-      <li><b>Cambiar los PIN</b> de esta página: aquí están a la vista para poder enseñar el sistema.</li>
+      <li><b>Cambiar los PIN y la contraseña de Costeos</b>: aquí están a la vista, a propósito, para poder enseñar el sistema.</li>
       <li><b>Mover las apps a Cloudflare Pages</b> con los dominios propios (`caja.hojaldraslily.com`, etc.). Aquí están en una URL pública.</li>
       <li><b>Conectar la terminal de cobro</b> con tarjeta y capturar la lista de precios real en Costeos.</li>
     </ul>

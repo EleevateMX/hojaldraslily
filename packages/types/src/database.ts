@@ -3111,6 +3111,29 @@ export type Database = {
         Returns: undefined
       }
       fn_imprimir_latido: { Args: { p_token: string }; Returns: undefined }
+      fn_existencias_del_dia: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          disponibles: number
+          horneados: number
+          imagen_url: string
+          mermados: number
+          nombre: string
+          precio: number
+          producto_id: string
+          vendidos: number
+        }[]
+      }
+      fn_produccion_registrar: {
+        Args: {
+          p_cantidad: number
+          p_motivo?: string
+          p_nota?: string
+          p_producto_id: string
+        }
+        Returns: number
+      }
       fn_menus_del_dia: {
         Args: Record<PropertyKey, never>
         Returns: {

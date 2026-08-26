@@ -39,6 +39,9 @@ por eso no aparecen en `orden-canonico.txt`. Se aplican en orden de nombre:
 | `20260826210000` | `fn_menus_del_dia`: el interruptor de cada menú |
 | `20260826213000` | El catálogo solo lo escribe el personal (ver abajo) |
 | `20260826214000` | Fuera las categorías heredadas del motor original |
+| `20260826220000` | Costeos con sesión propia (cierra la puerta de atrás a los precios) |
+| `20260826221000` | Una imagen de referencia por sabor |
+| `20260826222000` | Producción del día: paquetes horneados, mermados y disponibles |
 
 ### Lo que cerró `20260826213000`
 
@@ -62,3 +65,24 @@ cambió — el menú sigue siendo público.
 estación corren **sin sesión**. Se cierran haciendo que esas pantallas
 abran sesión real (ya existe `staff-login`), no quitándoles el permiso:
 eso dejaría la tienda sin poder marcar comandas ni abrir caja.
+
+
+### La puerta de atrás que cerró `20260826220000`
+
+`20260826213000` cerró la escritura directa del catálogo, pero **no bastaba**:
+`app_data` seguía con INSERT/UPDATE para `anon`, y su trigger `app_data_sync`
+corre como DEFINER y reescribe productos, insumos y recetas. O sea que con la
+llave pública todavía se podían mover los precios — dando el rodeo por
+Costeos en vez de tocar `productos`.
+
+Había además un problema de confidencialidad: `app_data` guarda el costeo
+(costos, márgenes, proveedores) y estaba con `select` para `anon`.
+
+Costeos no puede usar sesión de Supabase Auth (es un HTML plano con su propio
+usuario y contraseña), así que ahora al entrar recibe un **token** de 12 horas
+y todo pasa por `fn_costos_cargar` / `fn_costos_guardar`. `app_data` quedó
+cerrada a `anon`.
+
+Efecto colateral aceptado: Realtime ya no entrega los cambios de `app_data`
+(aplica RLS igual que una consulta), así que Costeos dejó de avisar
+"actualizado desde otro dispositivo". Recargar trae lo último.

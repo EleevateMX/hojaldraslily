@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Spinner } from '@shake/ui'
 import { useCarrito } from '@/store/carritoStore'
+import { urlDeFoto } from '@shake/utils'
 import {
   listarProductosParaVenta, listarExtras, listarProductosExtra, listarObservaciones,
   nombreParaOrdenar, partirNombreDeVenta, agruparCategorias,
@@ -367,29 +368,29 @@ export function Catalogo() {
                pantalla decide cuántas caben y todas quedan legibles: tres en
                la vertical de la tienda, más en un monitor ancho. */
             className="grid gap-5"
-            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))' }}
+            style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(268px, 1fr))' }}
           >
             {productosFiltrados.map((producto) => (
               <div
                 key={producto.id}
                 className="group relative bg-sa-cream-soft rounded-sa-lg overflow-hidden shadow-sa-sm hover:shadow-sa transition-all active:scale-[0.98]"
               >
-                {/* La foto es OPCIONAL y hoy casi ningun producto la trae.
-                    Antes el hueco se llenaba con un dibujo y un "se lo comio
-                    el perro": 18 tarjetas identicas de relleno beige donde lo
-                    unico que el cliente busca -- el sabor -- quedaba hasta
-                    abajo en letra chica. Sin foto, la tarjeta se cierra y el
-                    sabor pasa a ser el titulo. */}
-                {producto.imagen_url && (
-                  <div className="w-full h-56 bg-white flex items-center justify-center">
-                    <img
-                      src={producto.imagen_url}
-                      alt={nombreParaOrdenar(producto.nombre)}
-                      className="max-h-full max-w-full object-contain"
-                    />
-                  </div>
-                )}
                 <div className="p-4">
+                  {/* La imagen va de MINIATURA al lado del nombre, no de
+                      cabecera grande: con foto grande el menu completo dejaba
+                      de caber en una pantalla y volvia el scroll. Asi se
+                      distingue el sabor de un vistazo y siguen cabiendo
+                      todas. */}
+                  <div className="flex items-start gap-3">
+                    {urlDeFoto(producto.imagen_url, import.meta.env.BASE_URL) && (
+                      <img
+                        src={urlDeFoto(producto.imagen_url, import.meta.env.BASE_URL)!}
+                        alt=""
+                        className="w-14 h-14 shrink-0 object-contain -mt-1"
+                        draggable={false}
+                      />
+                    )}
+                    <div className="min-w-0 flex-1">
                   {/* Sabor arriba y grande, medida como etiqueta: es la
                       pregunta que de verdad se hace en la barra ("de que" y
                       luego "de que tamano"), en ese orden. */}
@@ -397,7 +398,7 @@ export function Catalogo() {
                     {partirNombreDeVenta(producto.nombre).sabor}
                   </p>
                   {partirNombreDeVenta(producto.nombre).medida && (
-                    <span className="inline-block mt-2 font-mono text-[11px] uppercase tracking-wide bg-sa-cream-warm text-sa-green-ink/75 px-2.5 py-1 rounded-full">
+                    <span className="inline-block mt-2 font-mono text-[11px] uppercase tracking-wide bg-sa-cream-warm text-sa-green-ink/75 px-2.5 py-1 rounded-full whitespace-nowrap">
                       {partirNombreDeVenta(producto.nombre).medida}
                     </span>
                   )}
@@ -406,6 +407,8 @@ export function Catalogo() {
                       {producto.descripcion}
                     </p>
                   )}
+                    </div>
+                  </div>
                   <div className="flex items-center justify-between mt-3">
                     <p className="font-mono text-lg font-medium text-sa-green">
                       ${producto.precio.toFixed(2)}
