@@ -173,13 +173,16 @@ para arriba** (títulos y cifras grandes); abajo de eso va Karla, y los
 números y etiquetas en versalitas van en DM Mono. Yellowtail es exclusiva
 del logotipo: nunca en texto corrido ni en la interfaz.
 
-**Las dos excepciones que hay que vigilar**, porque no pasan por el
+**Las tres excepciones que hay que vigilar**, porque no pasan por el
 empaquetador y se desvían solas:
 
 - `apps/costos/index.html` — HTML plano. Copia los valores a mano en su
   bloque `:root`. Ya se desvió una vez (usaba Fredoka + Inter y una paleta
   verde-olivo); si se toca `tokens.css`, hay que copiarlo aquí.
 - `apps/web` — carga las fuentes con su propio `<link>`.
+- `demo/index.html` — la portada de la vitrina, también HTML plano con su
+  propio `:root`. Se quedó en el coral viejo un rato después de que la
+  marca ya era carmín.
 
 ### 2.6 La PC de la tienda se mantiene sola
 
