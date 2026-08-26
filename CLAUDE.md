@@ -4,11 +4,11 @@ Este archivo es para quien retome el trabajo (yo incluido, en otra sesión):
 qué está vivo, cómo se opera y **qué trampas ya nos costaron caro**. Los
 detalles temáticos viven en `docs/` (42 documentos); esto es el mapa.
 
-**Este repo es la réplica del sistema de Shakeaholic para Hojaldras Lily**
-(ver `docs/replicar-el-sistema.md`). El motor es idéntico; cambió la
-identidad (`packages/brand`), los textos visibles, el proyecto Supabase y
-el dominio. Las trampas documentadas abajo se aprendieron con la tienda
-original abierta: siguen aplicando tal cual.
+**Este repo es el sistema de Hojaldras Lily**, replicado de un motor que
+ya opera en producción en otro negocio (ver `docs/replicar-el-sistema.md`).
+Cambió la identidad (`packages/brand`), los textos visibles, el proyecto
+Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
+la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura.** La base `fzkdgqqvfkogmxdgqsxj` ya tiene el
 esquema completo replicado; falta capturar el catálogo real en Costos,
@@ -113,9 +113,9 @@ pantallas muestran comandas pero **no sale papel**.
 - Reclama trabajos con `fn_imprimir_reclamar_trabajos` y late con
   `fn_imprimir_latido`, que ahora **reporta su versión** — visible en
   Admin → En vivo junto a cada impresora. Si dice ámbar, falta actualizar.
-- La etiqueta lleva familia + nombre (`Kombucha - Limonada Durazno`) pero
-  **Shakes va sin familia** (`#1 Chocokiller`), y **el tamaño del vaso no
-  se imprime**: vive solo en pantalla.
+- La etiqueta lleva familia + nombre (`Bebidas - Cafe de olla`) pero
+  **Hojaldras va sin familia** (`#1 Guayaba Mini`), y **el tamaño del vaso
+  no se imprime**: vive solo en pantalla.
 - Si el agente "acepta datos y no imprime", el problema es físico
   (papel/tapa/sensor): el autotest con FEED al encender lo confirma.
 
@@ -125,17 +125,18 @@ pantallas muestran comandas pero **no sale papel**.
 las tres tipografías. Las 8 apps de Vite lo importan en su `index.css`, así
 que heredan la marca sin hacer nada.
 
-- **Bagel Fat One** (display) · **DM Sans** (cuerpo) · **DM Mono** (cifras
-  y etiquetas chicas).
-- Verde `#2C4A3E`, verde profundo `#1A2E26`, tinta `#14241D`, crema
-  `#E8E6CC`, y los acentos de sabor (plátano `#F0C649`, fresa `#E04E5C`,
-  menta `#88C0A0`…) **uno por superficie**, nunca varios.
+- **Jost** (display/titulares) · **Karla** (cuerpo e interfaz) · **DM
+  Mono** (cifras y etiquetas chicas) · **Yellowtail** solo en el logotipo.
+- Coral `#C4463C`, coral oscuro `#A2372F`, cacao `#2E2420`, crema hojaldre
+  `#F8EDD5`, y los acentos (dorado `#C98A4B`, magenta `#C2186B`, rosa
+  `#F6D8CD`…) **uno por superficie**, nunca varios. Los nombres de los
+  tokens (`--sa-*`) se conservaron del motor original a propósito: las
+  apps los leen tal cual y solo cambiaron los valores.
 
 **La regla de tamaños, tomada del kiosko**: la display se usa de **18 px
-para arriba** (títulos y cifras grandes); abajo de eso va DM Sans, y los
-números y etiquetas en versalitas van en DM Mono. Bagel Fat One solo
-existe en **un peso**: pedirle `font-weight: 700` hace que el navegador la
-engorde sola y se ve emborronada.
+para arriba** (títulos y cifras grandes); abajo de eso va Karla, y los
+números y etiquetas en versalitas van en DM Mono. Yellowtail es exclusiva
+del logotipo: nunca en texto corrido ni en la interfaz.
 
 **Las dos excepciones que hay que vigilar**, porque no pasan por el
 empaquetador y se desvían solas:

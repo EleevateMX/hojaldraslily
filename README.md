@@ -1,9 +1,9 @@
 # hojaldraslily-pos-ecosistema
 
 Ecosistema de punto de venta + costos de **Hojaldras Lily** sobre Supabase
-(fuente única de verdad). Monorepo pnpm. Réplica del sistema probado de
-Shakeaholic (`docs/replicar-el-sistema.md`): mismo motor, identidad y
-catálogo de Hojaldras Lily. Los demos visuales de venta viven en `demo/`.
+(fuente única de verdad). Monorepo pnpm. Motor replicado de un sistema ya
+probado en producción (`docs/replicar-el-sistema.md`), con la identidad
+y el catálogo de Hojaldras Lily. Los demos visuales de venta viven en `demo/`.
 
 ```
 apps/costos            ✅ costeo (insumos, productos, recetas, parámetros)      :5180

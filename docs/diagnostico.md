@@ -5,7 +5,7 @@ Fecha: 2026-07-01
 ## Alcance de la auditoría
 
 El diagnóstico se hizo sobre **la base de datos Supabase real** (proyecto
-"Hojaldras Lily", réplica del proyecto original de Shakeaholic) más el código legacy de costos.
+"Hojaldras Lily", ) más el código legacy de costos.
 
 ✅ **Código de costos auditado**: subido a la rama `legacy-import` como
 `costosshake-main/` (README + `index.html` de 1,221 líneas; `index_2.html`

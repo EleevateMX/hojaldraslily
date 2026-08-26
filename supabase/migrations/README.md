@@ -3,12 +3,12 @@
 Historial en el proyecto Supabase **Hojaldras Lily** (`fzkdgqqvfkogmxdgqsxj`).
 
 Esta carpeta contiene el **historial canónico completo** (132 migraciones)
-replicado del proyecto original de Shakeaholic el 2026-08-26, con la marca
+replicado del proyecto original el 2026-08-26, con la marca
 adaptada (ver `scripts/adaptar-sql-lily.sh` y
 `scripts/instrucciones-replicacion-migraciones.md`). El orden exacto vive
 en `orden-canonico.txt`; los archivos van nombrados `VERSION_NOMBRE.sql`.
 
-Las dos primeras (`shakeaholic_inicial`, `core_unificado`) son las
+Las dos primeras (`hojaldraslily_inicial`, `core_unificado`) son las
 fundacionales que en el proyecto original nunca vivieron en repo: aquí sí
 están versionadas.
 
