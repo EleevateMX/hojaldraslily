@@ -352,7 +352,7 @@ export function Catalogo() {
               Conecta Supabase para llenar la vitrina con hojaldras, bocadillos y pan de verdad.
             </p>
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-green/70 mt-2">
-              · sin polvo raro ·
+              · recién horneado ·
             </p>
           </div>
         ) : (
@@ -444,7 +444,7 @@ export function Catalogo() {
           onClick={() => navigate('/carrito')}
           className="fixed bottom-8 right-8 z-20 flex items-center gap-3 bg-sa-strawberry text-white pl-6 pr-7 h-16 rounded-full shadow-sa active:scale-95 transition-transform"
         >
-          <span className="font-display text-2xl">Tu shake</span>
+          <span className="font-display text-2xl">Tu pedido</span>
           <span className="font-mono text-sm bg-white text-sa-strawberry rounded-full min-w-7 h-7 px-2 flex items-center justify-center font-medium">
             {totalItems()}
           </span>
