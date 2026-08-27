@@ -6,11 +6,17 @@ import {
   cobrarEncargo,
   cancelarEncargo,
   listarExistenciasDelDia,
+  mandarAProducir,
+  listarOrdenesConTiempo,
+  faltaPara,
+  horaDeSalida,
   partirNombreDeVenta,
   type Encargo,
   type ExistenciaDelDia,
+  type OrdenConTiempo,
 } from '@shake/supabase'
 import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
+import { usePosStore } from '@/store/posStore'
 import { sb } from '@/lib/sb'
 
 /**
@@ -69,6 +75,18 @@ export function Encargos() {
   const [busca, setBusca] = useState('')
   const [guardando, setGuardando] = useState(false)
 
+  // Mandar a producir, desde la caja.
+  //
+  // La duena atiende la caja: cuando ve que se estan acabando las bolitas de
+  // queso no tiene por que irse a Admin a pedirlas. Solo gerencia: un cajero
+  // no decide que se hornea.
+  const empleado = usePosStore((s) => s.empleado)
+  const esGerencia = ['administrador', 'gerente'].includes(empleado?.rol ?? '')
+  const [modoProducir, setModoProducir] = useState(false)
+  const [aProducir, setAProducir] = useState<Record<string, number>>({})
+  const [mandando, setMandando] = useState(false)
+  const [horno, setHorno] = useState<OrdenConTiempo[]>([])
+
   const base = import.meta.env.BASE_URL
 
   const cargar = useCallback(async (conSpinner = true) => {
@@ -87,7 +105,29 @@ export function Encargos() {
 
   useEffect(() => {
     void cargar()
+    void listarOrdenesConTiempo(sb).then(setHorno).catch(() => {})
   }, [cargar])
+
+  async function mandarAlHorno() {
+    const items = Object.entries(aProducir)
+      .filter(([, n]) => n > 0)
+      .map(([producto_id, cantidad]) => ({ producto_id, cantidad }))
+    if (items.length === 0) return
+    setMandando(true)
+    try {
+      await mandarAProducir(sb, items)
+      const piezas = items.reduce((s, i) => s + i.cantidad, 0)
+      setAviso(`Mandadas a hacer ${piezas} pieza${piezas === 1 ? '' : 's'}. Ya salió en la pantalla del horno.`)
+      setAProducir({})
+      setModoProducir(false)
+      setError(null)
+      setHorno(await listarOrdenesConTiempo(sb))
+    } catch (e) {
+      setError(mensajeDeError(e))
+    } finally {
+      setMandando(false)
+    }
+  }
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -160,6 +200,7 @@ export function Encargos() {
     }
   }
 
+  const aHornear = Object.values(aProducir).reduce((s, n) => s + n, 0)
   const piezasApartadas = encargos.reduce((s, e) => s + e.piezas, 0)
   const dinero = encargos.reduce((s, e) => s + e.total, 0)
 
@@ -174,11 +215,20 @@ export function Encargos() {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <button
-            onClick={() => setNuevo((v) => !v)}
+            onClick={() => { setNuevo((v) => !v); setModoProducir(false) }}
             className={`${btn} bg-sa-cream text-sa-green-deep`}
           >
             {nuevo ? 'Cerrar' : 'Apartar uno nuevo'}
           </button>
+          {/* Solo gerencia: un cajero no decide que se hornea. */}
+          {esGerencia && (
+            <button
+              onClick={() => { setModoProducir((v) => !v); setNuevo(false) }}
+              className={`${btn} bg-sa-banana/25 text-sa-cream border border-sa-banana/50`}
+            >
+              {modoProducir ? 'Cerrar' : 'Mandar a producir'}
+            </button>
+          )}
           <button
             onClick={() => navigate('/')}
             className={`${btn} bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 border border-sa-cream/20`}
@@ -204,6 +254,102 @@ export function Encargos() {
               Cerrar
             </button>
           </div>
+        )}
+
+        {/* Lo que ya esta en el horno, con su hora estimada. */}
+        {horno.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap bg-sa-cream-warm/60 rounded-sa px-4 py-3">
+            <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/60">
+              En el horno
+            </span>
+            {horno.map((o) => {
+              const f = faltaPara(o.listo_estimado)
+              return (
+                <span
+                  key={o.id}
+                  className={[
+                    'rounded-full px-3 py-1 font-body text-sm',
+                    f.tarde ? 'bg-sa-strawberry/20' : 'bg-white',
+                  ].join(' ')}
+                >
+                  <b>{o.piezas_pedidas - o.piezas_hechas}</b> piezas · {f.texto}
+                  <span className="text-sa-green-ink/45"> ({horaDeSalida(o.listo_estimado)})</span>
+                </span>
+              )
+            })}
+          </div>
+        )}
+
+        {modoProducir && (
+          <section className="bg-white rounded-sa shadow-sa-sm p-5 space-y-4">
+            <div>
+              <p className="font-display text-xl text-sa-green-ink">Mandar a producir</p>
+              <p className="font-body text-sm text-sa-green-ink/60 mt-0.5">
+                Sale en la pantalla del horno. Cuando lo marquen hecho, entra
+                solo al inventario.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+              {existencias.map((f) => {
+                const { sabor, medida } = partirNombreDeVenta(f.nombre)
+                const n = aProducir[f.producto_id] ?? 0
+                const foto = urlDeFoto(f.imagen_url, base)
+                return (
+                  <div
+                    key={f.producto_id}
+                    className={[
+                      'flex items-center gap-2 rounded-sa border p-2',
+                      n > 0 ? 'border-sa-banana bg-sa-banana/10' : 'border-sa-green-ink/10',
+                    ].join(' ')}
+                  >
+                    {foto && <img src={foto} alt="" className="w-10 h-10 object-contain shrink-0" />}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-body text-sm text-sa-green-ink leading-tight truncate">
+                        {sabor}
+                      </p>
+                      <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
+                        {medida ? medida + ' · ' : ''}quedan {Math.max(0, f.libres)}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() =>
+                          setAProducir((p) => ({ ...p, [f.producto_id]: Math.max(0, n - 5) }))
+                        }
+                        disabled={n === 0}
+                        className="w-8 h-8 rounded-full border border-sa-green-ink/15 text-sa-green-ink/60 disabled:opacity-25"
+                      >
+                        −
+                      </button>
+                      <span className="font-mono text-sm w-7 text-center tabular-nums">{n}</span>
+                      <button
+                        onClick={() => setAProducir((p) => ({ ...p, [f.producto_id]: n + 5 }))}
+                        className="w-8 h-8 rounded-full bg-sa-green text-sa-cream"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <p className="font-body text-sm text-sa-green-ink/70">
+                {aHornear > 0
+                  ? `${aHornear} pieza${aHornear === 1 ? '' : 's'} en la orden`
+                  : 'Todavía no ha puesto nada'}
+              </p>
+              <button
+                onClick={() => void mandarAlHorno()}
+                disabled={aHornear === 0 || mandando}
+                className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-6 py-2.5 rounded-sa font-medium text-sm disabled:opacity-40 transition-colors"
+              >
+                {mandando ? 'Mandando…' : 'Mandar al horno'}
+              </button>
+            </div>
+          </section>
         )}
 
         {nuevo && (

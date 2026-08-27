@@ -8,8 +8,8 @@ y el catálogo de Hojaldras Lily. Los demos visuales de venta viven en `demo/`.
 ```
 apps/costos            ✅ costeo (insumos, productos, recetas, parámetros)      :5180
 apps/pos               ✅ caja: catálogo, cobro 2 pasos, corte                 :5181
-apps/cocina-alimentos  ✅ KDS estación alimentos (realtime)                    :5182
-apps/cocina-bebidas    ✅ KDS estación bebidas (realtime)                      :5183
+apps/produccion        ✅ Pantalla del horno (órdenes de producción)          :5188
+apps/almacen           ✅ Visor de apartados (entregar y cobrar encargos)      :5189
 apps/cliente-display   ✅ pantalla pública de folios (preparando/listo)        :5184
 apps/admin             ✅ menú CRUD + ventas + inventario                      :5185
 apps/kiosko            ✅ autoservicio + Clip + lealtad (canal kiosko)         :5186
@@ -33,8 +33,8 @@ pnpm install
 pnpm dev:pos       # caja        → http://localhost:5181
 pnpm dev:kiosko    # autoservicio → :5186
 pnpm dev:admin     # admin        → :5185
-pnpm dev:cocina-alimentos   # :5182
-pnpm dev:cocina-bebidas     # :5183
+pnpm dev:produccion         # :5188
+pnpm dev:almacen            # :5189
 pnpm dev:display   # cliente-display → :5184
 pnpm dev:pwa       # PWA cliente (Rewards) → :5187
 pnpm dev:costos    # costeo      → :5180

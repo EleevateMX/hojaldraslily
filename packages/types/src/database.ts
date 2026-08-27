@@ -368,6 +368,35 @@ export type Database = {
           },
         ]
       }
+      precios_canal: {
+        Row: {
+          canal: Database["public"]["Enums"]["canal_orden"]
+          precio: number
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          canal: Database["public"]["Enums"]["canal_orden"]
+          precio: number
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: Database["public"]["Enums"]["canal_orden"]
+          precio?: number
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       encargo_items: {
         Row: {
           cantidad: number
@@ -3320,6 +3349,21 @@ export type Database = {
           vendidos: number
         }[]
       }
+      fn_ordenes_de_produccion: {
+        Args: { p_incluir_terminadas?: boolean }
+        Returns: {
+          created_at: string
+          creada_por: string
+          estado: string
+          folio: number
+          id: string
+          listo_estimado: string
+          minutos: number
+          nota: string
+          piezas_hechas: number
+          piezas_pedidas: number
+        }[]
+      }
       fn_produccion_avanzar: {
         Args: { p_hechas: number; p_item_id: string }
         Returns: number
@@ -3565,7 +3609,7 @@ export type Database = {
     }
     Enums: {
       ancho_papel: "58mm" | "80mm"
-      canal_orden: "kiosko" | "pos" | "delivery"
+      canal_orden: "kiosko" | "pos" | "delivery" | "rappi"
       estado_cocina:
         | "pendiente"
         | "en_preparacion"
@@ -3749,7 +3793,7 @@ export const Constants = {
   public: {
     Enums: {
       ancho_papel: ["58mm", "80mm"],
-      canal_orden: ["kiosko", "pos", "delivery"],
+      canal_orden: ["kiosko", "pos", "delivery", "rappi"],
       estado_cocina: [
         "pendiente",
         "en_preparacion",

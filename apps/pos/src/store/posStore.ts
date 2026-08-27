@@ -1,7 +1,11 @@
 import { create } from 'zustand'
-import { descuentoPromo as calcDescuentoPromo } from '@shake/supabase'
-import type { ProductoVenta, ClienteConLealtad } from '@shake/supabase'
-import type { Empleado } from '@shake/supabase'
+import { descuentoPromo as calcDescuentoPromo, precioEnCanal } from '@shake/supabase'
+import type { ProductoVenta, ClienteConLealtad, CanalDeVenta, PreciosDeCanal } from '@shake/supabase'
+// Lo que el login guarda de verdad es un EmpleadoSesion (id, nombre, ROL y
+// sucursal), no la fila cruda de `empleados`. Estaba tipado como `Empleado`
+// —que trae `rol_id`, no `rol`— y por eso quien necesitaba el puesto tenia
+// que castear. Se tipa lo que en realidad hay.
+import type { EmpleadoSesion } from '@shake/supabase'
 import type { Almacen, Caja, CajaCorte, Cupon, Promocion } from '@shake/types'
 
 /**
@@ -29,8 +33,8 @@ export interface DescuentoManual {
 
 interface PosStore {
   // --- Sesión del cajero ---
-  empleado: Empleado | null
-  iniciarSesion: (empleado: Empleado) => void
+  empleado: EmpleadoSesion | null
+  iniciarSesion: (empleado: EmpleadoSesion) => void
   cerrarSesion: () => void
 
   // --- Contexto de caja (bootstrap real: almacén kiosko + caja + corte) ---
@@ -39,6 +43,23 @@ interface PosStore {
   corte: CajaCorte | null
   setContexto: (ctx: { almacen: Almacen; caja: Caja; corte: CajaCorte | null }) => void
   setCorte: (corte: CajaCorte | null) => void
+
+  /**
+   * Canal de venta del ticket. Rappi cobra otra lista de precios: la
+   * plataforma se lleva su comisión, así que la pieza de $160 sale en $190.
+   *
+   * Vive en el store y no en la pantalla de cobro porque el precio tiene que
+   * verse desde que se arma el ticket. Y sobre todo: `fn_cobrar_orden` valida
+   * el importe contra el total que calcula el servidor, así que si la
+   * pantalla mostrara el precio de mostrador y el servidor el de Rappi, el
+   * cobro se rechazaría.
+   */
+  canal: CanalDeVenta
+  preciosCanal: PreciosDeCanal
+  setCanal: (canal: CanalDeVenta) => void
+  setPreciosCanal: (precios: PreciosDeCanal) => void
+  /** Lo que cuesta ese producto en el canal activo. */
+  precioDe: (p: ProductoVenta) => number
 
   // --- Orden activa ---
   items: LineaCarrito[]
@@ -148,7 +169,11 @@ export const usePosStore = create<PosStore>((set, get) => ({
   setDescuentoManual: (descuentoManual) => set({ descuentoManual }),
 
   limpiarOrden: () =>
+    // El canal vuelve a mostrador a proposito: dejarlo en Rappi despues de
+    // cobrar le cobraria el precio de plataforma al siguiente cliente que
+    // llegue al mostrador.
     set({
+      canal: 'pos',
       items: [],
       cliente: null,
       cupon: null,
@@ -157,7 +182,16 @@ export const usePosStore = create<PosStore>((set, get) => ({
       descuentoManual: null,
     }),
 
-  subtotal: () => get().items.reduce((s, l) => s + l.producto.precio * l.cantidad, 0),
+  canal: 'pos',
+  preciosCanal: {},
+  setCanal: (canal) => set({ canal }),
+  setPreciosCanal: (preciosCanal) => set({ preciosCanal }),
+  precioDe: (p) => precioEnCanal(p, get().canal, get().preciosCanal),
+
+  subtotal: () => {
+    const { items, canal, preciosCanal } = get()
+    return items.reduce((s, l) => s + precioEnCanal(l.producto, canal, preciosCanal) * l.cantidad, 0)
+  },
 
   // Ítems elegibles para un cupón: el de cumpleaños se limita a lo que hace
   // la casa (lo que va a la estación de alimentos); los demás, a cualquier
@@ -182,7 +216,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
     if (!cupon) return 0
     const eleg = get().itemsElegiblesCupon(cupon)
     if (eleg.length === 0) return 0
-    return Math.max(...eleg.map((l) => l.producto.precio))
+    return Math.max(...eleg.map((l) => get().precioDe(l.producto)))
   },
 
   descuentoPromoMonto: () => {
@@ -191,7 +225,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
     // items expandidos por unidad (precio + categoría) para calcular la promo.
     const planos = items.flatMap((l) =>
       Array.from({ length: l.cantidad }, () => ({
-        precio: l.producto.precio,
+        precio: get().precioDe(l.producto),
         categoria: l.producto.categorias?.nombre ?? null,
       })),
     )

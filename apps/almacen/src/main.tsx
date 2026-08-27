@@ -6,9 +6,10 @@ import './index.css'
 import { escucharRecargas } from '@shake/supabase'
 import { sb } from './lib/sb'
 
-// El timbre de "actualizar pantallas" del Admin: esta pantalla es de solo
-// lectura, así que recarga al instante — sin nadie caminando a picarle F5.
-escucharRecargas(sb, 'barra', () => window.location.reload())
+// El timbre de "actualizar pantallas" del Admin. Aquí SÍ se puede recargar
+// sin pensarlo: lo que se marca como hecho ya quedó guardado en la base en
+// ese momento, no hay nada a medias que se pueda perder.
+escucharRecargas(sb, 'cocina', () => window.location.reload())
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

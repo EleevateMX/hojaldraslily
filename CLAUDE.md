@@ -61,8 +61,7 @@ Cloudflare Pages por GitHub Actions al hacer push a `main`.
 | `kiosko` | `kiosko.hojaldraslily.com` | Cliente y cajero en la barra |
 | `pos` | `caja.hojaldraslily.com` | Caja (abrir turno, cobros manuales) |
 | `produccion` | `produccion.hojaldraslily.com` | Quien hornea (órdenes de producción) |
-| `cocina-bebidas` | `barra.hojaldraslily.com` | Estación de barra |
-| `cocina-alimentos` | `cocina.hojaldraslily.com` | Estación de cocina |
+| `almacen` | `almacen.hojaldraslily.com` | Almacén (entrega y cobra los encargos) |
 | `cliente-display` | `pantalla.hojaldraslily.com` | TV de folios |
 | `admin` | `admin.hojaldraslily.com` | Gerencia |
 | `cliente-pwa` | `rewards.hojaldraslily.com` | Celular del cliente (y la app de TestFlight) |

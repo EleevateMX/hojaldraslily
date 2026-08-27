@@ -24,6 +24,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
     descuentoManual, setDescuentoManual,
     itemsElegiblesCupon,
     subtotal, descuentoCupon, descuentoPromoMonto, descuentoManualMonto, neto, totalItems,
+    precioDe,
   } = usePosStore()
 
   const [modalDescuento, setModalDescuento] = useState(false)
@@ -102,7 +103,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
               <div key={l.lineaId} className="flex items-center gap-2 bg-sa-cream-soft rounded-sa px-3 py-2.5">
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-sa-green-ink truncate">{l.producto.nombre}</p>
-                  <p className="font-mono text-xs text-sa-green-ink/50">{mxn(l.producto.precio)} c/u</p>
+                  <p className="font-mono text-xs text-sa-green-ink/50">{mxn(precioDe(l.producto))} c/u</p>
                   {l.personalizacion && (
                     <p className="font-mono text-xs text-sa-strawberry mt-0.5 leading-snug">
                       📝 {l.personalizacion}
@@ -128,7 +129,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
                 </div>
                 <div className="w-16 text-right flex-shrink-0">
                   <p className="font-mono text-sm font-medium text-sa-green-ink">
-                    {mxn(l.producto.precio * l.cantidad)}
+                    {mxn(precioDe(l.producto) * l.cantidad)}
                   </p>
                 </div>
                 <button

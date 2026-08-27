@@ -126,6 +126,15 @@ const IconMetas = () => (
   </svg>
 )
 
+/**
+ * Lo que se ve en la barra lateral.
+ *
+ * Clientes, Rewards y Extras estan FUERA de esta lista a proposito: la
+ * panaderia todavia no opera lealtad ni extras, y tres pantallas vacias en el
+ * menu hacen que nadie encuentre las que si se usan. El codigo y sus rutas
+ * siguen ahi: el dia que se quieran, se vuelven a poner en esta lista y ya
+ * funcionan.
+ */
 const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
   { id: 'envivo', label: 'En vivo', Icon: IconEnVivo },
@@ -136,13 +145,10 @@ const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'menu', label: 'Menú', Icon: IconMenu },
   { id: 'categorias', label: 'Categorías', Icon: IconCategorias },
   { id: 'combos', label: 'Combos', Icon: IconCombos },
-  { id: 'extras', label: 'Extras', Icon: IconExtras },
   { id: 'inventario', label: 'Inventario', Icon: IconInventario },
   { id: 'promos', label: 'Promos', Icon: IconPromos },
   { id: 'ventas', label: 'Ventas', Icon: IconVentas },
-  { id: 'clientes', label: 'Clientes', Icon: IconClientes },
   { id: 'metas', label: 'Metas', Icon: IconMetas },
-  { id: 'rewards', label: 'Rewards', Icon: IconRewards },
   { id: 'empleados', label: 'Empleados', Icon: IconEmpleados },
   { id: 'impresoras', label: 'Impresoras', Icon: IconImpresoras },
   { id: 'sistema', label: 'Sistema', Icon: IconSistema },

@@ -46,6 +46,7 @@ export function Cobro() {
     empleado, almacen, corte,
     items, cliente, cupon, promo,
     subtotal, descuentoTotal, neto, limpiarOrden,
+    canal, precioDe,
   } = usePosStore()
 
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo')
@@ -77,7 +78,7 @@ export function Cobro() {
         {
           sucursal_id: almacen!.sucursal_id,
           almacen_id: almacen!.id,
-          canal: 'pos',
+          canal,
           corte_id: corte!.id,
           cliente_id: cliente?.id ?? null,
           empleado_id: empleado?.id ?? null,
@@ -86,7 +87,7 @@ export function Cobro() {
         items.map((l) => ({
           producto_id: l.producto.id,
           cantidad: l.cantidad,
-          precio_unitario: l.producto.precio,
+          precio_unitario: precioDe(l.producto),
           personalizacion: l.personalizacion,
         })),
       )
@@ -111,7 +112,7 @@ export function Cobro() {
         items: items.map((l) => ({
           cantidad: l.cantidad,
           nombre: l.producto.nombre,
-          precioUnitario: l.producto.precio,
+          precioUnitario: precioDe(l.producto),
         })),
         descuento: descuentoTotal(),
         metodoPago: metodoSel.label,
@@ -270,7 +271,7 @@ export function Cobro() {
               <div key={l.lineaId} className="py-1 border-b border-dashed border-sa-green-ink/10">
                 <div className="flex justify-between">
                   <span className="text-sa-green-ink/70 truncate flex-1 mr-2">×{l.cantidad} {l.producto.nombre}</span>
-                  <span className="font-medium text-sa-green-ink flex-shrink-0">{mxn(l.producto.precio * l.cantidad)}</span>
+                  <span className="font-medium text-sa-green-ink flex-shrink-0">{mxn(precioDe(l.producto) * l.cantidad)}</span>
                 </div>
                 {l.personalizacion && (
                   <p className="text-xs text-sa-strawberry leading-snug">📝 {l.personalizacion}</p>

@@ -17,6 +17,7 @@ interface Props {
 
 export function CatalogoBusqueda({ productos, categorias, extras, productosExtra }: Props) {
   const agregarItem = usePosStore((s) => s.agregarItem)
+  const precioDe = usePosStore((s) => s.precioDe)
   const [busqueda, setBusqueda] = useState('')
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null)
   const [marcaActiva, setMarcaActiva] = useState<string | null>(null)
@@ -187,7 +188,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                     {p.descripcion}
                   </p>
                 )}
-                <p className="font-mono text-sm font-medium text-sa-strawberry mt-2">{mxn(p.precio)}</p>
+                <p className="font-mono text-sm font-medium text-sa-strawberry mt-2">{mxn(precioDe(p))}</p>
               </button>
             ))}
           </div>

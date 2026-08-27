@@ -6,7 +6,7 @@
 #
 #   1. El kiosko dejo de ir en el monitor vertical y paso a la Sony. Las
 #      coordenadas escritas a mano ya no correspondian a nada, asi que el
-#      kiosko aterrizaba en la pantalla de bebidas.
+#      kiosko aterrizaba en la pantalla de produccion.
 #   2. Chrome guarda en el perfil la ultima posicion de la ventana. Si
 #      alguien la movio una vez, --window-position se ignora y vuelve al
 #      lugar equivocado para siempre.
@@ -23,8 +23,8 @@
 #  monitor.
 #
 #      kiosko=1
-#      bebidas=2
-#      cocina=3
+#      produccion=2
+#      almacen=3
 # =============================================================================
 
 param(
@@ -89,9 +89,9 @@ Apunta ("Navegador: " + [IO.Path]::GetFileName($NAV))
 #  2. Las tres apps
 # -----------------------------------------------------------------------------
 $APPS = @(
-  [pscustomobject]@{ clave = 'bebidas'; titulo = 'Barra (bebidas)';   url = 'https://barra.hojaldraslily.com';  perfil = 'shake-bebidas'   }
-  [pscustomobject]@{ clave = 'cocina';  titulo = 'Cocina (alimentos)'; url = 'https://cocina.hojaldraslily.com'; perfil = 'shake-alimentos' }
-  [pscustomobject]@{ clave = 'kiosko';  titulo = 'Kiosko';             url = 'https://kiosko.hojaldraslily.com'; perfil = 'shake-kiosko'    }
+  [pscustomobject]@{ clave = 'produccion'; titulo = 'Produccion'; url = 'https://produccion.hojaldraslily.com'; perfil = 'lily-produccion' }
+  [pscustomobject]@{ clave = 'almacen';    titulo = 'Almacen';    url = 'https://almacen.hojaldraslily.com';    perfil = 'lily-almacen'    }
+  [pscustomobject]@{ clave = 'kiosko';     titulo = 'Kiosko';     url = 'https://kiosko.hojaldraslily.com';     perfil = 'lily-kiosko'     }
 )
 # El kiosko va al FINAL a proposito: es la ventana que debe quedar al frente
 # cuando termine todo, con el PIN listo para que el cajero entre.
@@ -118,8 +118,8 @@ function Reparte-Monitores {
   $mapa = @{}
 
   # Regla: la pantalla del cliente es la GRANDE. Las estaciones son los dos
-  # tactiles chicos, y se reparten como estan puestos fisicamente: bebidas
-  # a la izquierda, cocina a la derecha.
+  # tactiles chicos, y se reparten como estan puestos fisicamente: produccion
+  # a la izquierda, almacen a la derecha.
   if ($pantallas.Count -ge 3) {
     $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
     # Las estaciones son los dos tactiles CHICOS, no "los dos siguientes":
@@ -130,18 +130,18 @@ function Reparte-Monitores {
       Select-Object -First 2 |
       Sort-Object { $_.Bounds.X })
     $mapa['kiosko']  = $grande
-    $mapa['bebidas'] = $chicos[0]
-    $mapa['cocina']  = $chicos[1]
+    $mapa['produccion'] = $chicos[0]
+    $mapa['almacen']  = $chicos[1]
   }
   elseif ($pantallas.Count -eq 2) {
-    Apunta '[!] Solo hay 2 monitores: barra y cocina van a compartir el segundo.'
+    Apunta '[!] Solo hay 2 monitores: produccion y almacen van a compartir el segundo.'
     $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
     $otro   = @($pantallas | Where-Object { $_.DeviceName -ne $grande.DeviceName })[0]
-    $mapa['kiosko'] = $grande; $mapa['bebidas'] = $otro; $mapa['cocina'] = $otro
+    $mapa['kiosko'] = $grande; $mapa['produccion'] = $otro; $mapa['almacen'] = $otro
   }
   else {
     Apunta '[!] Solo hay 1 monitor: las tres ventanas van encima (alt+tab para cambiar).'
-    $mapa['kiosko'] = $pantallas[0]; $mapa['bebidas'] = $pantallas[0]; $mapa['cocina'] = $pantallas[0]
+    $mapa['kiosko'] = $pantallas[0]; $mapa['produccion'] = $pantallas[0]; $mapa['almacen'] = $pantallas[0]
   }
 
   # La salida de emergencia: si el reparto automatico se equivoca, este
@@ -150,7 +150,7 @@ function Reparte-Monitores {
   if (Test-Path $cfg) {
     Apunta 'Hay pantallas.txt: se respeta lo que diga ese archivo.'
     foreach ($linea in (Get-Content $cfg)) {
-      if ($linea -match '^\s*(kiosko|bebidas|cocina)\s*=\s*(\d+)\s*$') {
+      if ($linea -match '^\s*(kiosko|produccion|almacen)\s*=\s*(\d+)\s*$') {
         $clave = $Matches[1]; $n = [int]$Matches[2]
         if ($n -ge 1 -and $n -le $pantallas.Count) {
           $mapa[$clave] = $pantallas[$n - 1]
@@ -369,7 +369,7 @@ Di-Splash 'Conectando...'
 # se van amontonando ventanas y nadie sabe cual esta viva.
 try {
   $viejos = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction Stop |
-            Where-Object { $_.CommandLine -match 'shake-(kiosko|bebidas|alimentos)' }
+            Where-Object { $_.CommandLine -match 'shake-(kiosko|produccion|alimentos)' }
   if ($viejos) {
     Apunta ('Cerrando ' + @($viejos).Count + ' ventana(s) de un arranque anterior.')
     foreach ($v in $viejos) { Stop-Process -Id $v.ProcessId -Force -ErrorAction SilentlyContinue }

@@ -299,3 +299,145 @@ export async function cancelarEncargo(
   })
   if (error) throw error
 }
+
+// ------------------- el reloj del horno -------------------
+
+export interface OrdenConTiempo {
+  id: string
+  folio: number
+  estado: 'pendiente' | 'en_proceso' | 'terminada' | 'cancelada'
+  nota: string | null
+  creada_por: string | null
+  created_at: string
+  /** Cuánto se estima que tarda la orden entera (la pieza más lenta manda). */
+  minutos: number
+  listo_estimado: string
+  piezas_pedidas: number
+  piezas_hechas: number
+}
+
+/**
+ * Las órdenes abiertas con su hora estimada de salida.
+ *
+ * Es lo que la caja necesita para contestar «¿a qué hora salen?» sin ir a
+ * preguntar al horno. La estimación se calcula en la base al vuelo: si mañana
+ * se ajusta el tiempo de un producto, las órdenes abiertas se recalculan
+ * solas en vez de quedarse con una estimación vieja congelada.
+ */
+export async function listarOrdenesConTiempo(
+  sb: ShakeClient,
+  incluirTerminadas = false,
+): Promise<OrdenConTiempo[]> {
+  const { data, error } = await sb.rpc('fn_ordenes_de_produccion', {
+    p_incluir_terminadas: incluirTerminadas,
+  })
+  if (error) throw error
+  return (data ?? []) as OrdenConTiempo[]
+}
+
+/**
+ * Cuánto falta para que salga, en palabras.
+ *
+ * Devuelve el texto y si ya se pasó del tiempo, para que la pantalla decida
+ * el color. Se redondea a minutos: un contador al segundo en una pantalla de
+ * cocina solo distrae, y nadie hornea con esa precisión.
+ */
+export function faltaPara(listoEstimado: string, ahora = new Date()): {
+  texto: string
+  minutos: number
+  tarde: boolean
+} {
+  const objetivo = new Date(listoEstimado)
+  const minutos = Math.round((objetivo.getTime() - ahora.getTime()) / 60000)
+  if (minutos < 0) {
+    const m = -minutos
+    return {
+      texto: m >= 60 ? `${Math.floor(m / 60)} h ${m % 60} min tarde` : `${m} min tarde`,
+      minutos,
+      tarde: true,
+    }
+  }
+  if (minutos === 0) return { texto: 'ya mero', minutos, tarde: false }
+  if (minutos >= 60) {
+    return { texto: `en ${Math.floor(minutos / 60)} h ${minutos % 60} min`, minutos, tarde: false }
+  }
+  return { texto: `en ${minutos} min`, minutos, tarde: false }
+}
+
+/** La hora de salida, como se lee en un reloj. */
+export function horaDeSalida(listoEstimado: string): string {
+  return new Date(listoEstimado).toLocaleTimeString('es-MX', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+// ------------------- precios por canal (Rappi) -------------------
+
+/** `producto_id -> canal -> precio`. Solo trae las excepciones. */
+export type PreciosDeCanal = Record<string, Record<string, number>>
+
+/** Los canales que la caja sabe cobrar. */
+export type CanalDeVenta = 'pos' | 'rappi'
+
+/**
+ * La lista de precios por canal.
+ *
+ * Lo que se vende por Rappi no cuesta lo mismo que en mostrador: la
+ * plataforma se lleva su comisión, así que el precio de lista sube. La caja
+ * tiene que MOSTRAR ese precio, no solo cobrarlo: `fn_cobrar_orden` valida el
+ * importe contra el total que calculó el servidor, así que si la pantalla
+ * dijera $160 y el servidor $190, el cobro se rechazaría.
+ *
+ * Solo se guardan las excepciones: un producto sin fila aquí vale su precio
+ * de mostrador en todos los canales.
+ */
+export async function listarPreciosDeCanal(sb: ShakeClient): Promise<PreciosDeCanal> {
+  const { data, error } = await sb.from('precios_canal').select('producto_id, canal, precio')
+  if (error) throw error
+  const mapa: PreciosDeCanal = {}
+  for (const f of data ?? []) {
+    const fila = f as { producto_id: string; canal: string; precio: number }
+    mapa[fila.producto_id] ??= {}
+    mapa[fila.producto_id][fila.canal] = Number(fila.precio)
+  }
+  return mapa
+}
+
+/**
+ * Cuánto cuesta este producto en este canal.
+ *
+ * Es la MISMA regla que aplica `fn_precio_linea` en la base: si el producto
+ * tiene precio para el canal, ese; si no, el de mostrador. Las dos tienen que
+ * coincidir o el cobro se rechaza, así que si una cambia hay que cambiar la
+ * otra.
+ */
+export function precioEnCanal(
+  producto: { id: string; precio: number },
+  canal: CanalDeVenta,
+  precios: PreciosDeCanal,
+): number {
+  return precios[producto.id]?.[canal] ?? producto.precio
+}
+
+/** Guarda (o quita) el precio de un producto en un canal. */
+export async function guardarPrecioDeCanal(
+  sb: ShakeClient,
+  productoId: string,
+  canal: CanalDeVenta,
+  precio: number | null,
+): Promise<void> {
+  if (precio == null) {
+    const { error } = await sb
+      .from('precios_canal')
+      .delete()
+      .eq('producto_id', productoId)
+      .eq('canal', canal)
+    if (error) throw error
+    return
+  }
+  const { error } = await sb
+    .from('precios_canal')
+    .upsert({ producto_id: productoId, canal, precio, updated_at: new Date().toISOString() })
+  if (error) throw error
+}
