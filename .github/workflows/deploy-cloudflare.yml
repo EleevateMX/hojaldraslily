@@ -63,6 +63,10 @@ jobs:
             project: lily-kiosko
           - app: admin
             project: lily-admin
+          # La pantalla donde el personal ve lo que hay que hornear y marca
+          # lo que va saliendo; lo marcado entra solo al inventario.
+          - app: produccion
+            project: lily-produccion
           - app: cocina-alimentos
             project: lily-cocina-alimentos
           - app: cocina-bebidas

@@ -8,6 +8,9 @@ import type { ReactNode } from 'react'
 // ── Clases reutilizables ────────────────────────────────────────────────────
 export const cx = {
   panel: 'bg-white rounded-sa p-6 shadow-sa-sm border border-sa-green-ink/5',
+  /* Para las cifras de arriba de cada pantalla: en un telefono van tres en
+     fila, y con el `p-6` del panel normal no cabian los numeros. */
+  panelChico: 'bg-white rounded-sa p-3 sm:p-5 shadow-sa-sm border border-sa-green-ink/5',
   h3: 'text-xl font-display text-sa-green-ink',
   tableWrap: 'bg-white rounded-sa shadow-sa-sm border border-sa-green-ink/5 overflow-hidden overflow-x-auto',
   table: 'w-full text-sm',

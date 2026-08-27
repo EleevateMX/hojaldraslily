@@ -115,20 +115,20 @@ export default function Menus() {
 
       {error && <ErrorMsg>{error}</ErrorMsg>}
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className={cx.panel}>
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        <div className={cx.panelChico}>
           <p className={cx.label}>Menús abiertos</p>
-          <p className="font-display text-3xl text-sa-green-ink mt-1">
+          <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">
             {abiertos.length} <span className="text-lg text-sa-green-ink/40">de {menus.length}</span>
           </p>
         </div>
-        <div className={cx.panel}>
+        <div className={cx.panelChico}>
           <p className={cx.label}>Piezas vendidas hoy</p>
-          <p className="font-display text-3xl text-sa-green-ink mt-1">{piezasHoy}</p>
+          <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">{piezasHoy}</p>
         </div>
-        <div className={cx.panel}>
+        <div className={cx.panelChico}>
           <p className={cx.label}>Vendido hoy</p>
-          <p className="font-display text-3xl text-sa-green mt-1">{mxn(vendidoHoy)}</p>
+          <p className="font-display text-2xl sm:text-3xl text-sa-green mt-1">{mxn(vendidoHoy)}</p>
         </div>
       </div>
 
@@ -139,7 +139,7 @@ export default function Menus() {
             <div
               key={m.id}
               className={[
-                'flex items-center gap-5 rounded-sa border p-5 transition-colors',
+                'flex items-center gap-3 sm:gap-5 rounded-sa border p-4 sm:p-5 transition-colors',
                 m.activa
                   ? 'bg-white border-sa-green/30'
                   : 'bg-sa-cream-soft/60 border-sa-green-ink/10',
@@ -187,7 +187,10 @@ export default function Menus() {
                 </p>
               </div>
 
-              <div className="shrink-0 w-24 text-right">
+              {/* En el telefono el interruptor YA dice si esta abierto: la
+                  etiqueta de texto solo robaria el ancho que necesita el
+                  nombre del menu. */}
+              <div className="hidden sm:block shrink-0 w-24 text-right">
                 <span
                   className={[
                     'font-mono text-[11px] uppercase tracking-wide px-2.5 py-1 rounded-full',

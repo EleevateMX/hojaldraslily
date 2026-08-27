@@ -368,6 +368,179 @@ export type Database = {
           },
         ]
       }
+      encargo_items: {
+        Row: {
+          cantidad: number
+          encargo_id: string
+          id: string
+          precio_unitario: number
+          producto_id: string
+        }
+        Insert: {
+          cantidad: number
+          encargo_id: string
+          id?: string
+          precio_unitario: number
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          encargo_id?: string
+          id?: string
+          precio_unitario?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encargo_items_encargo_id_fkey"
+            columns: ["encargo_id"]
+            isOneToOne: false
+            referencedRelation: "encargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encargos: {
+        Row: {
+          anticipo: number
+          cliente: string
+          created_at: string
+          creado_por: string | null
+          estado: string
+          fecha_entrega: string | null
+          folio: number
+          hora_entrega: string | null
+          id: string
+          nota: string | null
+          orden_id: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          anticipo?: number
+          cliente: string
+          created_at?: string
+          creado_por?: string | null
+          estado?: string
+          fecha_entrega?: string | null
+          folio?: number
+          hora_entrega?: string | null
+          id?: string
+          nota?: string | null
+          orden_id?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anticipo?: number
+          cliente?: string
+          created_at?: string
+          creado_por?: string | null
+          estado?: string
+          fecha_entrega?: string | null
+          folio?: number
+          hora_entrega?: string | null
+          id?: string
+          nota?: string | null
+          orden_id?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encargos_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orden_produccion_items: {
+        Row: {
+          cantidad_hecha: number
+          cantidad_pedida: number
+          id: string
+          orden_id: string
+          producto_id: string
+          terminado_en: string | null
+          terminado_por: string | null
+        }
+        Insert: {
+          cantidad_hecha?: number
+          cantidad_pedida: number
+          id?: string
+          orden_id: string
+          producto_id: string
+          terminado_en?: string | null
+          terminado_por?: string | null
+        }
+        Update: {
+          cantidad_hecha?: number
+          cantidad_pedida?: number
+          id?: string
+          orden_id?: string
+          producto_id?: string
+          terminado_en?: string | null
+          terminado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orden_produccion_items_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_produccion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordenes_produccion: {
+        Row: {
+          created_at: string
+          creada_por: string | null
+          estado: string
+          fecha: string
+          folio: number
+          id: string
+          nota: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creada_por?: string | null
+          estado?: string
+          fecha?: string
+          folio?: number
+          id?: string
+          nota?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creada_por?: string | null
+          estado?: string
+          fecha?: string
+          folio?: number
+          id?: string
+          nota?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       cocinas: {
         Row: {
           id: string
@@ -3111,19 +3284,49 @@ export type Database = {
         Returns: undefined
       }
       fn_imprimir_latido: { Args: { p_token: string }; Returns: undefined }
+      fn_encargo_cancelar: {
+        Args: { p_encargo_id: string; p_motivo?: string }
+        Returns: undefined
+      }
+      fn_encargo_cobrar: {
+        Args: { p_encargo_id: string; p_metodo?: string }
+        Returns: number
+      }
+      fn_encargo_crear: {
+        Args: {
+          p_anticipo?: number
+          p_cliente: string
+          p_fecha_entrega?: string
+          p_hora_entrega?: string
+          p_items: Json
+          p_nota?: string
+          p_telefono?: string
+        }
+        Returns: string
+      }
       fn_existencias_del_dia: {
         Args: { p_fecha?: string }
         Returns: {
+          apartados: number
           categoria: string
           disponibles: number
           horneados: number
           imagen_url: string
+          libres: number
           mermados: number
           nombre: string
           precio: number
           producto_id: string
           vendidos: number
         }[]
+      }
+      fn_produccion_avanzar: {
+        Args: { p_hechas: number; p_item_id: string }
+        Returns: number
+      }
+      fn_produccion_mandar_a_hacer: {
+        Args: { p_items: Json; p_nota?: string }
+        Returns: string
       }
       fn_produccion_registrar: {
         Args: {

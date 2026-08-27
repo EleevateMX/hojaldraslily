@@ -18,7 +18,7 @@ RAIZ="$(cd "$(dirname "$0")/.." && pwd)"
 BASE_PUBLICA="${BASE_PUBLICA:-/hojaldraslily/app}"
 DESTINO="$RAIZ/demo/app"
 
-APPS=(kiosko pos admin cocina-alimentos cocina-bebidas cliente-display web cliente-pwa)
+APPS=(kiosko pos admin produccion cocina-alimentos cocina-bebidas cliente-display web cliente-pwa)
 
 cd "$RAIZ"
 rm -rf "$DESTINO"

@@ -907,7 +907,12 @@ export interface ExistenciaDelDia {
   horneados: number
   mermados: number
   vendidos: number
+  /** Lo que fisicamente hay: horneado - merma - vendido. */
   disponibles: number
+  /** Comprometido en encargos que todavia no se pagan. */
+  apartados: number
+  /** Lo que se puede vender hoy: disponibles - apartados. */
+  libres: number
 }
 
 export type MotivoProduccion = 'horneado' | 'merma' | 'ajuste'
