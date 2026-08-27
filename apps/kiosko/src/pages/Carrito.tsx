@@ -49,10 +49,10 @@ export function Carrito() {
       <div className="flex flex-col items-center justify-center h-screen bg-sa-cream-paper gap-6 px-8 text-center">
         <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="h-56" />
         <p className="font-display text-4xl text-sa-green-ink">
-          La coctelera está vacía
+          Todavía no ha puesto nada
         </p>
         <p className="font-body text-sa-green-ink/70 max-w-sm">
-          Échale algo: un shake, un bowl, lo que el cuerpo pida.
+          Elija sus hojaldras del menú y aparecen aquí.
         </p>
         <button
           onClick={() => navigate('/catalogo')}
@@ -78,7 +78,7 @@ export function Carrito() {
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">
             #PEDIDO
           </p>
-          <h1 className="font-display text-3xl mt-1">Tu shake en proceso</h1>
+          <h1 className="font-display text-3xl mt-1">Tu pedido</h1>
         </div>
       </header>
 
@@ -136,8 +136,8 @@ export function Carrito() {
               </div>
 
               {/* Los extras no tienen sus propios botones: suben y bajan con
-                  su shake. Tenerlos sueltos permitía quedarse con galletas
-                  sin shake, cobrándose solas. */}
+                  su pieza. Tenerlos sueltos permitía quedarse con un extra
+                  sin la pieza que lo lleva, cobrándose solo. */}
               {extras.length > 0 && (
                 <ul className="mt-3 pl-24 space-y-1">
                   {extras.map((e) => (

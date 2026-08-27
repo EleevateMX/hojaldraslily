@@ -26,7 +26,8 @@ Lo que falta para abrir, todo fuera del código:
    en el primer push a `main` con los secretos del workflow puestos.
 3. **Capturar el catálogo real en Costeos** — el sembrado es una base
    verosímil, no la lista de precios de la casa.
-4. **PIN del personal y hardware del local** (ver `docs/dia-de-instalacion.md`).
+4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
+   `docs/dia-de-instalacion.md`).
 
 **La vitrina para enseñar el sistema** vive en
 <https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
@@ -51,7 +52,7 @@ reloptions y `search_path`), así que no hubo que regenerarlo.
 ## 1. Qué es esto
 
 Panadería de hojaldras en Mérida (Col. Miguel Alemán). Monorepo pnpm,
-9 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
+10 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
 Cloudflare Pages por GitHub Actions al hacer push a `main`.
 
 | App | Dominio | Quién la usa |
@@ -59,6 +60,7 @@ Cloudflare Pages por GitHub Actions al hacer push a `main`.
 | `web` | `hojaldraslily.com` | El público (menú vivo, QR de Rewards) |
 | `kiosko` | `kiosko.hojaldraslily.com` | Cliente y cajero en la barra |
 | `pos` | `caja.hojaldraslily.com` | Caja (abrir turno, cobros manuales) |
+| `produccion` | `produccion.hojaldraslily.com` | Quien hornea (órdenes de producción) |
 | `cocina-bebidas` | `barra.hojaldraslily.com` | Estación de barra |
 | `cocina-alimentos` | `cocina.hojaldraslily.com` | Estación de cocina |
 | `cliente-display` | `pantalla.hojaldraslily.com` | TV de folios |
@@ -89,6 +91,28 @@ propósito hasta entonces.
 La pregunta de media mañana ("¿cuántos paquetes de guayaba chica quedan?")
 **no se contesta con kilos**: por eso existe la segunda. La primera no se
 tocó; se complementan.
+
+**Y hay TRES números, no uno**, porque apartar no es vender:
+
+| | Qué es |
+|---|---|
+| `disponibles` | Lo que físicamente hay: horneado − merma − vendido |
+| `apartados` | Comprometido en encargos que **todavía no se pagan** |
+| `libres` | `disponibles − apartados`: lo que se puede vender hoy |
+
+**Apartar no descuenta.** Un encargo separa la mercancía en Almacén, pero
+sigue en el inventario hasta que se cobra: si el cliente no llega, nunca se
+fue. Cobrar es lo único que descuenta, y pasa por `fn_crear_orden` +
+`fn_cobrar_orden` —el mismo camino que una venta de mostrador— para que caiga
+en el corte de caja. Insertar la orden a mano dejaba el cobro **fuera del
+corte** y el día no cuadraba.
+
+**Lo que se manda a producir entra solo al inventario.** Gerencia crea la
+orden en Admin → Producción, sale en la app `produccion`, y al marcarla hecha
+un **trigger** (`fn_produccion_desde_orden`) sube la diferencia. Va en trigger
+y no en la RPC a propósito: así la regla se cumple venga de donde venga el
+UPDATE. Apunta solo el delta, para que marcar "van 12" y luego "van 20" sume
+20 y no 32.
 
 Ojo: Producción solo muestra los menús **abiertos** (respeta el interruptor
 de Menús del día). Un menú cerrado esconde sus existencias.
@@ -239,8 +263,12 @@ empaquetador y se desvían solas:
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
-| Apuntar lo que salió del horno | Admin → **Producción** → los botones +1 / +5 / +10 |
+| Mandar a hacer una hornada | Admin → **Producción** → "Mandar a producir" (sale en la pantalla de producción) |
+| Apuntar lo que salió del horno | En la pantalla de **Producción** del local, o Admin → Producción con +1 / +5 / +10 |
+| Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
+| Cobrar un encargo | Caja → **Encargos** → Efectivo o Terminal (es lo único que lo descuenta) |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
+| Ver lo apartado y para quién | Admin → **Almacén** |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |

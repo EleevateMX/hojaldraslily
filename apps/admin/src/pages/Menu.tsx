@@ -101,7 +101,7 @@ export default function Menu() {
   /**
    * Cambio de categoría directo desde la tabla, sin abrir el formulario.
    *
-   * Existe porque reorganizar el menú (Shakes → Café, Tés, Kombuchas…) son
+   * Existe porque reorganizar el menú (mover piezas entre menús) son
    * decenas de productos: a formulario por producto nadie lo termina. La
    * sincronización desde costeo no pisa la categoría al actualizar, así que
    * el movimiento es permanente.

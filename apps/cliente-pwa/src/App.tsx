@@ -718,12 +718,12 @@ function Menu({ productos }: { productos: ProductoVenta[] | null }) {
     return <p className="text-sa-cream/50 text-center py-10 font-mono text-xs uppercase tracking-widest">Cargando el menú…</p>
   }
 
-  // Solo lo que se antoja: los scoops y suplementos son surtido de
-  // mostrador, no carta.
+  // La carta que ve el cliente en su telefono. Los extras no van: no se
+  // piden solos, se ofrecen dentro de la pieza que los lleva.
   const carta = new Map<string, ProductoVenta[]>()
   for (const p of productos) {
     const cat = p.categorias?.nombre
-    if (!cat || /^(extras|scoops|suplementos)/i.test(cat)) continue
+    if (!cat || /^extras/i.test(cat)) continue
     if (!carta.has(cat)) carta.set(cat, [])
     carta.get(cat)!.push(p)
   }

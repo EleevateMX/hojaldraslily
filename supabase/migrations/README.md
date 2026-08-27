@@ -86,3 +86,29 @@ cerrada a `anon`.
 Efecto colateral aceptado: Realtime ya no entrega los cambios de `app_data`
 (aplica RLS igual que una consulta), así que Costeos dejó de avisar
 "actualizado desde otro dispositivo". Recargar trae lo último.
+
+## Producción y encargos (27 de agosto)
+
+| Versión | Qué hace |
+|---|---|
+| `20260827100000` | Órdenes de producción y encargos (tablas, trigger al inventario, permisos) |
+| `20260827101000` | Existencias con `apartados` y `libres` |
+| `20260827102000` | Mandar a producir, avanzar, apartar, cobrar y cancelar |
+| `20260827103000` | El cobro del encargo usa la fila que devuelve `fn_crear_orden` |
+
+**Las dos reglas que hay que respetar si se toca esto:**
+
+1. **Lo hecho entra solo al inventario**, y va en un TRIGGER
+   (`fn_produccion_desde_orden`) sobre `orden_produccion_items`, no dentro de
+   la RPC. Así la regla se cumple venga de donde venga el UPDATE. Apunta solo
+   la DIFERENCIA: marcar «van 12» y luego «van 20» tiene que sumar 20, no 32.
+
+2. **Apartar no descuenta.** Un encargo cuenta como `apartado` mientras su
+   estado lo sea; al pagarse deja de contar ahí y su venta cae en `vendidos`.
+   Así no se cuenta dos veces.
+
+`fn_encargo_cobrar` pasa por `fn_crear_orden` + `fn_cobrar_orden` a propósito.
+La primera versión insertaba en `ordenes` directo y **estaba mal**: esa orden
+nacía sin `corte_id`, o sea que el cobro no aparecía en el corte de caja y el
+dinero del día no cuadraba. Por el camino normal se ganan además las comandas
+por estación y el movimiento de inventario.

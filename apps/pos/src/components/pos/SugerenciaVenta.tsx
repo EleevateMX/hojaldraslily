@@ -8,10 +8,15 @@ interface Props {
 }
 
 /**
- * Sugerencia de venta cruzada para el cajero: si el ticket lleva shake
- * pero no comida, propone comida; si lleva comida pero no bebida, propone
- * un shake. Solo sugiere sobre lo que hay en el catálogo activo — nunca
+ * Sugerencia de venta cruzada para el cajero: si el ticket lleva hojaldras
+ * pero nada de tomar, propone un café; si lleva café y nada más, propone
+ * hojaldras. Solo sugiere sobre lo que hay en el catálogo activo — nunca
  * inventa productos ni precios — y se puede descartar en el turno.
+ *
+ * Las categorías se agrupan por ESTACIÓN y no por nombre: la de bebidas se
+ * llama «Café» y «Bebidas», y la de alimentos «Menú del día», «Por encargo»
+ * y «Temporada». Buscar por nombre exacto (como hacía la versión de shakes)
+ * dejaba de sugerir en cuanto alguien renombraba un menú.
  */
 export function SugerenciaVenta({ productos }: Props) {
   const items = usePosStore((s) => s.items)
@@ -21,21 +26,23 @@ export function SugerenciaVenta({ productos }: Props) {
   const sugerencia = useMemo(() => {
     if (items.length === 0) return null
 
-    const cats = new Set(
-      items.map((l) => l.producto.categorias?.nombre).filter((c): c is string => Boolean(c)),
+    const estaciones = new Set(
+      items
+        .map((l) => l.producto.categorias?.cocinas?.slug)
+        .filter((c): c is string => Boolean(c)),
     )
-    const llevaBebida = cats.has('Shakes') || cats.has('Bebidas')
-    const llevaComida = cats.has('Alimentos')
+    const llevaBebida = estaciones.has('bebidas')
+    const llevaComida = estaciones.has('alimentos')
 
-    // Ya lleva de ambos: no hay nada que sugerir.
+    // Ya lleva de ambos, o no lleva de ninguno: no hay nada que sugerir.
     if (llevaBebida === llevaComida) return null
 
-    const objetivo = llevaComida ? 'Shakes' : 'Alimentos'
-    const candidatos = productos.filter((p) => p.categorias?.nombre === objetivo)
+    const objetivo = llevaComida ? 'bebidas' : 'alimentos'
+    const candidatos = productos.filter((p) => p.categorias?.cocinas?.slug === objetivo)
     if (candidatos.length === 0) return null
 
     return {
-      titulo: llevaComida ? '¿Le ofreces un shake?' : '¿Le ofreces algo de comer?',
+      titulo: llevaComida ? '¿Le ofreces un café?' : '¿Le ofreces unas hojaldras?',
       opciones: candidatos.slice(0, 3),
     }
   }, [items, productos])

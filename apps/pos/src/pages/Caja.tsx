@@ -147,6 +147,15 @@ export function Caja() {
           >
             Pedidos de kiosko
           </button>
+          {/* El otro rubro de la caja: lo apartado para despues. Va junto a
+              los pedidos de kiosko porque son las dos colas que el cajero
+              revisa, no algo de configuracion. */}
+          <button
+            onClick={() => navigate('/encargos')}
+            className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"
+          >
+            Encargos
+          </button>
           <button
             onClick={() => navigate('/corte')}
             className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"

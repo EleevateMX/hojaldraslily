@@ -45,7 +45,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
     else agregarItem(p)
   }
 
-  // Marcas de la categoría abierta (snacks/bebidas/suplementos vienen con
+  // Marcas de la categoría abierta (lo de reventa viene con
   // marca desde costosshake). Con varias marcas se muestra un segundo nivel
   // de filtro para no tener que buscar entre decenas de sabores sueltos.
   const marcasDeCategoria = useMemo(() => {
@@ -76,7 +76,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
             type="text"
             value={busqueda}
             onChange={(e) => { setBusqueda(e.target.value); setCategoriaActiva(null); setMarcaActiva(null) }}
-            placeholder="Buscar shake, café, lo que sea…"
+            placeholder="Buscar sabor, tamaño, café…"
             className="w-full pl-11 pr-10 py-3 bg-white rounded-sa-lg text-sa-green-ink placeholder:font-mono placeholder:text-sa-green-ink/40 placeholder:text-sm focus:outline-none focus:ring-2 focus:ring-sa-green/30 border border-sa-green-ink/10 transition-all"
           />
           {busqueda && (
@@ -180,7 +180,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                     {partirNombreDeVenta(p.nombre).medida}
                   </p>
                 )}
-                {/* Los ingredientes del shake, para que el cajero conteste
+                {/* Lo que trae la pieza, para que el cajero conteste
                     "¿qué trae?" sin salirse de la pantalla ni preguntar. */}
                 {p.descripcion && (
                   <p className="font-body text-[11px] text-sa-green-ink/50 text-center leading-snug line-clamp-2 w-full mt-1">

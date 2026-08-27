@@ -75,16 +75,18 @@ export function Catalogo() {
   const extrasDe = (productoId: string) => extras.filter((e) => e.producto_id === productoId)
 
   /**
-   * Si el producto ofrece extras (tipo de leche, adicionales), se abre el
-   * modal para elegirlos; si no, se agrega directo. Así el "+" no obliga a
-   * pasar por una pantalla extra en los productos que no la necesitan, como
-   * un agua o un snack.
+   * Si hay algo que preguntar, se abre el modal; si no, la pieza entra al
+   * carrito de un toque.
+   *
+   * Antes la condición era «tiene extras O va a la estación de alimentos», y
+   * con eso el modal se abría con CADA hojaldra para no preguntar nada: en
+   * una panadería no hay leche que elegir ni doble scoop. Ahora se abre solo
+   * si de verdad hay extras o indicaciones que ofrecer.
    */
   function tocarAgregar(p: ProductoVenta) {
-    // El modal se abre si hay algo que decidir: extras, o las observaciones
-    // de alimentos ("sin tomate"…). Las bebidas embotelladas (Coca, Gatorade)
-    // no tienen ni lo uno ni lo otro y siguen entrando en un toque.
-    if (extrasDe(p.id).length > 0 || p.categorias?.cocinas?.slug === 'alimentos') {
+    const slug = p.categorias?.cocinas?.slug
+    const hayIndicaciones = !!slug && (observaciones[slug]?.length ?? 0) > 0
+    if (extrasDe(p.id).length > 0 || hayIndicaciones) {
       setPersonalizando(p)
       return
     }
@@ -100,21 +102,21 @@ export function Catalogo() {
   /**
    * Cada extra entra como su PROPIA línea del carrito, igual que en el POS:
    * así cuesta, cobra y descuenta inventario como cualquier producto. Pero
-   * ahora queda COLGADO del shake que lo lleva, no suelto en la lista.
+   * queda COLGADO de la pieza que lo lleva, no suelto en la lista.
    *
-   * Ese vínculo es el que hace que la comanda imprima "+GALLETA" bajo el
-   * shake correcto. Sin él, con dos shakes en el mismo pedido —uno con
-   * galletas y otro sin— no hay forma de saber cuál las lleva, y en barra se
-   * las ponen al vaso equivocado.
+   * Ese vínculo es el que hace que la comanda imprima el extra bajo la pieza
+   * correcta. Sin él, con dos piezas iguales en el mismo pedido —una con
+   * extra y otra sin— no hay forma de saber cuál lo lleva, y en la estación
+   * se lo ponen a la equivocada.
    *
-   * La nota (el tipo de leche) sigue viajando pegada al shake.
+   * La nota ("sin azúcar glass") sigue viajando pegada a su pieza.
    */
   function agregarPersonalizado(nota: string | null, elegidos: ExtraDeProducto[]) {
     const p = personalizando
     if (!p) return
 
     // Los repetidos se agrupan con su cantidad en vez de repetir la línea:
-    // dos scoops son una línea de cantidad 2, no dos líneas de uno.
+    // dos del mismo extra son una línea de cantidad 2, no dos líneas de uno.
     const porExtra = new Map<string, { extra: ExtraDeProducto; cantidad: number }>()
     for (const e of elegidos) {
       const previo = porExtra.get(e.extra_id)
@@ -163,14 +165,11 @@ export function Catalogo() {
   /**
    * Las categorías, agrupadas en dos niveles.
    *
-   * Al partir Scoops y Suplementos por tipo pasamos de 12 chips a 24, y la
-   * fila de filtros creció de dos renglones a cuatro: se comía media
-   * pantalla antes de mostrar un solo producto. El nombre ya trae la
-   * jerarquía ("Scoops - Proteínas"), así que se usa esa misma marca para
-   * plegarlas: un renglón de familias, y la sub-fila solo cuando hace falta.
-   *
-   * "Suplementos Birdman" no lleva guion —así lo pidió el negocio— por eso
-   * se reconoce aparte en vez de exigir un separador.
+   * La fila de filtros no aguanta un chip por categoría cuando el catálogo
+   * crece: se come media pantalla antes de mostrar un solo producto. Como el
+   * nombre ya trae la jerarquía ("Temporada - Navidad"), se usa esa misma
+   * marca para plegarlas: un renglón de familias, y la sub-fila solo cuando
+   * hace falta.
    */
   const familias = useMemo(() => agruparCategorias(categorias), [categorias])
 
@@ -181,7 +180,7 @@ export function Catalogo() {
   /**
    * Qué se muestra. Si hay una subcategoría elegida manda ella; si solo hay
    * familia abierta se muestran TODOS sus productos juntos, que es lo que
-   * espera quien tocó "Scoops" sin más.
+   * espera quien tocó una familia sin elegir subcategoría.
    */
   const productosFiltrados = useMemo(() => {
     if (categoriaActiva) return productos.filter((p) => p.categoria_id === categoriaActiva)
@@ -269,8 +268,8 @@ export function Catalogo() {
           táctil una fila con desplazamiento horizontal esconde la mitad del
           menú, porque nadie arrastra una barra que no sabe que existe.
 
-          Pero al partir Scoops y Suplementos por tipo pasamos de 12 chips a
-          24 y la fila creció a cuatro renglones — media pantalla gastada
+          Pero un chip por categoría hace crecer la fila a varios renglones
+          en cuanto el catálogo se parte por tipo — media pantalla gastada
           antes del primer producto. Por eso las subcategorías se pliegan
           bajo su familia y solo se despliegan cuando alguien la toca. */}
       <div className="bg-sa-cream-paper border-b border-sa-cream-warm">

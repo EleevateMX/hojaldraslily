@@ -298,7 +298,8 @@ export async function quitarComponenteCombo(
 // Un extra es un producto normal (`es_extra = true`) con receta 1:1 contra
 // el insumo que consume — al venderlo descuenta inventario y cuesta igual
 // que cualquier producto. `producto_extras` dice cuáles se ofrecen en cuál
-// alimento. Ver supabase/migrations/catalogo_suplementos_y_extras.sql.
+// alimento. Ver supabase/migrations/catalogo_suplementos_y_extras.sql
+// (el nombre del archivo es historico: viene del catalogo original).
 
 export interface ExtraDeProducto {
   producto_id: string
@@ -313,10 +314,8 @@ export interface ExtraDeProducto {
    */
   grupo: string | null
   /**
-   * Marca del extra. Es lo que amarra "Proteína BIRDMAN FALCON - Chocolate"
-   * con "Doble scoop - BIRDMAN FALCON": un dato, no un recorte del nombre.
-   * Importa porque "BIRDMAN FALCON" y "BIRDMAN FALCON PERFORMANCE" empiezan
-   * igual y adivinarlo por texto los confundiría.
+   * Marca del extra, cuando la tiene. Es un dato, no un recorte del nombre:
+   * dos marcas que empiezan igual se confundirían si se adivinara por texto.
    */
   marca: string | null
   activo: boolean
@@ -393,12 +392,11 @@ export async function guardarExtra(
 }
 
 // ---------------------------------------------------------------------------
-// Extras de shakes (leches, proteínas, agua) — autoservicio del Admin
+// Extras del catálogo — autoservicio del Admin
 // ---------------------------------------------------------------------------
 // Distintos de los extras de alimentos: no llevan insumo de receta (no
-// descuentan inventario) y se ofrecen en bloque — una leche va en todos los
-// shakes, una proteína solo en El Clásico. El kiosko los agrupa por cómo
-// empieza el nombre: "Leche …", "Proteína MARCA - Sabor", "Agua".
+// descuentan inventario) y se ofrecen en bloque — el mismo extra puede ir
+// en todo lo que hornea la casa o solo en una pieza.
 
 export interface ExtraBebidaAdmin {
   id: string
@@ -421,7 +419,10 @@ export async function listarExtrasBebidaAdmin(sb: ShakeClient): Promise<ExtraBeb
 /**
  * Crea (o repara) un extra de bebida y lo liga a sus productos. Idempotente:
  * guardar dos veces el mismo nombre no duplica — reutiliza y re-liga.
- * `aplicar`: 'shakes' = todos los shakes activos · 'clasico' = solo El Clásico.
+ * `aplicar`: 'shakes' = todo lo que hornea la casa · 'clasico' = solo la
+ * pieza clásica. Los dos valores los espera la función de la base y por eso
+ * se conservan; en pantalla se leen como "Todas las hojaldras" y "Solo la
+ * clásica".
  */
 export async function guardarExtraBebida(
   sb: ShakeClient,
@@ -493,9 +494,8 @@ export async function vincularExtraBebida(
  * Precio de ESTE extra en ESTE producto. `null` devuelve el vínculo a
  * cobrar el precio normal del extra.
  *
- * Es lo que hace que la misma leche cueste $10 en un americano y $0 en un
- * shake, o que cambiar de proteína sume $10 solo en los shakes que lo
- * cobran — sin duplicar productos.
+ * Es lo que hace que el mismo extra cueste $10 en una pieza y $0 en otra,
+ * sin tener que duplicar productos para cada combinación.
  */
 export async function precioExtraEnProducto(
   sb: ShakeClient,
@@ -622,19 +622,17 @@ export async function quitarExtra(
 /**
  * Cómo se nombra un producto en la pantalla donde se ordena.
  *
- * Los scoops se llaman en la base "Scoop BIRDMAN FALCON - Chocolate": el
- * prefijo lo pone la sincronización de costosshake, que además empata las
- * recetas por ese nombre exacto y desactiva cualquier producto de la
- * categoría Scoops que no lo lleve. Por eso el prefijo NO se le quita al
- * dato —renombrarlos apagaría los 45 y crearía 45 duplicados— y se le quita
- * solo aquí, al pintarlo.
+ * Antes recortaba el prefijo «Scoop » de los productos del negocio del que se
+ * replicó el sistema. En una panadería no hay scoops, y ese recorte podía
+ * morder un nombre que legítimamente empezara así.
  *
- * Sirve para que en la tarjeta quepa lo que de verdad hay que leer: la
- * marca, el producto y su sabor. En comanda y etiqueta el nombre sigue
- * completo, con su "Scoop" al frente, que es como en barra lo identifican.
+ * La función se conserva —aunque hoy solo limpie espacios— porque la usan
+ * todas las pantallas: es el único punto donde meter cualquier recorte futuro
+ * sin ir app por app. Para partir «Sabor · Tamaño» está
+ * `partirNombreDeVenta`.
  */
 export function nombreParaOrdenar(nombre: string): string {
-  return nombre.replace(/^\s*scoop\s+/i, '').trim() || nombre
+  return nombre.trim() || nombre
 }
 
 // --------------------- a que pantalla va cada categoria ---------------------
@@ -684,26 +682,23 @@ export interface FamiliaCategorias<T extends CategoriaAgrupable> {
   orden: number
   /** La categoría con el nombre de la familia, si existe como tal. */
   propia: T | null
-  /** Sus subcategorías, ya con el nombre corto ("Proteínas", no "Scoops - Proteínas"). */
+  /** Sus subcategorías, con el nombre corto ("Navidad", no "Temporada - Navidad"). */
   subs: T[]
 }
 
 /**
  * Pliega las categorías en dos niveles para el menú.
  *
- * Al partir Scoops y Suplementos por tipo, la fila de filtros del kiosko pasó
- * de 12 chips a 24 y creció de dos renglones a cuatro: media pantalla gastada
- * antes de mostrar un solo producto. El nombre ya trae la jerarquía
- * ("Scoops - Proteínas"), así que se aprovecha esa marca en vez de inventar
- * una tabla de padres.
+ * Agrupa las categorías en familias por su nombre: "Familia - Sub".
  *
- * Dos formas se reconocen como subcategoría:
- *   · "Familia - Sub"  — el separador que usa casi todo el catálogo.
- *   · "Suplementos X"  — sin guion, porque el negocio pidió que ese botón se
- *                        llamara exactamente "Suplementos Birdman".
+ * La fila de filtros del kiosko no aguanta una categoría por botón cuando el
+ * catálogo crece, así que las que comparten prefijo se juntan en un botón con
+ * sus subcategorías dentro. Es una regla de NOMBRES, no una lista fija: sirve
+ * igual para "Temporada - Navidad" que para lo que se le ocurra a gerencia,
+ * sin tocar código.
  *
- * Lo que no encaja en ninguna se queda como familia suelta, que es lo correcto
- * para Shakes, Café o Combos: no tienen de qué colgar.
+ * Una categoría sin guion se queda tal cual, con su propio botón, que es el
+ * caso de "Menú del día", "Por encargo", "Café" y "Bebidas".
  */
 export function agruparCategorias<T extends CategoriaAgrupable>(
   categorias: T[],
@@ -718,14 +713,11 @@ export function agruparCategorias<T extends CategoriaAgrupable>(
     if (guion > 0) {
       familia = cat.nombre.slice(0, guion)
       sub = cat.nombre.slice(guion + 3)
-    } else if (cat.nombre.startsWith('Suplementos ')) {
-      familia = 'Suplementos'
-      sub = cat.nombre.slice('Suplementos '.length)
     }
 
     const actual = grupos.get(familia) ?? { nombre: familia, orden: cat.orden, propia: null, subs: [] }
-    // La familia se ordena por el primero de los suyos: así "Scoops" queda
-    // donde estaba y no se va al final por culpa de una subcategoría nueva.
+    // La familia se ordena por el primero de los suyos: así no se va al
+    // final por culpa de una subcategoría nueva con orden alto.
     actual.orden = Math.min(actual.orden, cat.orden)
     if (sub) actual.subs.push({ ...cat, nombre: sub })
     else actual.propia = cat

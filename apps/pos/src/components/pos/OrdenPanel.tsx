@@ -38,7 +38,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
     if (itemsElegiblesCupon(cup).length === 0) {
       setCuponMsg(
         cup.tipo === 'cumpleanos'
-          ? 'Agrega un shake al ticket para usar el cupón de cumpleaños.'
+          ? 'Agrega algo al ticket para usar el cupón de cumpleaños.'
           : 'Agrega un producto para aplicar el cupón.',
       )
       return

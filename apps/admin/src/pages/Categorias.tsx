@@ -181,7 +181,7 @@ export default function Categorias() {
             <span className={cx.label}>Nueva categoría</span>
             <input
               className={cx.input}
-              placeholder="Smoothie Bowls"
+              placeholder="Temporada - Navidad"
               value={nuevoNombre}
               onChange={(e) => setNuevoNombre(e.target.value)}
             />

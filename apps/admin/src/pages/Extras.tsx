@@ -44,10 +44,14 @@ export default function Extras() {
   const [obsEstacion, setObsEstacion] = useState<'bebidas' | 'alimentos'>('bebidas')
   const [guardandoObs, setGuardandoObs] = useState(false)
 
-  // --- extras de shakes (leches, proteínas, agua) ---
+  // --- extras del catalogo (los que se ofrecen dentro de una pieza) ---
   const [bebida, setBebida] = useState<ExtraBebidaAdmin[]>([])
   const [nuevoNombre, setNuevoNombre] = useState('')
   const [nuevoPrecio, setNuevoPrecio] = useState('0')
+  // Los dos valores ('shakes' | 'clasico') son los que espera la funcion de
+  // la base y por eso se conservan tal cual; en pantalla se leen en el
+  // idioma del negocio ("Todas las hojaldras" / "Solo la clasica").
+  // Renombrarlos aqui sin cambiar la funcion romperia el alta de extras.
   const [nuevoAplicar, setNuevoAplicar] = useState<'shakes' | 'clasico'>('shakes')
   const [guardandoBebida, setGuardandoBebida] = useState(false)
   // Panel "dónde se ofrece": un extra abierto a la vez, con su checklist.
@@ -424,7 +428,7 @@ export default function Extras() {
       </Panel>
 
       {/* ------------------------------------------------------------------ */}
-      {/* Extras de shakes: leches, proteínas, agua. Aquí la sucursal da de  */}
+      {/* Extras que se ofrecen dentro de una pieza. Aqui la sucursal da de */}
       {/* alta una leche o un sabor nuevo y aparece en el kiosko solo; y     */}
       {/* cuando un sabor se acaba, lo apaga al momento sin borrar nada.     */}
       {/* ------------------------------------------------------------------ */}

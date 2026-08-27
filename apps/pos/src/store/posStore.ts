@@ -159,11 +159,19 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   subtotal: () => get().items.reduce((s, l) => s + l.producto.precio * l.cantidad, 0),
 
-  // Ítems elegibles para un cupón: cumpleaños solo shakes; otros cualquiera.
+  // Ítems elegibles para un cupón: el de cumpleaños se limita a lo que hace
+  // la casa (lo que va a la estación de alimentos); los demás, a cualquier
+  // cosa del ticket.
+  //
+  // Antes esto pedía la categoría llamada exactamente 'Shakes'. En una
+  // panadería esa categoría no existe, así que la lista salía vacía y el
+  // cupón de cumpleaños regalaba $0: se podía canjear y no descontaba nada,
+  // sin ningún aviso. Se compara por ESTACIÓN, que no cambia aunque a los
+  // menús les cambien el nombre.
   itemsElegiblesCupon: (cup) => {
     const items = get().items
     if (cup.tipo === 'cumpleanos') {
-      return items.filter((l) => l.producto.categorias?.nombre === 'Shakes')
+      return items.filter((l) => l.producto.categorias?.cocinas?.slug === 'alimentos')
     }
     return items
   },

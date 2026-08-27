@@ -9,7 +9,7 @@ export interface ItemCarrito {
   /**
    * Identidad de ESTA línea del carrito, no del producto.
    *
-   * Antes el carrito se indexaba por `producto_id`, y dos shakes iguales con
+   * Antes el carrito se indexaba por `producto_id`, y dos piezas iguales con
    * leches distintas se fundían en una sola línea de cantidad 2 con la nota
    * del primero: en barra salían dos vasos con la misma leche. Con una línea
    * propia, cada configuración vive aparte.
@@ -97,7 +97,7 @@ const nuevaLinea = () =>
  *
  * Los extras se recalculan como `porUnidad × cantidad del padre`, no se suman
  * uno a uno: pedir "otro igual" tiene que traer también sus galletas, y con
- * dos por shake la cuenta solo sale multiplicando. Si el padre llega a cero,
+ * dos por pieza la cuenta solo sale multiplicando. Si el padre llega a cero,
  * se van los dos — un extra huérfano se seguiría cobrando sin producto.
  */
 function ajustar(items: ItemCarrito[], linea: string, delta: number): { items: ItemCarrito[] } {
@@ -128,7 +128,7 @@ export const useCarrito = create<CarritoStore>((set, get) => ({
   agregar: (item) => {
     let nuevaCantidad = 1
     set((state) => {
-      // Solo se funden líneas realmente idénticas. Un shake con extras nunca
+      // Solo se funden líneas realmente idénticas. Una pieza con extras nunca
       // se funde con nada: sus extras cuelgan de ESTA línea.
       const existe = state.items.find(
         (i) =>

@@ -22,8 +22,8 @@ type EstadoPago = 'cargando' | 'eligiendo' | 'procesando' | 'no_disponible'
  *
  * `linea`/`padre_linea` son etiquetas del navegador: el servidor genera los
  * uuid reales y solo las usa para resolver quién acompaña a quién dentro de
- * este mismo envío. Es lo que hace que las galletas queden pegadas a SU
- * shake y no al otro que iba en el mismo pedido.
+ * este mismo envío. Es lo que hace que un extra quede pegado a SU pieza y no
+ * a la otra igual que iba en el mismo pedido.
  */
 const lineaParaOrden = (i: ItemCarrito) => ({
   producto_id: i.producto_id,

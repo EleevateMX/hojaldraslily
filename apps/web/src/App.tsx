@@ -13,11 +13,10 @@ const URL_REWARDS =
 const WHATSAPP = 'https://wa.me/529999267151'
 
 /**
- * Categorías del sistema que no pintan en la carta pública: los scoops y
- * suplementos son surtido de mostrador/venta interna, y "Extras" vive
+ * Categorías del sistema que no pintan en la carta pública: "Extras" vive
  * dentro de cada producto, no como tarjeta propia.
  */
-const CATEGORIAS_INTERNAS = /^(extras|scoops|suplementos)/i
+const CATEGORIAS_INTERNAS = /^extras/i
 
 /** Paleta de sabores del manual, para los puntos de la carta. */
 const SABORES = ['--c-mint', '--c-banana', '--c-strawberry', '--c-mango', '--c-blueberry', '--c-chocolate']
