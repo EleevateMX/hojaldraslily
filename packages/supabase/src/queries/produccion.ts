@@ -23,11 +23,13 @@ import type { ShakeClient } from '../client'
 
 export interface ItemDeProduccion {
   id: string
-  producto_id: string
-  producto: string
+  /** El sabor que hay que hornear. El tamaño se decide al vender, no aquí. */
+  sabor: string
   imagen_url: string | null
-  cantidad_pedida: number
-  cantidad_hecha: number
+  /** Moldes pedidos. Cada molde rinde `cuadros_por_molde` (48). */
+  moldes: number
+  /** Moldes ya hechos. Es un TOTAL, no un incremento. */
+  hechos: number
   terminado_por: string | null
 }
 
@@ -53,11 +55,10 @@ interface FilaOrden {
   created_at: string
   orden_produccion_items: {
     id: string
-    producto_id: string
-    cantidad_pedida: number
+    sabor: string | null
+    moldes: number | null
     cantidad_hecha: number
     terminado_por: string | null
-    productos: { nombre: string; imagen_url: string | null } | null
   }[]
 }
 
@@ -74,8 +75,7 @@ export async function listarOrdenesDeProduccion(
     .from('ordenes_produccion')
     .select(
       'id, folio, fecha, estado, nota, creada_por, created_at,' +
-        ' orden_produccion_items(id, producto_id, cantidad_pedida, cantidad_hecha,' +
-        ' terminado_por, productos(nombre, imagen_url))',
+        ' orden_produccion_items(id, sabor, moldes, cantidad_hecha, terminado_por)',
     )
     .order('created_at', { ascending: false })
     .limit(50)
@@ -95,20 +95,26 @@ export async function listarOrdenesDeProduccion(
     created_at: o.created_at,
     items: (o.orden_produccion_items ?? []).map((i) => ({
       id: i.id,
-      producto_id: i.producto_id,
-      producto: i.productos?.nombre ?? '—',
-      imagen_url: i.productos?.imagen_url ?? null,
-      cantidad_pedida: i.cantidad_pedida,
-      cantidad_hecha: i.cantidad_hecha,
+      sabor: i.sabor ?? '—',
+      imagen_url: null,
+      moldes: i.moldes ?? 0,
+      hechos: i.cantidad_hecha,
       terminado_por: i.terminado_por,
     })),
   }))
 }
 
-/** Manda a hacer. Regresa el id de la orden creada. */
+/**
+ * Manda a hacer, en MOLDES de un sabor.
+ *
+ * Se pide por sabor y no por paquete porque así se hornea: sale un molde de
+ * 48 cuadros y de ahí se cortan los paquetes conforme se venden. Pedir «10
+ * paquetes de 12» obligaría a decidir en el horno algo que se decide en el
+ * mostrador.
+ */
 export async function mandarAProducir(
   sb: ShakeClient,
-  items: { producto_id: string; cantidad: number }[],
+  items: { sabor: string; moldes: number }[],
   nota?: string,
 ): Promise<string> {
   const { data, error } = await sb.rpc('fn_produccion_mandar_a_hacer', {
@@ -120,18 +126,20 @@ export async function mandarAProducir(
 }
 
 /**
- * Marca cuántas van hechas de un renglón. Es un TOTAL, no un incremento:
- * marcar «12» y luego «20» deja 20, no 32. El servidor apunta solo la
- * diferencia en el inventario.
+ * Marca cuántos MOLDES van hechos de un renglón. Es un TOTAL, no un
+ * incremento: marcar «2» y luego «3» deja 3, no 5. El servidor apunta solo la
+ * diferencia en el inventario, ya convertida a cuadros.
+ *
+ * Regresa cuántos cuadros quedan libres de ese sabor.
  */
 export async function avanzarProduccion(
   sb: ShakeClient,
   itemId: string,
-  hechas: number,
+  moldes: number,
 ): Promise<number> {
   const { data, error } = await sb.rpc('fn_produccion_avanzar', {
     p_item_id: itemId,
-    p_hechas: hechas,
+    p_moldes: moldes,
   })
   if (error) throw error
   return Number(data ?? 0)

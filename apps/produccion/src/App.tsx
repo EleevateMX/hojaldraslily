@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   listarOrdenesDeProduccion,
   avanzarProduccion,
-  partirNombreDeVenta,
   entrarConPin,
   empleadoDeLaSesion,
   salirDeSesion,
@@ -112,9 +111,8 @@ function Renglon({
   ocupado: boolean
   onMarcar: (hechas: number) => void
 }) {
-  const { sabor, medida } = partirNombreDeVenta(item.producto)
   const foto = urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)
-  const falta = Math.max(0, item.cantidad_pedida - item.cantidad_hecha)
+  const falta = Math.max(0, item.moldes - item.hechos)
   const listo = falta === 0
 
   return (
@@ -127,47 +125,45 @@ function Renglon({
       <div className="flex items-center gap-4">
         {foto && <img src={foto} alt="" className="w-16 h-16 object-contain shrink-0" />}
         <div className="min-w-0 flex-1">
-          <p className="font-display text-2xl leading-tight text-sa-green-ink">{sabor}</p>
-          {medida && (
-            <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
-              {medida}
-            </p>
-          )}
+          <p className="font-display text-2xl leading-tight text-sa-green-ink">{item.sabor}</p>
+          <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
+            moldes de 48 cuadros
+          </p>
         </div>
         <div className="text-right shrink-0">
           <p className="font-display text-4xl leading-none text-sa-green-ink">
-            {item.cantidad_hecha}
-            <span className="text-2xl text-sa-green-ink/35"> / {item.cantidad_pedida}</span>
+            {item.hechos}
+            <span className="text-2xl text-sa-green-ink/35"> / {item.moldes}</span>
           </p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-            {listo ? '¡listo!' : `faltan ${falta}`}
+            {listo ? '¡listo!' : `faltan ${falta} molde${falta === 1 ? '' : 's'}`}
           </p>
         </div>
       </div>
 
       <div className="flex items-center gap-2 mt-4">
-        {[1, 5, 10].map((n) => (
+        {[1, 2].map((n) => (
           <button
             key={n}
             disabled={ocupado}
-            onClick={() => onMarcar(item.cantidad_hecha + n)}
-            className="flex-1 h-14 rounded-sa bg-sa-green text-sa-cream font-display text-xl active:scale-95 transition-transform disabled:opacity-50"
+            onClick={() => onMarcar(item.hechos + n)}
+            className="flex-1 h-14 rounded-sa bg-sa-green text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-50"
           >
-            +{n}
+            +{n} molde{n === 1 ? '' : 's'}
           </button>
         ))}
         {/* "Ya está" evita tener que sumar a mano hasta llegar al numero
             pedido, que es lo que se hace 9 de cada 10 veces. */}
         <button
           disabled={ocupado || listo}
-          onClick={() => onMarcar(item.cantidad_pedida)}
+          onClick={() => onMarcar(item.moldes)}
           className="flex-[1.4] h-14 rounded-sa bg-sa-green-deep text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-30"
         >
           Ya está
         </button>
         <button
-          disabled={ocupado || item.cantidad_hecha === 0}
-          onClick={() => onMarcar(Math.max(0, item.cantidad_hecha - 1))}
+          disabled={ocupado || item.hechos === 0}
+          onClick={() => onMarcar(Math.max(0, item.hechos - 1))}
           className="w-14 h-14 rounded-sa border-2 border-sa-green-ink/15 text-sa-green-ink/60 font-display text-2xl active:scale-95 transition-transform disabled:opacity-25"
           title="Me pasé, quitar uno"
         >
@@ -187,8 +183,8 @@ function Tarjeta({
   ocupado: string | null
   onMarcar: (item: ItemDeProduccion, hechas: number) => void
 }) {
-  const total = orden.items.reduce((s, i) => s + i.cantidad_pedida, 0)
-  const hecho = orden.items.reduce((s, i) => s + Math.min(i.cantidad_hecha, i.cantidad_pedida), 0)
+  const total = orden.items.reduce((s, i) => s + i.moldes, 0)
+  const hecho = orden.items.reduce((s, i) => s + Math.min(i.hechos, i.moldes), 0)
   const pct = total > 0 ? Math.round((hecho / total) * 100) : 0
 
   return (
@@ -196,7 +192,7 @@ function Tarjeta({
       <div className="flex items-baseline justify-between gap-4 mb-1">
         <p className="font-display text-2xl text-sa-green-ink">Orden #{orden.folio}</p>
         <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50">
-          {hecho} de {total}
+          {hecho} de {total} moldes
         </p>
       </div>
       {orden.nota && (
@@ -258,18 +254,18 @@ export default function App() {
     return () => clearInterval(t)
   }, [empleado, cargar])
 
-  async function marcar(item: ItemDeProduccion, hechas: number) {
+  async function marcar(item: ItemDeProduccion, moldes: number) {
     setOcupado(item.id)
     // Se pinta de una vez para que el boton responda al dedo; si la base lo
     // rechaza, el cargar() de abajo deja la pantalla como esta de verdad.
     setOrdenes((antes) =>
       antes.map((o) => ({
         ...o,
-        items: o.items.map((i) => (i.id === item.id ? { ...i, cantidad_hecha: hechas } : i)),
+        items: o.items.map((i) => (i.id === item.id ? { ...i, hechos: moldes } : i)),
       })),
     )
     try {
-      await avanzarProduccion(sb, item.id, hechas)
+      await avanzarProduccion(sb, item.id, moldes)
     } catch (e) {
       setError(mensajeDeError(e))
     } finally {
@@ -291,7 +287,7 @@ export default function App() {
   if (!empleado) return <Candado onEntra={setEmpleado} />
 
   const pendientes = ordenes.reduce(
-    (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.cantidad_pedida - i.cantidad_hecha), 0),
+    (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.moldes - i.hechos), 0),
     0,
   )
 
@@ -308,7 +304,9 @@ export default function App() {
             Producción
           </p>
           <h1 className="font-display text-4xl leading-none mt-1">
-            {pendientes > 0 ? `Faltan ${pendientes} por hacer` : 'Todo al día'}
+            {pendientes > 0
+              ? `Faltan ${pendientes} molde${pendientes === 1 ? '' : 's'} por hacer`
+              : 'Todo al día'}
           </h1>
         </div>
         <button

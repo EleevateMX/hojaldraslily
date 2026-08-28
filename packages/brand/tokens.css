@@ -9,7 +9,10 @@
  * carmín 5.0:1 · crema sobre carmín 4.7:1. El coral y el dorado son
  * DECORATIVOS: 2.3:1, nunca texto chico encima de crema. */
 
-@import url('https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@300;400;500&family=Karla:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+/* Jost llega hasta 600: en 300 los titulos grandes se ven lavados sobre el
+   carmin, y en una pantalla de tienda a un metro de distancia eso se lee
+   peor, no mas elegante. */
+@import url('https://fonts.googleapis.com/css2?family=Yellowtail&family=Jost:wght@400;500;600&family=Karla:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
 
 :root {
   /* Dúo principal — el carmín de los botones de su web y la crema del menú */
@@ -56,4 +59,41 @@
 .sa-dark {
   background: var(--sa-green-deep);
   color: var(--sa-cream);
+}
+
+/* ---------------------------------------------------------------------------
+   Ajustes de tipografía
+   ---------------------------------------------------------------------------
+   Van sobre las clases que las 8 apps ya usan (`font-display`, `font-body`,
+   `font-mono`), no sobre etiquetas HTML: así se aplican en todas sin tocar
+   app por app, y sin pelearse con Tailwind — Tailwind solo declara la familia
+   en esas clases, aquí se afina el resto.
+
+   Jost es geométrica: a tamaño grande el espaciado por omisión la deja
+   suelta y los títulos se ven desarmados. Con el tracking un poco cerrado y
+   un peso medio, un "Hojaldras Lily" de 48 px se lee como una palabra y no
+   como letras sueltas. */
+.font-display {
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.08;
+}
+
+/* El cuerpo al revés: un pelo más suelto para que se lea de corrido. */
+.font-body {
+  letter-spacing: 0.005em;
+}
+
+/* Cifras tabulares SIEMPRE en la mono: sin esto, "$1,180.00" y "$990.00"
+   tienen anchos distintos y una columna de precios queda como escalera.
+   Se nota justo donde más importa: el corte de caja y los tickets. */
+.font-mono {
+  font-feature-settings: 'tnum' 1, 'zero' 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Los números grandes (lo que queda, lo vendido) también van tabulares: un
+   contador que salta de ancho cada vez que cambia se ve roto. */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
 }

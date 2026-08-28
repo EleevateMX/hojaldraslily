@@ -112,3 +112,29 @@ La primera versión insertaba en `ordenes` directo y **estaba mal**: esa orden
 nacía sin `corte_id`, o sea que el cobro no aparecía en el corte de caja y el
 dinero del día no cuadraba. Por el camino normal se ganan además las comandas
 por estación y el movimiento de inventario.
+
+## El modelo de cuadros (28 de agosto)
+
+| Versión | Qué hace |
+|---|---|
+| `20260827110000` | `rappi` como canal de venta |
+| `20260827111000` | Lista de precios por canal |
+| `20260827112000` | `fn_crear_orden` cobra el precio del canal (parche con ancla) |
+| `20260827113000` | Tiempo de horneado y hora estimada de salida |
+| `20260827120000` | Sabor y cuadros por producto; producción en cuadros |
+| `20260827121000` | Existencias por sabor y paquetes que alcanzan |
+| `20260827122000` | Producción por moldes |
+
+**La regla que cambió todo:** el pan sale en **moldes de 48 cuadros** y de ahí
+se cortan los paquetes conforme se venden. Los tamaños **no son inventarios
+separados**: de 192 cuadros salen 15 paquetes de 12 *o* 7 de 24 *o* 3 de 48 —
+el mismo pan contado distinto. Contarlo por paquete obligaba a decidir en el
+horno algo que se decide en el mostrador.
+
+**Sobre el parche de `fn_crear_orden`:** el guardaclase del método de
+CLAUDE.md **abortó dos veces** antes de aplicar. La primera versión buscaba el
+texto literal de la llamada y solo encontraba una de las dos (la otra está
+partida en varias líneas), así que habría dejado la función cobrando el precio
+del canal en el total y el de mostrador en los renglones. Se resolvió con un
+patrón que tolera saltos de línea. Es exactamente para lo que sirve verificar
+que el ancla aparece N veces antes de ejecutar.

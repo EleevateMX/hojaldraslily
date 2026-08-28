@@ -5,10 +5,10 @@ import {
   cobrarEncargo,
   cancelarEncargo,
   crearEncargo,
-  listarExistenciasDelDia,
+  listarPaquetesDelDia,
   partirNombreDeVenta,
   type Encargo,
-  type ExistenciaDelDia,
+  type PaqueteDelDia,
 } from '@shake/supabase'
 import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
@@ -161,7 +161,7 @@ function Apartar({
   base,
   onListo,
 }: {
-  existencias: ExistenciaDelDia[]
+  existencias: PaqueteDelDia[]
   base: string
   onListo: (mensaje: string) => void
 }) {
@@ -279,7 +279,7 @@ function Apartar({
                 const foto = urlDeFoto(f.imagen_url, base)
                 // Se avisa, no se prohibe: se puede apartar mas de lo que hay
                 // hoy porque para eso esta la orden de produccion.
-                const pasado = n > f.libres
+                const pasado = n > f.paquetes_posibles
                 return (
                   <div
                     key={f.producto_id}
@@ -290,11 +290,11 @@ function Apartar({
                       <p className="font-body text-sm text-sa-green-ink leading-tight">{sabor}</p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
                         {medida ? medida + ' · ' : ''}
-                        {Math.max(0, f.libres)} libre{f.libres === 1 ? '' : 's'}
+                        {f.paquetes_posibles} libre{f.paquetes_posibles === 1 ? '' : 's'}
                       </p>
                       {pasado && (
                         <p className="font-body text-[11px] text-sa-banana mt-0.5">
-                          Hay que hornear {n - Math.max(0, f.libres)} más
+                          Hay que hornear {n - f.paquetes_posibles} más
                         </p>
                       )}
                     </div>
@@ -356,7 +356,7 @@ function Apartar({
 
 export default function Almacen() {
   const [encargos, setEncargos] = useState<Encargo[]>([])
-  const [existencias, setExistencias] = useState<ExistenciaDelDia[]>([])
+  const [existencias, setExistencias] = useState<PaqueteDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -367,7 +367,7 @@ export default function Almacen() {
   const cargar = useCallback(async (conSpinner = true) => {
     if (conSpinner) setCargando(true)
     try {
-      const [e, x] = await Promise.all([listarEncargos(sb), listarExistenciasDelDia(sb)])
+      const [e, x] = await Promise.all([listarEncargos(sb), listarPaquetesDelDia(sb)])
       setEncargos(e)
       setExistencias(x)
       setError(null)

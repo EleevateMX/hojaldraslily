@@ -1902,6 +1902,9 @@ export type Database = {
           codigo: string | null
           codigo_barras: string | null
           created_at: string
+          cuadros: number | null
+          minutos_horneado: number | null
+          sabor: string | null
           descripcion: string | null
           es_combo: boolean
           es_extra: boolean
@@ -1923,6 +1926,9 @@ export type Database = {
           codigo?: string | null
           codigo_barras?: string | null
           created_at?: string
+          cuadros?: number | null
+          minutos_horneado?: number | null
+          sabor?: string | null
           descripcion?: string | null
           es_combo?: boolean
           es_extra?: boolean
@@ -1944,6 +1950,9 @@ export type Database = {
           codigo?: string | null
           codigo_barras?: string | null
           created_at?: string
+          cuadros?: number | null
+          minutos_horneado?: number | null
+          sabor?: string | null
           descripcion?: string | null
           es_combo?: boolean
           es_extra?: boolean
@@ -3333,19 +3342,33 @@ export type Database = {
         }
         Returns: string
       }
-      fn_existencias_del_dia: {
+      fn_existencias_por_sabor: {
         Args: { p_fecha?: string }
         Returns: {
-          apartados: number
           categoria: string
-          disponibles: number
-          horneados: number
+          cuadros_apartados: number
+          cuadros_horneados: number
+          cuadros_libres: number
+          cuadros_mermados: number
+          cuadros_por_molde: number
+          cuadros_vendidos: number
           imagen_url: string
-          libres: number
-          mermados: number
+          moldes_horneados: number
+          sabor: string
+        }[]
+      }
+      fn_paquetes_del_dia: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          cuadros: number
+          cuadros_libres: number
+          imagen_url: string
           nombre: string
+          paquetes_posibles: number
           precio: number
           producto_id: string
+          sabor: string
           vendidos: number
         }[]
       }
@@ -3365,20 +3388,15 @@ export type Database = {
         }[]
       }
       fn_produccion_avanzar: {
-        Args: { p_hechas: number; p_item_id: string }
+        Args: { p_item_id: string; p_moldes: number }
         Returns: number
       }
       fn_produccion_mandar_a_hacer: {
         Args: { p_items: Json; p_nota?: string }
         Returns: string
       }
-      fn_produccion_registrar: {
-        Args: {
-          p_cantidad: number
-          p_motivo?: string
-          p_nota?: string
-          p_producto_id: string
-        }
+      fn_horneada_registrar: {
+        Args: { p_cuadros: number; p_motivo?: string; p_nota?: string; p_sabor: string }
         Returns: number
       }
       fn_menus_del_dia: {

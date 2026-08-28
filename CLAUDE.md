@@ -82,10 +82,21 @@ propósito hasta entonces.
 
 - **Insumos** (Admin → Inventario): harina, jamón, queso, por kilo y por
   almacén. Es el que sirve para costear, y vino del motor original.
-- **Paquetes terminados** (Admin → **Producción**): lo que sale del horno,
-  por sabor y tamaño, que es como Lily vende — cuadros en paquetes de 6, 12
-  (Mini), 24 (Chica) y 48 (Grande). `disponibles = horneado − merma −
-  vendido`, y baja solo con cada cobro.
+- **Cuadros por sabor** (Admin → **Producción**): la unidad real. El pan sale
+  en **moldes de 48 cuadros** (`parametros.cuadros_por_molde`) y de ahí se
+  cortan los paquetes conforme se venden — cuatro de 12, dos de 24, uno de
+  48, o mezclado. Por eso venden pan del día: **no se comprometen a un tamaño
+  hasta que alguien lo pide**.
+
+**Los tamaños NO son inventarios separados.** De 192 cuadros de guayaba salen
+15 paquetes de 12 *o* 7 de 24 *o* 3 de 48: es el mismo pan contado distinto, y
+vender uno baja los otros. Contarlo por paquete (como estaba al principio)
+obligaba a decidir en el horno algo que se decide en el mostrador.
+
+- Se **hornea** por sabor, en moldes → `fn_produccion_mandar_a_hacer`.
+- Se **vende** por paquete, y cada uno descuenta sus `productos.cuadros`.
+- `fn_existencias_por_sabor` contesta "¿cuánta guayaba queda?" (el horno);
+  `fn_paquetes_del_dia`, "¿cuántas chicas puedo vender?" (la caja).
 
 La pregunta de media mañana ("¿cuántos paquetes de guayaba chica quedan?")
 **no se contesta con kilos**: por eso existe la segunda. La primera no se
@@ -262,10 +273,11 @@ empaquetador y se desvían solas:
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
-| Mandar a hacer una hornada | Admin → **Producción** → "Mandar a producir" (sale en la pantalla de producción) |
+| Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, no en paquetes |
 | Apuntar lo que salió del horno | En la pantalla de **Producción** del local, o Admin → Producción con +1 / +5 / +10 |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
-| Cobrar un encargo | Caja → **Encargos** → Efectivo o Terminal (es lo único que lo descuenta) |
+| Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Almacén** al entregarlo (es lo único que lo descuenta) |
+| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
 | Ver lo apartado y para quién | Admin → **Almacén** |
 | Ver la tienda a distancia | Admin → **En vivo** |
@@ -310,6 +322,16 @@ empaquetador y se desvían solas:
   `pg_get_functiondef`, **verificar que el ancla aparece exactamente N
   veces**, reemplazar y `execute`. Si el ancla no cuadra, abortar — así el
   parche falla ruidosamente en vez de corromper la función.
+
+**Precios y canales**
+
+- La caja no solo **cobra** el precio del canal: tiene que **mostrarlo**.
+  `fn_cobrar_orden` valida el importe contra el total que calculó el
+  servidor, así que una pantalla en $160 contra un servidor en $190 rechaza
+  el cobro. `precioEnCanal()` (TypeScript) y `fn_precio_linea()` (SQL) son la
+  misma regla escrita dos veces: si cambia una, cambia la otra.
+- El canal vuelve a **Mostrador** al cobrar. Dejarlo en Rappi le cobraría el
+  precio de plataforma al siguiente cliente del mostrador.
 
 **Indicadores**
 

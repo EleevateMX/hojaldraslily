@@ -5,14 +5,16 @@ import {
   crearEncargo,
   cobrarEncargo,
   cancelarEncargo,
-  listarExistenciasDelDia,
+  listarPaquetesDelDia,
+  listarExistenciasPorSabor,
   mandarAProducir,
   listarOrdenesConTiempo,
   faltaPara,
   horaDeSalida,
   partirNombreDeVenta,
   type Encargo,
-  type ExistenciaDelDia,
+  type PaqueteDelDia,
+  type ExistenciaPorSabor,
   type OrdenConTiempo,
 } from '@shake/supabase'
 import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
@@ -58,7 +60,8 @@ const btn =
 export function Encargos() {
   const navigate = useNavigate()
   const [encargos, setEncargos] = useState<Encargo[]>([])
-  const [existencias, setExistencias] = useState<ExistenciaDelDia[]>([])
+  const [existencias, setExistencias] = useState<PaqueteDelDia[]>([])
+  const [sabores, setSabores] = useState<ExistenciaPorSabor[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -92,9 +95,12 @@ export function Encargos() {
   const cargar = useCallback(async (conSpinner = true) => {
     if (conSpinner) setCargando(true)
     try {
-      const [e, x] = await Promise.all([listarEncargos(sb), listarExistenciasDelDia(sb)])
+      const [e, x, s] = await Promise.all([
+        listarEncargos(sb), listarPaquetesDelDia(sb), listarExistenciasPorSabor(sb),
+      ])
       setEncargos(e)
       setExistencias(x)
+      setSabores(s)
       setError(null)
     } catch (err) {
       setError(mensajeDeError(err))
@@ -109,15 +115,17 @@ export function Encargos() {
   }, [cargar])
 
   async function mandarAlHorno() {
+    // Se pide por SABOR y en moldes: asi se hornea. Un molde de 48 cuadros
+    // se corta despues en los paquetes que pidan.
     const items = Object.entries(aProducir)
       .filter(([, n]) => n > 0)
-      .map(([producto_id, cantidad]) => ({ producto_id, cantidad }))
+      .map(([sabor, moldes]) => ({ sabor, moldes }))
     if (items.length === 0) return
     setMandando(true)
     try {
       await mandarAProducir(sb, items)
-      const piezas = items.reduce((s, i) => s + i.cantidad, 0)
-      setAviso(`Mandadas a hacer ${piezas} pieza${piezas === 1 ? '' : 's'}. Ya salió en la pantalla del horno.`)
+      const moldes = items.reduce((s, i) => s + i.moldes, 0)
+      setAviso(`Mandados a hacer ${moldes} molde${moldes === 1 ? '' : 's'}. Ya salió en la pantalla del horno.`)
       setAProducir({})
       setModoProducir(false)
       setError(null)
@@ -291,13 +299,13 @@ export function Encargos() {
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto">
-              {existencias.map((f) => {
-                const { sabor, medida } = partirNombreDeVenta(f.nombre)
-                const n = aProducir[f.producto_id] ?? 0
+              {sabores.map((f) => {
+                const sabor = f.sabor
+                const n = aProducir[sabor] ?? 0
                 const foto = urlDeFoto(f.imagen_url, base)
                 return (
                   <div
-                    key={f.producto_id}
+                    key={sabor}
                     className={[
                       'flex items-center gap-2 rounded-sa border p-2',
                       n > 0 ? 'border-sa-banana bg-sa-banana/10' : 'border-sa-green-ink/10',
@@ -309,22 +317,22 @@ export function Encargos() {
                         {sabor}
                       </p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                        {medida ? medida + ' · ' : ''}quedan {Math.max(0, f.libres)}
+                        quedan {Math.max(0, f.cuadros_libres)} cuadros
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
-                        onClick={() =>
-                          setAProducir((p) => ({ ...p, [f.producto_id]: Math.max(0, n - 5) }))
-                        }
+                        onClick={() => setAProducir((p) => ({ ...p, [sabor]: Math.max(0, n - 1) }))}
                         disabled={n === 0}
                         className="w-8 h-8 rounded-full border border-sa-green-ink/15 text-sa-green-ink/60 disabled:opacity-25"
                       >
                         −
                       </button>
-                      <span className="font-mono text-sm w-7 text-center tabular-nums">{n}</span>
+                      <span className="font-mono text-sm w-10 text-center tabular-nums">
+                        {n > 0 ? `${n} m` : '—'}
+                      </span>
                       <button
-                        onClick={() => setAProducir((p) => ({ ...p, [f.producto_id]: n + 5 }))}
+                        onClick={() => setAProducir((p) => ({ ...p, [sabor]: n + 1 }))}
                         className="w-8 h-8 rounded-full bg-sa-green text-sa-cream"
                       >
                         +
@@ -338,7 +346,7 @@ export function Encargos() {
             <div className="flex items-center justify-between gap-4">
               <p className="font-body text-sm text-sa-green-ink/70">
                 {aHornear > 0
-                  ? `${aHornear} pieza${aHornear === 1 ? '' : 's'} en la orden`
+                  ? `${aHornear} molde${aHornear === 1 ? '' : 's'} en la orden`
                   : 'Todavía no ha puesto nada'}
               </p>
               <button
@@ -415,7 +423,7 @@ export function Encargos() {
                       </p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
                         {medida ? medida + ' · ' : ''}
-                        {Math.max(0, f.libres)} libre{f.libres === 1 ? '' : 's'}
+                        {f.paquetes_posibles} libre{f.paquetes_posibles === 1 ? '' : 's'}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">

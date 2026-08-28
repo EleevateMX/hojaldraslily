@@ -888,60 +888,85 @@ export async function cambiarMenuActivo(
   if (error) throw error
 }
 
-// ------------------- lo que hay hoy, en paquetes -------------------
+// ------------------- lo que hay hoy -------------------
+//
+// El inventario se lleva en CUADROS por SABOR, no en paquetes por producto:
+// el pan sale en moldes de 48 y de ahi se cortan los paquetes conforme se
+// venden. Por eso hay dos vistas de lo mismo:
+//
+//   ExistenciaPorSabor  -> "¿cuanta guayaba me queda?"     (el horno)
+//   PaqueteDelDia       -> "¿cuantas chicas puedo vender?" (la caja)
 
-export interface ExistenciaDelDia {
+export interface ExistenciaPorSabor {
+  sabor: string
+  imagen_url: string | null
+  categoria: string
+  cuadros_horneados: number
+  cuadros_mermados: number
+  cuadros_vendidos: number
+  cuadros_apartados: number
+  cuadros_libres: number
+  cuadros_por_molde: number
+  moldes_horneados: number
+}
+
+export interface PaqueteDelDia {
   producto_id: string
   nombre: string
+  sabor: string
   categoria: string
-  imagen_url: string | null
+  cuadros: number
   precio: number
-  horneados: number
-  mermados: number
+  imagen_url: string | null
+  /** Cuadros libres del SABOR: los tamaños los comparten. */
+  cuadros_libres: number
+  /** Cuántos paquetes de este tamaño alcanzan con esos cuadros. */
+  paquetes_posibles: number
   vendidos: number
-  /** Lo que fisicamente hay: horneado - merma - vendido. */
-  disponibles: number
-  /** Comprometido en encargos que todavia no se pagan. */
-  apartados: number
-  /** Lo que se puede vender hoy: disponibles - apartados. */
-  libres: number
 }
 
-export type MotivoProduccion = 'horneado' | 'merma' | 'ajuste'
-
-/**
- * Paquetes horneados, vendidos y disponibles de hoy.
- *
- * Esto NO es el inventario de insumos (harina, jamon, queso por kilo), que
- * sirve para costear. Es el producto TERMINADO: la pregunta que se hace a
- * media manana es "¿cuantos paquetes de guayaba chica me quedan?", y esa no
- * se contesta con kilos.
- */
-export async function listarExistenciasDelDia(
+/** Cuadros por sabor: la unidad real del inventario. */
+export async function listarExistenciasPorSabor(
   sb: ShakeClient,
   fecha?: string,
-): Promise<ExistenciaDelDia[]> {
-  const { data, error } = await sb.rpc('fn_existencias_del_dia', { p_fecha: fecha ?? undefined })
+): Promise<ExistenciaPorSabor[]> {
+  const { data, error } = await sb.rpc('fn_existencias_por_sabor', { p_fecha: fecha ?? undefined })
   if (error) throw error
-  return (data ?? []) as ExistenciaDelDia[]
+  return (data ?? []) as ExistenciaPorSabor[]
 }
 
 /**
- * Apunta lo que salio del horno (o una merma).
+ * Cuántos paquetes de cada tamaño alcanzan hoy.
  *
- * La merma siempre resta, aunque se capture en positivo: el servidor le pone
- * el signo. Regresa cuantos quedan disponibles despues del movimiento.
+ * OJO al leerlo: los tamaños **no son existencias separadas**. De 192 cuadros
+ * de guayaba salen 15 paquetes de 12 **o** 7 de 24 **o** 3 de 48 — es el
+ * mismo pan contado de otra forma. Vender uno baja los otros.
  */
-export async function registrarProduccion(
+export async function listarPaquetesDelDia(
   sb: ShakeClient,
-  productoId: string,
-  cantidad: number,
-  motivo: MotivoProduccion = 'horneado',
+  fecha?: string,
+): Promise<PaqueteDelDia[]> {
+  const { data, error } = await sb.rpc('fn_paquetes_del_dia', { p_fecha: fecha ?? undefined })
+  if (error) throw error
+  return (data ?? []) as PaqueteDelDia[]
+}
+
+/**
+ * Apunta cuadros a mano: lo que salió sin orden, o una merma.
+ *
+ * La merma siempre resta aunque se capture en positivo; el servidor le pone
+ * el signo. Regresa cuántos cuadros quedan libres de ese sabor.
+ */
+export async function registrarHorneada(
+  sb: ShakeClient,
+  sabor: string,
+  cuadros: number,
+  motivo: 'horneado' | 'merma' | 'ajuste' = 'horneado',
   nota?: string,
 ): Promise<number> {
-  const { data, error } = await sb.rpc('fn_produccion_registrar', {
-    p_producto_id: productoId,
-    p_cantidad: cantidad,
+  const { data, error } = await sb.rpc('fn_horneada_registrar', {
+    p_sabor: sabor,
+    p_cuadros: cuadros,
     p_motivo: motivo,
     p_nota: nota ?? undefined,
   })

@@ -22,6 +22,16 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
   const [categoriaActiva, setCategoriaActiva] = useState<string | null>(null)
   const [marcaActiva, setMarcaActiva] = useState<string | null>(null)
   const [personalizando, setPersonalizando] = useState<ProductoVenta | null>(null)
+  /**
+   * El sabor abierto.
+   *
+   * La caja elige en dos pasos —primero QUE hojaldra, luego DE QUE TAMANO—
+   * porque asi se pide en el mostrador. Antes cada combinacion de sabor y
+   * tamano era una tarjeta suelta: 18 tarjetas donde el mismo sabor aparecia
+   * tres o cuatro veces, y el cajero tenia que leerlas todas para encontrar
+   * la que le pidieron.
+   */
+  const [saborAbierto, setSaborAbierto] = useState<string | null>(null)
 
   const extrasPorProducto = useMemo(() => {
     const m = new Map<string, ExtraDeProducto[]>()
@@ -66,6 +76,25 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
       return coincideBusqueda && coincideCategoria && coincideMarca
     })
   }, [productos, busqueda, categoriaActiva, marcaActiva])
+
+  /**
+   * Los productos agrupados por sabor, y dentro ordenados por tamano.
+   *
+   * Es el mismo catalogo, contado como se pide: "una de guayaba" primero, y
+   * el tamano despues. De paso la rejilla se hace mucho mas corta.
+   */
+  const porSabor = useMemo(() => {
+    const m = new Map<string, ProductoVenta[]>()
+    for (const p of productosFiltrados) {
+      const clave = partirNombreDeVenta(p.nombre).sabor
+      const l = m.get(clave) ?? []
+      l.push(p)
+      m.set(clave, l)
+    }
+    for (const l of m.values()) l.sort((a, b) => (a.cuadros ?? 0) - (b.cuadros ?? 0))
+    return [...m.entries()]
+  }, [productosFiltrados])
+
 
   return (
     <div className="flex flex-col h-full">
@@ -148,49 +177,80 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
         </div>
       )}
 
-      {/* Grid de productos */}
+      {/* Catalogo en dos pasos: sabor, y dentro sus tamanos. */}
       <div className="flex-1 overflow-y-auto px-4 pb-4">
-        {productosFiltrados.length === 0 ? (
+        {porSabor.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-40 text-sa-green-ink/40">
             <p className="font-mono text-sm uppercase tracking-wide">Nada por aquí</p>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {productosFiltrados.map((p) => (
-              <button
-                key={p.id}
-                onClick={() => tocar(p)}
-                className="flex flex-col items-center p-3 bg-white rounded-sa shadow-sa-sm border border-sa-green-ink/5 hover:border-sa-green/30 hover:-translate-y-0.5 active:scale-95 transition-all text-left group"
-              >
-                {/* Sin foto la tarjeta se cierra, igual que en el kiosko:
-                    el cajero busca por sabor, no por dibujo, y un hueco de
-                    relleno por producto solo estorba la busqueda. */}
-                {urlDeFoto(p.imagen_url, import.meta.env.BASE_URL) && (
-                  <img
-                    src={urlDeFoto(p.imagen_url, import.meta.env.BASE_URL)!}
-                    alt=""
-                    className="w-14 h-14 object-contain mb-1"
-                    draggable={false}
-                  />
-                )}
-                <p className="font-display text-sm text-sa-green-ink text-center leading-tight line-clamp-2 w-full">
-                  {partirNombreDeVenta(p.nombre).sabor}
-                </p>
-                {partirNombreDeVenta(p.nombre).medida && (
-                  <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/55 text-center mt-1">
-                    {partirNombreDeVenta(p.nombre).medida}
-                  </p>
-                )}
-                {/* Lo que trae la pieza, para que el cajero conteste
-                    "¿qué trae?" sin salirse de la pantalla ni preguntar. */}
-                {p.descripcion && (
-                  <p className="font-body text-[11px] text-sa-green-ink/50 text-center leading-snug line-clamp-2 w-full mt-1">
-                    {p.descripcion}
-                  </p>
-                )}
-                <p className="font-mono text-sm font-medium text-sa-strawberry mt-2">{mxn(precioDe(p))}</p>
-              </button>
-            ))}
+            {porSabor.map(([sabor, piezas]) => {
+              const abierto = saborAbierto === sabor
+              const foto = urlDeFoto(piezas[0].imagen_url, import.meta.env.BASE_URL)
+              // Un sabor con un solo tamano no necesita segundo paso: entra
+              // al ticket de un toque, como un cafe.
+              const unico = piezas.length === 1
+
+              return (
+                <div
+                  key={sabor}
+                  className={[
+                    'rounded-sa border transition-all',
+                    abierto
+                      ? 'col-span-3 bg-sa-cream-soft border-sa-green shadow-sa'
+                      : 'bg-white border-sa-green-ink/5 shadow-sa-sm hover:border-sa-green/30',
+                  ].join(' ')}
+                >
+                  <button
+                    onClick={() => (unico ? tocar(piezas[0]) : setSaborAbierto(abierto ? null : sabor))}
+                    className="w-full flex flex-col items-center p-3 active:scale-95 transition-transform"
+                  >
+                    {foto && (
+                      <img src={foto} alt="" className="w-14 h-14 object-contain mb-1" draggable={false} />
+                    )}
+                    <p className="font-display text-base text-sa-green-ink text-center leading-tight w-full">
+                      {sabor}
+                    </p>
+                    <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
+                      {unico
+                        ? mxn(precioDe(piezas[0]))
+                        : abierto
+                          ? '¿de qué tamaño?'
+                          : `${piezas.length} tamaños`}
+                    </p>
+                  </button>
+
+                  {abierto && !unico && (
+                    <div className="grid grid-cols-3 gap-2 px-3 pb-3">
+                      {piezas.map((p) => {
+                        const { medida } = partirNombreDeVenta(p.nombre)
+                        return (
+                          <button
+                            key={p.id}
+                            onClick={() => { tocar(p); setSaborAbierto(null) }}
+                            className="rounded-sa bg-white border border-sa-green-ink/10 hover:border-sa-green px-3 py-3 active:scale-95 transition-all"
+                          >
+                            <p className="font-display text-2xl text-sa-green-ink leading-none">
+                              {p.cuadros ?? '—'}
+                            </p>
+                            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
+                              cuadros
+                            </p>
+                            <p className="font-body text-xs text-sa-green-ink/70 mt-1 leading-tight">
+                              {medida.replace(/·.*$/, '').trim() || 'Paquete'}
+                            </p>
+                            <p className="font-mono text-sm font-medium text-sa-green mt-1.5">
+                              {mxn(precioDe(p))}
+                            </p>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         )}
       </div>
