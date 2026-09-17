@@ -1,5 +1,9 @@
 import { create } from 'zustand'
-import { descuentoPromo as calcDescuentoPromo, precioEnCanal } from '@shake/supabase'
+import {
+  descuentoPromo as calcDescuentoPromo,
+  precioEnCanal,
+  seVendeEnCanal,
+} from '@shake/supabase'
 import type { ProductoVenta, ClienteConLealtad, CanalDeVenta, PreciosDeCanal } from '@shake/supabase'
 // Lo que el login guarda de verdad es un EmpleadoSesion (id, nombre, ROL y
 // sucursal), no la fila cruda de `empleados`. Estaba tipado como `Empleado`
@@ -184,7 +188,15 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   canal: 'pos',
   preciosCanal: {},
-  setCanal: (canal) => set({ canal }),
+  // Al cambiar de canal se sacan del ticket las lineas que no se venden en el
+  // canal nuevo. Dejarlas seria dejar armada una orden que `fn_crear_orden` va
+  // a rechazar entera -- y el rechazo llega hasta el cobro, con el cliente
+  // enfrente. Mas vale que la linea desaparezca al tocar "Rappi" que despues.
+  setCanal: (canal) =>
+    set((estado) => ({
+      canal,
+      items: estado.items.filter((l) => seVendeEnCanal(l.producto, canal, estado.preciosCanal)),
+    })),
   setPreciosCanal: (preciosCanal) => set({ preciosCanal }),
   precioDe: (p) => precioEnCanal(p, get().canal, get().preciosCanal),
 

@@ -14,42 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      _respaldo_pruebas_28jul: {
-        Row: {
-          fila: Json
-          guardado_en: string
-          tabla: string
-        }
-        Insert: {
-          fila: Json
-          guardado_en?: string
-          tabla: string
-        }
-        Update: {
-          fila?: Json
-          guardado_en?: string
-          tabla?: string
-        }
-        Relationships: []
-      }
-      _respaldo_pruebas_30jul: {
-        Row: {
-          fila: Json
-          guardado_en: string
-          tabla: string
-        }
-        Insert: {
-          fila: Json
-          guardado_en?: string
-          tabla: string
-        }
-        Update: {
-          fila?: Json
-          guardado_en?: string
-          tabla?: string
-        }
-        Relationships: []
-      }
       almacenes: {
         Row: {
           activo: boolean
@@ -103,20 +67,56 @@ export type Database = {
         }
         Relationships: []
       }
+      app_data_respaldos: {
+        Row: {
+          data: Json
+          id: number
+          nota: string | null
+          origen: string
+          tomado_en: string
+        }
+        Insert: {
+          data: Json
+          id?: number
+          nota?: string | null
+          origen?: string
+          tomado_en?: string
+        }
+        Update: {
+          data?: Json
+          id?: number
+          nota?: string | null
+          origen?: string
+          tomado_en?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
+          autorizado: boolean
+          autorizado_en: string | null
           created_at: string
           hash: string
+          token: string | null
+          token_expira: string | null
           username: string
         }
         Insert: {
+          autorizado?: boolean
+          autorizado_en?: string | null
           created_at?: string
           hash: string
+          token?: string | null
+          token_expira?: string | null
           username: string
         }
         Update: {
+          autorizado?: boolean
+          autorizado_en?: string | null
           created_at?: string
           hash?: string
+          token?: string | null
+          token_expira?: string | null
           username?: string
         }
         Relationships: []
@@ -211,27 +211,54 @@ export type Database = {
           },
         ]
       }
+      catalogo_publicaciones: {
+        Row: {
+          id: string
+          publicado_en: string
+          publicado_por: string | null
+          snapshot: Json
+        }
+        Insert: {
+          id?: string
+          publicado_en?: string
+          publicado_por?: string | null
+          snapshot: Json
+        }
+        Update: {
+          id?: string
+          publicado_en?: string
+          publicado_por?: string | null
+          snapshot?: Json
+        }
+        Relationships: []
+      }
       categorias: {
         Row: {
           activa: boolean
           cocina_id: string
           id: string
           nombre: string
+          nombre_singular: string | null
           orden: number
+          va_a_pantalla: boolean
         }
         Insert: {
           activa?: boolean
           cocina_id: string
           id?: string
           nombre: string
+          nombre_singular?: string | null
           orden?: number
+          va_a_pantalla?: boolean
         }
         Update: {
           activa?: boolean
           cocina_id?: string
           id?: string
           nombre?: string
+          nombre_singular?: string | null
           orden?: number
+          va_a_pantalla?: boolean
         }
         Relationships: [
           {
@@ -251,11 +278,16 @@ export type Database = {
           created_at: string
           email: string | null
           fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
           id: string
           mancuernas: number
           nombre: string
           notas: string | null
           sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
           telefono: string | null
         }
         Insert: {
@@ -265,11 +297,16 @@ export type Database = {
           created_at?: string
           email?: string | null
           fecha_nacimiento?: string | null
+          foto_propia?: boolean
+          foto_url?: string | null
           id?: string
           mancuernas?: number
           nombre: string
           notas?: string | null
           sabor_favorito?: string | null
+          saldo_mancuernas?: number
+          sellos_alimento?: number
+          sellos_bebida?: number
           telefono?: string | null
         }
         Update: {
@@ -279,11 +316,16 @@ export type Database = {
           created_at?: string
           email?: string | null
           fecha_nacimiento?: string | null
+          foto_propia?: boolean
+          foto_url?: string | null
           id?: string
           mancuernas?: number
           nombre?: string
           notas?: string | null
           sabor_favorito?: string | null
+          saldo_mancuernas?: number
+          sellos_alimento?: number
+          sellos_bebida?: number
           telefono?: string | null
         }
         Relationships: []
@@ -367,208 +409,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      precios_canal: {
-        Row: {
-          canal: Database["public"]["Enums"]["canal_orden"]
-          precio: number
-          producto_id: string
-          updated_at: string
-        }
-        Insert: {
-          canal: Database["public"]["Enums"]["canal_orden"]
-          precio: number
-          producto_id: string
-          updated_at?: string
-        }
-        Update: {
-          canal?: Database["public"]["Enums"]["canal_orden"]
-          precio?: number
-          producto_id?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "precios_canal_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      encargo_items: {
-        Row: {
-          cantidad: number
-          encargo_id: string
-          id: string
-          precio_unitario: number
-          producto_id: string
-        }
-        Insert: {
-          cantidad: number
-          encargo_id: string
-          id?: string
-          precio_unitario: number
-          producto_id: string
-        }
-        Update: {
-          cantidad?: number
-          encargo_id?: string
-          id?: string
-          precio_unitario?: number
-          producto_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "encargo_items_encargo_id_fkey"
-            columns: ["encargo_id"]
-            isOneToOne: false
-            referencedRelation: "encargos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "encargo_items_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      encargos: {
-        Row: {
-          anticipo: number
-          cliente: string
-          created_at: string
-          creado_por: string | null
-          estado: string
-          fecha_entrega: string | null
-          folio: number
-          hora_entrega: string | null
-          id: string
-          nota: string | null
-          orden_id: string | null
-          telefono: string | null
-          updated_at: string
-        }
-        Insert: {
-          anticipo?: number
-          cliente: string
-          created_at?: string
-          creado_por?: string | null
-          estado?: string
-          fecha_entrega?: string | null
-          folio?: number
-          hora_entrega?: string | null
-          id?: string
-          nota?: string | null
-          orden_id?: string | null
-          telefono?: string | null
-          updated_at?: string
-        }
-        Update: {
-          anticipo?: number
-          cliente?: string
-          created_at?: string
-          creado_por?: string | null
-          estado?: string
-          fecha_entrega?: string | null
-          folio?: number
-          hora_entrega?: string | null
-          id?: string
-          nota?: string | null
-          orden_id?: string | null
-          telefono?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "encargos_orden_id_fkey"
-            columns: ["orden_id"]
-            isOneToOne: false
-            referencedRelation: "ordenes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      orden_produccion_items: {
-        Row: {
-          cantidad_hecha: number
-          cantidad_pedida: number
-          id: string
-          orden_id: string
-          producto_id: string
-          terminado_en: string | null
-          terminado_por: string | null
-        }
-        Insert: {
-          cantidad_hecha?: number
-          cantidad_pedida: number
-          id?: string
-          orden_id: string
-          producto_id: string
-          terminado_en?: string | null
-          terminado_por?: string | null
-        }
-        Update: {
-          cantidad_hecha?: number
-          cantidad_pedida?: number
-          id?: string
-          orden_id?: string
-          producto_id?: string
-          terminado_en?: string | null
-          terminado_por?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "orden_produccion_items_orden_id_fkey"
-            columns: ["orden_id"]
-            isOneToOne: false
-            referencedRelation: "ordenes_produccion"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "orden_produccion_items_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "productos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ordenes_produccion: {
-        Row: {
-          created_at: string
-          creada_por: string | null
-          estado: string
-          fecha: string
-          folio: number
-          id: string
-          nota: string | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          creada_por?: string | null
-          estado?: string
-          fecha?: string
-          folio?: number
-          id?: string
-          nota?: string | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          creada_por?: string | null
-          estado?: string
-          fecha?: string
-          folio?: number
-          id?: string
-          nota?: string | null
-          updated_at?: string
-        }
-        Relationships: []
       }
       cocinas: {
         Row: {
@@ -677,9 +517,31 @@ export type Database = {
           },
         ]
       }
+      config_sellos: {
+        Row: {
+          activo: boolean
+          precio_minimo: number
+          requeridos: number
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          precio_minimo?: number
+          requeridos?: number
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          precio_minimo?: number
+          requeridos?: number
+          tipo?: string
+        }
+        Relationships: []
+      }
       configuracion_kiosko: {
         Row: {
           clip_configurado: boolean
+          clip_serial_pos: string | null
           expira_minutos: number
           modo_pago: Database["public"]["Enums"]["modo_pago_kiosko"]
           sucursal_id: string
@@ -687,6 +549,7 @@ export type Database = {
         }
         Insert: {
           clip_configurado?: boolean
+          clip_serial_pos?: string | null
           expira_minutos?: number
           modo_pago?: Database["public"]["Enums"]["modo_pago_kiosko"]
           sucursal_id: string
@@ -694,6 +557,7 @@ export type Database = {
         }
         Update: {
           clip_configurado?: boolean
+          clip_serial_pos?: string | null
           expira_minutos?: number
           modo_pago?: Database["public"]["Enums"]["modo_pago_kiosko"]
           sucursal_id?: string
@@ -843,6 +707,129 @@ export type Database = {
             columns: ["sucursal_id"]
             isOneToOne: false
             referencedRelation: "sucursales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encargo_items: {
+        Row: {
+          cantidad: number
+          encargo_id: string
+          id: string
+          precio_unitario: number
+          producto_id: string
+        }
+        Insert: {
+          cantidad: number
+          encargo_id: string
+          id?: string
+          precio_unitario: number
+          producto_id: string
+        }
+        Update: {
+          cantidad?: number
+          encargo_id?: string
+          id?: string
+          precio_unitario?: number
+          producto_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encargo_items_encargo_id_fkey"
+            columns: ["encargo_id"]
+            isOneToOne: false
+            referencedRelation: "encargos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "encargo_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      encargos: {
+        Row: {
+          anticipo: number
+          cliente: string
+          creado_por: string | null
+          created_at: string
+          estado: string
+          fecha_entrega: string | null
+          folio: number
+          hora_entrega: string | null
+          id: string
+          nota: string | null
+          orden_id: string | null
+          telefono: string | null
+          updated_at: string
+        }
+        Insert: {
+          anticipo?: number
+          cliente: string
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          fecha_entrega?: string | null
+          folio?: never
+          hora_entrega?: string | null
+          id?: string
+          nota?: string | null
+          orden_id?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Update: {
+          anticipo?: number
+          cliente?: string
+          creado_por?: string | null
+          created_at?: string
+          estado?: string
+          fecha_entrega?: string | null
+          folio?: never
+          hora_entrega?: string | null
+          id?: string
+          nota?: string | null
+          orden_id?: string | null
+          telefono?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "encargos_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes"
             referencedColumns: ["id"]
           },
         ]
@@ -1030,6 +1017,7 @@ export type Database = {
           activa: boolean
           agente_id: string | null
           agente_token: string
+          agente_version: string | null
           ancho_papel: Database["public"]["Enums"]["ancho_papel"]
           buzzer: boolean
           cocina_id: string | null
@@ -1050,6 +1038,7 @@ export type Database = {
           activa?: boolean
           agente_id?: string | null
           agente_token?: string
+          agente_version?: string | null
           ancho_papel?: Database["public"]["Enums"]["ancho_papel"]
           buzzer?: boolean
           cocina_id?: string | null
@@ -1070,6 +1059,7 @@ export type Database = {
           activa?: boolean
           agente_id?: string | null
           agente_token?: string
+          agente_version?: string | null
           ancho_papel?: Database["public"]["Enums"]["ancho_papel"]
           buzzer?: boolean
           cocina_id?: string | null
@@ -1201,6 +1191,27 @@ export type Database = {
           },
         ]
       }
+      intentos_pin: {
+        Row: {
+          created_at: string
+          exito: boolean
+          id: number
+          origen: string
+        }
+        Insert: {
+          created_at?: string
+          exito: boolean
+          id?: number
+          origen: string
+        }
+        Update: {
+          created_at?: string
+          exito?: boolean
+          id?: number
+          origen?: string
+        }
+        Relationships: []
+      }
       inventario_movimientos: {
         Row: {
           almacen_id: string | null
@@ -1255,6 +1266,8 @@ export type Database = {
       inventario_stock: {
         Row: {
           almacen_id: string
+          contado_at: string | null
+          contado_por: string | null
           id: string
           insumo_id: string
           stock_actual: number
@@ -1262,6 +1275,8 @@ export type Database = {
         }
         Insert: {
           almacen_id: string
+          contado_at?: string | null
+          contado_por?: string | null
           id?: string
           insumo_id: string
           stock_actual?: number
@@ -1269,6 +1284,8 @@ export type Database = {
         }
         Update: {
           almacen_id?: string
+          contado_at?: string | null
+          contado_por?: string | null
           id?: string
           insumo_id?: string
           stock_actual?: number
@@ -1429,6 +1446,153 @@ export type Database = {
           },
         ]
       }
+      misiones: {
+        Row: {
+          activo: boolean
+          clave: string
+          created_at: string
+          descripcion: string
+          id: string
+          limite_total: number | null
+          mancuernas: number
+          nombre: string
+          orden: number
+          pide_texto: string | null
+          repetir_dias: number | null
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          clave: string
+          created_at?: string
+          descripcion: string
+          id?: string
+          limite_total?: number | null
+          mancuernas: number
+          nombre: string
+          orden?: number
+          pide_texto?: string | null
+          repetir_dias?: number | null
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          clave?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          limite_total?: number | null
+          mancuernas?: number
+          nombre?: string
+          orden?: number
+          pide_texto?: string | null
+          repetir_dias?: number | null
+          tipo?: string
+        }
+        Relationships: []
+      }
+      misiones_cumplidas: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          dia: string
+          estado: string
+          evidencia_url: string | null
+          id: string
+          mancuernas: number
+          mision_id: string
+          motivo: string | null
+          nota: string | null
+          revisada_en: string | null
+          revisada_por: string | null
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          dia?: string
+          estado?: string
+          evidencia_url?: string | null
+          id?: string
+          mancuernas?: number
+          mision_id: string
+          motivo?: string | null
+          nota?: string | null
+          revisada_en?: string | null
+          revisada_por?: string | null
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          dia?: string
+          estado?: string
+          evidencia_url?: string | null
+          id?: string
+          mancuernas?: number
+          mision_id?: string
+          motivo?: string | null
+          nota?: string | null
+          revisada_en?: string | null
+          revisada_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "misiones_cumplidas_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "misiones_cumplidas_mision_id_fkey"
+            columns: ["mision_id"]
+            isOneToOne: false
+            referencedRelation: "misiones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "misiones_cumplidas_revisada_por_fkey"
+            columns: ["revisada_por"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      observaciones: {
+        Row: {
+          activa: boolean
+          cocina_id: string
+          created_at: string
+          id: string
+          orden: number
+          texto: string
+        }
+        Insert: {
+          activa?: boolean
+          cocina_id: string
+          created_at?: string
+          id?: string
+          orden?: number
+          texto: string
+        }
+        Update: {
+          activa?: boolean
+          cocina_id?: string
+          created_at?: string
+          id?: string
+          orden?: number
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observaciones_cocina_id_fkey"
+            columns: ["cocina_id"]
+            isOneToOne: false
+            referencedRelation: "cocinas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orden_items: {
         Row: {
           cantidad: number
@@ -1505,6 +1669,85 @@ export type Database = {
           },
           {
             foreignKeyName: "orden_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orden_produccion_items: {
+        Row: {
+          cantidad_hecha: number
+          cantidad_pedida: number | null
+          id: string
+          moldes: number | null
+          orden_id: string
+          producto_id: string | null
+          sabor: string | null
+          terminado_en: string | null
+          terminado_por: string | null
+        }
+        Insert: {
+          cantidad_hecha?: number
+          cantidad_pedida?: number | null
+          id?: string
+          moldes?: number | null
+          orden_id: string
+          producto_id?: string | null
+          sabor?: string | null
+          terminado_en?: string | null
+          terminado_por?: string | null
+        }
+        Update: {
+          cantidad_hecha?: number
+          cantidad_pedida?: number | null
+          id?: string
+          moldes?: number | null
+          orden_id?: string
+          producto_id?: string | null
+          sabor?: string | null
+          terminado_en?: string | null
+          terminado_por?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orden_produccion_items_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes_produccion"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "orden_produccion_items_producto_id_fkey"
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "vw_productos_mas_vendidos"
@@ -1659,6 +1902,39 @@ export type Database = {
           },
         ]
       }
+      ordenes_produccion: {
+        Row: {
+          creada_por: string | null
+          created_at: string
+          estado: string
+          fecha: string
+          folio: number
+          id: string
+          nota: string | null
+          updated_at: string
+        }
+        Insert: {
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          fecha?: string
+          folio?: never
+          id?: string
+          nota?: string | null
+          updated_at?: string
+        }
+        Update: {
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          fecha?: string
+          folio?: never
+          id?: string
+          nota?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pagos: {
         Row: {
           autorizado_por: string | null
@@ -1734,35 +2010,107 @@ export type Database = {
           },
         ]
       }
+      paquetes_saldo: {
+        Row: {
+          activo: boolean
+          id: string
+          mancuernas: number
+          nombre: string
+          orden: number
+          precio_mxn: number
+          producto_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          id?: string
+          mancuernas: number
+          nombre: string
+          orden?: number
+          precio_mxn: number
+          producto_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          id?: string
+          mancuernas?: number
+          nombre?: string
+          orden?: number
+          precio_mxn?: number
+          producto_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paquetes_saldo_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paquetes_saldo_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paquetes_saldo_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paquetes_saldo_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "paquetes_saldo_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       parametros: {
         Row: {
           clave_compras: string
           clave_traspaso: string
+          cuadros_por_molde: number
           food_cost_meta: number
           id: string
           iva: number
           mano_obra: number
           merma_default: number
+          minutos_horneado_default: number
           updated_at: string
         }
         Insert: {
           clave_compras?: string
           clave_traspaso?: string
+          cuadros_por_molde?: number
           food_cost_meta?: number
           id?: string
           iva?: number
           mano_obra?: number
           merma_default?: number
+          minutos_horneado_default?: number
           updated_at?: string
         }
         Update: {
           clave_compras?: string
           clave_traspaso?: string
+          cuadros_por_molde?: number
           food_cost_meta?: number
           id?: string
           iva?: number
           mano_obra?: number
           merma_default?: number
+          minutos_horneado_default?: number
           updated_at?: string
         }
         Relationships: []
@@ -1809,17 +2157,263 @@ export type Database = {
           },
         ]
       }
+      portal_eventos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          datos: Json
+          id: string
+          ip: string | null
+          mac: string | null
+          ssid: string | null
+          tipo: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          datos?: Json
+          id?: string
+          ip?: string | null
+          mac?: string | null
+          ssid?: string | null
+          tipo: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          datos?: Json
+          id?: string
+          ip?: string | null
+          mac?: string | null
+          ssid?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "portal_eventos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      precios_canal: {
+        Row: {
+          canal: Database["public"]["Enums"]["canal_orden"]
+          disponible: boolean
+          precio: number
+          producto_id: string
+          updated_at: string
+        }
+        Insert: {
+          canal: Database["public"]["Enums"]["canal_orden"]
+          disponible?: boolean
+          precio: number
+          producto_id: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: Database["public"]["Enums"]["canal_orden"]
+          disponible?: boolean
+          precio?: number
+          producto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "precios_canal_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      premios_sellos: {
+        Row: {
+          activo: boolean
+          id: string
+          producto_id: string
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          id?: string
+          producto_id: string
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          id?: string
+          producto_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "premios_sellos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premios_sellos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premios_sellos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "premios_sellos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "premios_sellos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produccion: {
+        Row: {
+          cantidad: number
+          created_at: string
+          fecha: string
+          id: string
+          motivo: string
+          nota: string | null
+          orden_produccion_item_id: string | null
+          producto_id: string | null
+          quien: string | null
+          sabor: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          fecha?: string
+          id?: string
+          motivo?: string
+          nota?: string | null
+          orden_produccion_item_id?: string | null
+          producto_id?: string | null
+          quien?: string | null
+          sabor: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          fecha?: string
+          id?: string
+          motivo?: string
+          nota?: string | null
+          orden_produccion_item_id?: string | null
+          producto_id?: string | null
+          quien?: string | null
+          sabor?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produccion_orden_produccion_item_id_fkey"
+            columns: ["orden_produccion_item_id"]
+            isOneToOne: false
+            referencedRelation: "orden_produccion_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produccion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produccion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produccion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_costeo_producto"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produccion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_producto_extras"
+            referencedColumns: ["extra_id"]
+          },
+          {
+            foreignKeyName: "produccion_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "vw_productos_mas_vendidos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producto_extras: {
         Row: {
           extra_id: string
+          grupo: string | null
+          precio: number | null
           producto_id: string
         }
         Insert: {
           extra_id: string
+          grupo?: string | null
+          precio?: number | null
           producto_id: string
         }
         Update: {
           extra_id?: string
+          grupo?: string | null
+          precio?: number | null
           producto_id?: string
         }
         Relationships: [
@@ -1903,8 +2497,6 @@ export type Database = {
           codigo_barras: string | null
           created_at: string
           cuadros: number | null
-          minutos_horneado: number | null
-          sabor: string | null
           descripcion: string | null
           es_combo: boolean
           es_extra: boolean
@@ -1915,10 +2507,12 @@ export type Database = {
           mano_obra: number
           marca: string | null
           merma_pct: number | null
+          minutos_horneado: number | null
           nombre: string
           onzas: number | null
           orden: number
           precio: number
+          sabor: string | null
         }
         Insert: {
           activo?: boolean
@@ -1927,8 +2521,6 @@ export type Database = {
           codigo_barras?: string | null
           created_at?: string
           cuadros?: number | null
-          minutos_horneado?: number | null
-          sabor?: string | null
           descripcion?: string | null
           es_combo?: boolean
           es_extra?: boolean
@@ -1939,10 +2531,12 @@ export type Database = {
           mano_obra?: number
           marca?: string | null
           merma_pct?: number | null
+          minutos_horneado?: number | null
           nombre: string
           onzas?: number | null
           orden?: number
           precio?: number
+          sabor?: string | null
         }
         Update: {
           activo?: boolean
@@ -1951,8 +2545,6 @@ export type Database = {
           codigo_barras?: string | null
           created_at?: string
           cuadros?: number | null
-          minutos_horneado?: number | null
-          sabor?: string | null
           descripcion?: string | null
           es_combo?: boolean
           es_extra?: boolean
@@ -1963,10 +2555,12 @@ export type Database = {
           mano_obra?: number
           marca?: string | null
           merma_pct?: number | null
+          minutos_horneado?: number | null
           nombre?: string
           onzas?: number | null
           orden?: number
           precio?: number
+          sabor?: string | null
         }
         Relationships: [
           {
@@ -2160,6 +2754,133 @@ export type Database = {
         }
         Relationships: []
       }
+      saldo_movimientos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descripcion: string | null
+          empleado_id: string | null
+          id: string
+          mancuernas: number
+          orden_id: string | null
+          saldo_despues: number
+          tipo: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descripcion?: string | null
+          empleado_id?: string | null
+          id?: string
+          mancuernas: number
+          orden_id?: string | null
+          saldo_despues: number
+          tipo: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descripcion?: string | null
+          empleado_id?: string | null
+          id?: string
+          mancuernas?: number
+          orden_id?: string | null
+          saldo_despues?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saldo_movimientos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saldo_movimientos_empleado_id_fkey"
+            columns: ["empleado_id"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "saldo_movimientos_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sellos_movimientos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descripcion: string | null
+          id: string
+          orden_id: string | null
+          sellos: number
+          tipo: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          orden_id?: string | null
+          sellos: number
+          tipo: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descripcion?: string | null
+          id?: string
+          orden_id?: string | null
+          sellos?: number
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sellos_movimientos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sellos_movimientos_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      senales_pantallas: {
+        Row: {
+          accion: string
+          creado_en: string
+          id: string
+          pantalla: string
+          pedido_por: string | null
+        }
+        Insert: {
+          accion?: string
+          creado_en?: string
+          id?: string
+          pantalla: string
+          pedido_por?: string | null
+        }
+        Update: {
+          accion?: string
+          creado_en?: string
+          id?: string
+          pantalla?: string
+          pedido_por?: string | null
+        }
+        Relationships: []
+      }
       sucursales: {
         Row: {
           activa: boolean
@@ -2186,6 +2907,57 @@ export type Database = {
           nombre?: string
         }
         Relationships: []
+      }
+      tarjetas_regalo: {
+        Row: {
+          canjeada_en: string | null
+          canjeada_por: string | null
+          codigo: string
+          creada_por: string | null
+          created_at: string
+          estado: string
+          id: string
+          lote: string | null
+          mancuernas: number
+        }
+        Insert: {
+          canjeada_en?: string | null
+          canjeada_por?: string | null
+          codigo: string
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          lote?: string | null
+          mancuernas: number
+        }
+        Update: {
+          canjeada_en?: string | null
+          canjeada_por?: string | null
+          codigo?: string
+          creada_por?: string | null
+          created_at?: string
+          estado?: string
+          id?: string
+          lote?: string | null
+          mancuernas?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tarjetas_regalo_canjeada_por_fkey"
+            columns: ["canjeada_por"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tarjetas_regalo_creada_por_fkey"
+            columns: ["creada_por"]
+            isOneToOne: false
+            referencedRelation: "empleados"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trabajos_impresion: {
         Row: {
@@ -2532,6 +3304,8 @@ export type Database = {
         Row: {
           activo: boolean | null
           extra_id: string | null
+          grupo: string | null
+          marca: string | null
           nombre: string | null
           precio: number | null
           producto_id: string | null
@@ -2661,6 +3435,7 @@ export type Database = {
         }
         Returns: {
           clip_configurado: boolean
+          clip_serial_pos: string | null
           expira_minutos: number
           modo_pago: Database["public"]["Enums"]["modo_pago_kiosko"]
           sucursal_id: string
@@ -2755,6 +3530,39 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_canjear_mancuernas: {
+        Args: { p_mancuernas: number; p_orden_id: string }
+        Returns: Json
+      }
+      fn_canjear_sellos: {
+        Args: { p_orden_id: string; p_producto_id: string; p_tipo: string }
+        Returns: Json
+      }
+      fn_canjear_tarjeta: {
+        Args: { p_cliente_id?: string; p_codigo: string }
+        Returns: Json
+      }
+      fn_catalogo_cambios: { Args: never; Returns: Json }
+      fn_catalogo_publicar: {
+        Args: { p_clave?: string; p_quien?: string }
+        Returns: Json
+      }
+      fn_catalogo_snapshot: { Args: never; Returns: Json }
+      fn_categoria_pantalla: {
+        Args: { p_categoria_id: string; p_cocina_slug: string }
+        Returns: undefined
+      }
+      fn_categorias_pantalla: {
+        Args: never
+        Returns: {
+          cocina: string
+          cocina_slug: string
+          id: string
+          nombre: string
+          productos_activos: number
+          va_a_pantalla: boolean
+        }[]
+      }
       fn_cliente_actualizar: {
         Args: {
           p_email?: string
@@ -2770,11 +3578,16 @@ export type Database = {
           created_at: string
           email: string | null
           fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
           id: string
           mancuernas: number
           nombre: string
           notas: string | null
           sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
           telefono: string | null
         }
         SetofOptions: {
@@ -2801,11 +3614,16 @@ export type Database = {
           created_at: string
           email: string | null
           fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
           id: string
           mancuernas: number
           nombre: string
           notas: string | null
           sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
           telefono: string | null
         }
         SetofOptions: {
@@ -2814,6 +3632,22 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      fn_clientes_admin: {
+        Args: { p_busqueda?: string; p_limite?: number }
+        Returns: {
+          alta: string
+          codigo: string
+          compras: number
+          con_google: boolean
+          cupones_activos: number
+          email: string
+          id: string
+          mancuernas: number
+          nombre: string
+          telefono: string
+          ultima_compra: string
+        }[]
       }
       fn_cobrar_orden: {
         Args: {
@@ -2887,6 +3721,41 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_costos_autorizar: {
+        Args: { p_autorizado: boolean; p_usuario: string }
+        Returns: undefined
+      }
+      fn_costos_cargar: { Args: { p_token: string }; Returns: Json }
+      fn_costos_guardar: {
+        Args: { p_data: Json; p_token: string }
+        Returns: string
+      }
+      fn_costos_login: {
+        Args: { p_contrasena: string; p_usuario: string }
+        Returns: {
+          autorizado: boolean
+          mensaje: string
+          ok: boolean
+          token: string
+        }[]
+      }
+      fn_costos_registrar: {
+        Args: { p_contrasena: string; p_usuario: string }
+        Returns: string
+      }
+      fn_costos_usuario_del_token: {
+        Args: { p_token: string }
+        Returns: string
+      }
+      fn_costos_usuarios: {
+        Args: never
+        Returns: {
+          autorizado: boolean
+          autorizado_en: string
+          creado: string
+          username: string
+        }[]
+      }
       fn_crear_empleado: {
         Args: {
           p_nombre: string
@@ -2915,211 +3784,89 @@ export type Database = {
           id: string
         }[]
       }
-      fn_crear_orden:
-        | {
-            Args: {
-              p_almacen_id: string
-              p_canal: Database["public"]["Enums"]["canal_orden"]
-              p_cliente_id?: string
-              p_corte_id?: string
-              p_descuento?: number
-              p_empleado_id?: string
-              p_items: Json
-              p_sucursal_id: string
-            }
-            Returns: {
-              almacen_id: string | null
-              canal: Database["public"]["Enums"]["canal_orden"]
-              cliente_id: string | null
-              clip_recibo: string | null
-              codigo_corto: string | null
-              corte_id: string | null
-              created_at: string
-              descuento: number
-              empleado_id: string | null
-              es_demo: boolean
-              estado: Database["public"]["Enums"]["estado_orden"]
-              estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
-              expira_en: string | null
-              folio: number
-              id: string
-              metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
-              nombre_cliente: string | null
-              pagado: boolean
-              sucursal_id: string | null
-              total: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "ordenes"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_almacen_id: string
-              p_canal: Database["public"]["Enums"]["canal_orden"]
-              p_cliente_id?: string
-              p_corte_id?: string
-              p_descuento?: number
-              p_empleado_id?: string
-              p_es_demo?: boolean
-              p_items: Json
-              p_sucursal_id: string
-            }
-            Returns: {
-              almacen_id: string | null
-              canal: Database["public"]["Enums"]["canal_orden"]
-              cliente_id: string | null
-              clip_recibo: string | null
-              codigo_corto: string | null
-              corte_id: string | null
-              created_at: string
-              descuento: number
-              empleado_id: string | null
-              es_demo: boolean
-              estado: Database["public"]["Enums"]["estado_orden"]
-              estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
-              expira_en: string | null
-              folio: number
-              id: string
-              metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
-              nombre_cliente: string | null
-              pagado: boolean
-              sucursal_id: string | null
-              total: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "ordenes"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_almacen_id: string
-              p_canal: Database["public"]["Enums"]["canal_orden"]
-              p_cliente_id?: string
-              p_corte_id?: string
-              p_descuento?: number
-              p_empleado_id?: string
-              p_es_demo?: boolean
-              p_items: Json
-              p_nombre_cliente?: string
-              p_sucursal_id: string
-            }
-            Returns: {
-              almacen_id: string | null
-              canal: Database["public"]["Enums"]["canal_orden"]
-              cliente_id: string | null
-              clip_recibo: string | null
-              codigo_corto: string | null
-              corte_id: string | null
-              created_at: string
-              descuento: number
-              empleado_id: string | null
-              es_demo: boolean
-              estado: Database["public"]["Enums"]["estado_orden"]
-              estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
-              expira_en: string | null
-              folio: number
-              id: string
-              metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
-              nombre_cliente: string | null
-              pagado: boolean
-              sucursal_id: string | null
-              total: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "ordenes"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-      fn_crear_orden_kiosko_caja:
-        | {
-            Args: {
-              p_almacen_id: string
-              p_cliente_id?: string
-              p_descuento?: number
-              p_items: Json
-              p_sucursal_id: string
-            }
-            Returns: {
-              almacen_id: string | null
-              canal: Database["public"]["Enums"]["canal_orden"]
-              cliente_id: string | null
-              clip_recibo: string | null
-              codigo_corto: string | null
-              corte_id: string | null
-              created_at: string
-              descuento: number
-              empleado_id: string | null
-              es_demo: boolean
-              estado: Database["public"]["Enums"]["estado_orden"]
-              estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
-              expira_en: string | null
-              folio: number
-              id: string
-              metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
-              nombre_cliente: string | null
-              pagado: boolean
-              sucursal_id: string | null
-              total: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "ordenes"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
-        | {
-            Args: {
-              p_almacen_id: string
-              p_cliente_id?: string
-              p_descuento?: number
-              p_items: Json
-              p_nombre_cliente?: string
-              p_sucursal_id: string
-            }
-            Returns: {
-              almacen_id: string | null
-              canal: Database["public"]["Enums"]["canal_orden"]
-              cliente_id: string | null
-              clip_recibo: string | null
-              codigo_corto: string | null
-              corte_id: string | null
-              created_at: string
-              descuento: number
-              empleado_id: string | null
-              es_demo: boolean
-              estado: Database["public"]["Enums"]["estado_orden"]
-              estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
-              expira_en: string | null
-              folio: number
-              id: string
-              metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
-              nombre_cliente: string | null
-              pagado: boolean
-              sucursal_id: string | null
-              total: number
-              updated_at: string
-            }
-            SetofOptions: {
-              from: "*"
-              to: "ordenes"
-              isOneToOne: true
-              isSetofReturn: false
-            }
-          }
+      fn_crear_orden: {
+        Args: {
+          p_almacen_id: string
+          p_canal: Database["public"]["Enums"]["canal_orden"]
+          p_cliente_id?: string
+          p_corte_id?: string
+          p_descuento?: number
+          p_empleado_id?: string
+          p_es_demo?: boolean
+          p_items: Json
+          p_nombre_cliente?: string
+          p_sucursal_id: string
+        }
+        Returns: {
+          almacen_id: string | null
+          canal: Database["public"]["Enums"]["canal_orden"]
+          cliente_id: string | null
+          clip_recibo: string | null
+          codigo_corto: string | null
+          corte_id: string | null
+          created_at: string
+          descuento: number
+          empleado_id: string | null
+          es_demo: boolean
+          estado: Database["public"]["Enums"]["estado_orden"]
+          estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
+          expira_en: string | null
+          folio: number
+          id: string
+          metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
+          nombre_cliente: string | null
+          pagado: boolean
+          sucursal_id: string | null
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ordenes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_crear_orden_kiosko_caja: {
+        Args: {
+          p_almacen_id: string
+          p_cliente_id?: string
+          p_descuento?: number
+          p_items: Json
+          p_nombre_cliente?: string
+          p_sucursal_id: string
+        }
+        Returns: {
+          almacen_id: string | null
+          canal: Database["public"]["Enums"]["canal_orden"]
+          cliente_id: string | null
+          clip_recibo: string | null
+          codigo_corto: string | null
+          corte_id: string | null
+          created_at: string
+          descuento: number
+          empleado_id: string | null
+          es_demo: boolean
+          estado: Database["public"]["Enums"]["estado_orden"]
+          estado_pago_orden: Database["public"]["Enums"]["estado_pago_orden"]
+          expira_en: string | null
+          folio: number
+          id: string
+          metodo_pago: Database["public"]["Enums"]["metodo_pago"] | null
+          nombre_cliente: string | null
+          pagado: boolean
+          sucursal_id: string | null
+          total: number
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "ordenes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_devolver_canje: { Args: { p_orden_id: string }; Returns: Json }
       fn_diagnostico_impresora: {
         Args: { p_token: string }
         Returns: {
@@ -3142,6 +3889,8 @@ export type Database = {
           ultima_impresion: string
         }[]
       }
+      fn_diagnostico_sistema: { Args: never; Returns: Json }
+      fn_empleado_actual: { Args: never; Returns: string }
       fn_empleados_activos: {
         Args: { p_sucursal?: string }
         Returns: {
@@ -3150,6 +3899,26 @@ export type Database = {
           rol: string
           sucursal_id: string
         }[]
+      }
+      fn_encargo_cancelar: {
+        Args: { p_encargo_id: string; p_motivo?: string }
+        Returns: undefined
+      }
+      fn_encargo_cobrar: {
+        Args: { p_encargo_id: string; p_metodo?: string }
+        Returns: number
+      }
+      fn_encargo_crear: {
+        Args: {
+          p_anticipo?: number
+          p_cliente: string
+          p_fecha_entrega?: string
+          p_hora_entrega?: string
+          p_items: Json
+          p_nota?: string
+          p_telefono?: string
+        }
+        Returns: string
       }
       fn_encolar_comanda_para_pedido: {
         Args: { p_pedido_id: string }
@@ -3215,10 +3984,48 @@ export type Database = {
         Args: { p_costo_envio?: number; p_lineas: Json }
         Returns: Json
       }
+      fn_es_jefe: { Args: never; Returns: boolean }
+      fn_es_staff: { Args: never; Returns: boolean }
+      fn_existencias_del_dia: {
+        Args: { p_fecha?: string }
+        Returns: {
+          apartados: number
+          categoria: string
+          disponibles: number
+          horneados: number
+          imagen_url: string
+          libres: number
+          mermados: number
+          nombre: string
+          precio: number
+          producto_id: string
+          vendidos: number
+        }[]
+      }
+      fn_existencias_por_sabor: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          cuadros_apartados: number
+          cuadros_horneados: number
+          cuadros_libres: number
+          cuadros_mermados: number
+          cuadros_por_molde: number
+          cuadros_vendidos: number
+          imagen_url: string
+          moldes_horneados: number
+          sabor: string
+        }[]
+      }
+      fn_expediente_cliente: { Args: { p_cliente_id: string }; Returns: Json }
       fn_expirar_cupones: { Args: never; Returns: number }
       fn_expirar_ordenes_kiosko: { Args: never; Returns: number }
       fn_extra_bebida_activar: {
         Args: { p_activo: boolean; p_id: string }
+        Returns: undefined
+      }
+      fn_extra_bebida_grupo: {
+        Args: { p_extra_id: string; p_grupo: string; p_producto_id: string }
         Returns: undefined
       }
       fn_extra_bebida_guardar: {
@@ -3229,6 +4036,7 @@ export type Database = {
           codigo: string | null
           codigo_barras: string | null
           created_at: string
+          cuadros: number | null
           descripcion: string | null
           es_combo: boolean
           es_extra: boolean
@@ -3239,10 +4047,12 @@ export type Database = {
           mano_obra: number
           marca: string | null
           merma_pct: number | null
+          minutos_horneado: number | null
           nombre: string
           onzas: number | null
           orden: number
           precio: number
+          sabor: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3251,12 +4061,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_extra_bebida_precio: {
+        Args: { p_extra_id: string; p_precio: number; p_producto_id: string }
+        Returns: undefined
+      }
       fn_extra_bebida_productos: {
         Args: { p_extra_id: string }
         Returns: {
           categoria: string
+          grupo: string
           nombre: string
           ofrecido: boolean
+          precio_base: number
+          precio_propio: number
           producto_id: string
         }[]
       }
@@ -3277,6 +4094,26 @@ export type Database = {
       fn_extras_disponibles: { Args: { p_producto_id: string }; Returns: Json }
       fn_generar_codigo_corto: { Args: never; Returns: string }
       fn_generar_cupones_cumpleanos: { Args: never; Returns: number }
+      fn_generar_tarjetas: {
+        Args: { p_cantidad: number; p_lote?: string; p_mancuernas: number }
+        Returns: {
+          canjeada_en: string | null
+          canjeada_por: string | null
+          codigo: string
+          creada_por: string | null
+          created_at: string
+          estado: string
+          id: string
+          lote: string | null
+          mancuernas: number
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "tarjetas_regalo"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       fn_guardar_extra: {
         Args: {
           p_cantidad?: number
@@ -3291,6 +4128,7 @@ export type Database = {
           codigo: string | null
           codigo_barras: string | null
           created_at: string
+          cuadros: number | null
           descripcion: string | null
           es_combo: boolean
           es_extra: boolean
@@ -3301,10 +4139,12 @@ export type Database = {
           mano_obra: number
           marca: string | null
           merma_pct: number | null
+          minutos_horneado: number | null
           nombre: string
           onzas: number | null
           orden: number
           precio: number
+          sabor: string | null
         }
         SetofOptions: {
           from: "*"
@@ -3312,6 +4152,44 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      fn_guardar_mi_foto: {
+        Args: { p_url: string }
+        Returns: {
+          activo: boolean
+          auth_user_id: string | null
+          codigo: string | null
+          created_at: string
+          email: string | null
+          fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
+          id: string
+          mancuernas: number
+          nombre: string
+          notas: string | null
+          sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
+          telefono: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "clientes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_historial_pedidos: { Args: { p_limite?: number }; Returns: Json }
+      fn_horneada_registrar: {
+        Args: {
+          p_cuadros: number
+          p_motivo?: string
+          p_nota?: string
+          p_sabor: string
+        }
+        Returns: number
       }
       fn_imprimir_confirmar: {
         Args: { p_token: string; p_trabajo_id: string }
@@ -3321,96 +4199,9 @@ export type Database = {
         Args: { p_error: string; p_token: string; p_trabajo_id: string }
         Returns: undefined
       }
-      fn_imprimir_latido: { Args: { p_token: string }; Returns: undefined }
-      fn_encargo_cancelar: {
-        Args: { p_encargo_id: string; p_motivo?: string }
+      fn_imprimir_latido: {
+        Args: { p_token: string; p_version?: string }
         Returns: undefined
-      }
-      fn_encargo_cobrar: {
-        Args: { p_encargo_id: string; p_metodo?: string }
-        Returns: number
-      }
-      fn_encargo_crear: {
-        Args: {
-          p_anticipo?: number
-          p_cliente: string
-          p_fecha_entrega?: string
-          p_hora_entrega?: string
-          p_items: Json
-          p_nota?: string
-          p_telefono?: string
-        }
-        Returns: string
-      }
-      fn_existencias_por_sabor: {
-        Args: { p_fecha?: string }
-        Returns: {
-          categoria: string
-          cuadros_apartados: number
-          cuadros_horneados: number
-          cuadros_libres: number
-          cuadros_mermados: number
-          cuadros_por_molde: number
-          cuadros_vendidos: number
-          imagen_url: string
-          moldes_horneados: number
-          sabor: string
-        }[]
-      }
-      fn_paquetes_del_dia: {
-        Args: { p_fecha?: string }
-        Returns: {
-          categoria: string
-          cuadros: number
-          cuadros_libres: number
-          imagen_url: string
-          nombre: string
-          paquetes_posibles: number
-          precio: number
-          producto_id: string
-          sabor: string
-          vendidos: number
-        }[]
-      }
-      fn_ordenes_de_produccion: {
-        Args: { p_incluir_terminadas?: boolean }
-        Returns: {
-          created_at: string
-          creada_por: string
-          estado: string
-          folio: number
-          id: string
-          listo_estimado: string
-          minutos: number
-          nota: string
-          piezas_hechas: number
-          piezas_pedidas: number
-        }[]
-      }
-      fn_produccion_avanzar: {
-        Args: { p_item_id: string; p_moldes: number }
-        Returns: number
-      }
-      fn_produccion_mandar_a_hacer: {
-        Args: { p_items: Json; p_nota?: string }
-        Returns: string
-      }
-      fn_horneada_registrar: {
-        Args: { p_cuadros: number; p_motivo?: string; p_nota?: string; p_sabor: string }
-        Returns: number
-      }
-      fn_menus_del_dia: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          activa: boolean
-          cocina: string
-          id: string
-          importe_hoy: number
-          nombre: string
-          orden: number
-          productos: number
-          vendidos_hoy: number
-        }[]
       }
       fn_imprimir_liberar_vencidos: { Args: never; Returns: number }
       fn_imprimir_prueba: {
@@ -3517,6 +4308,33 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_inventario_contar: {
+        Args: { p_almacen_id?: string; p_lineas: Json }
+        Returns: Json
+      }
+      fn_inventario_entrada: {
+        Args: { p_almacen_destino?: string; p_lineas: Json; p_origen?: string }
+        Returns: Json
+      }
+      fn_inventario_huecos: { Args: { p_dias?: number }; Returns: Json }
+      fn_inventario_lista_de_compra: {
+        Args: { p_almacen_id?: string }
+        Returns: Json
+      }
+      fn_inventario_merma: {
+        Args: {
+          p_almacen_id?: string
+          p_cantidad: number
+          p_insumo_id: string
+          p_motivo?: string
+        }
+        Returns: Json
+      }
+      fn_inventario_minimo: {
+        Args: { p_almacen_id?: string; p_insumo_id: string; p_minimo: number }
+        Returns: undefined
+      }
+      fn_inventario_resumen: { Args: { p_almacen_id?: string }; Returns: Json }
       fn_items_comanda: { Args: { p_pedido_id: string }; Returns: Json }
       fn_login_cajero: {
         Args: { p_pin: string }
@@ -3527,6 +4345,78 @@ export type Database = {
           sucursal_id: string
         }[]
       }
+      fn_menus_del_dia: {
+        Args: never
+        Returns: {
+          activa: boolean
+          cocina: string
+          id: string
+          importe_hoy: number
+          nombre: string
+          orden: number
+          productos: number
+          vendidos_hoy: number
+        }[]
+      }
+      fn_meta_acreditar: { Args: { p_cumplida_id: string }; Returns: number }
+      fn_meta_automatica: { Args: { p_clave: string }; Returns: Json }
+      fn_meta_enviar_evidencia: {
+        Args: { p_clave: string; p_nota?: string; p_url: string }
+        Returns: Json
+      }
+      fn_meta_revisar: {
+        Args: { p_aprobar: boolean; p_id: string; p_motivo?: string }
+        Returns: Json
+      }
+      fn_metas_por_revisar: { Args: never; Returns: Json }
+      fn_mi_historial: {
+        Args: { p_limite?: number }
+        Returns: {
+          fecha: string
+          folio: number
+          items: Json
+          mancuernas_ganadas: number
+          total: number
+        }[]
+      }
+      fn_mi_resumen_lealtad: { Args: never; Returns: Json }
+      fn_mi_telefono_guardar: {
+        Args: { p_telefono: string }
+        Returns: {
+          activo: boolean
+          auth_user_id: string | null
+          codigo: string | null
+          created_at: string
+          email: string | null
+          fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
+          id: string
+          mancuernas: number
+          nombre: string
+          notas: string | null
+          sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
+          telefono: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "clientes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_mis_favoritos: {
+        Args: { p_limite?: number }
+        Returns: {
+          producto: string
+          ultima_vez: string
+          veces: number
+        }[]
+      }
+      fn_mis_metas: { Args: never; Returns: Json }
       fn_nombres_pedido_frecuentes: {
         Args: { p_limite?: number }
         Returns: {
@@ -3534,9 +4424,121 @@ export type Database = {
           veces: number
         }[]
       }
+      fn_observacion_activar: {
+        Args: { p_activa: boolean; p_id: string }
+        Returns: undefined
+      }
+      fn_observacion_borrar: { Args: { p_id: string }; Returns: undefined }
+      fn_observacion_guardar: {
+        Args: { p_cocina_slug: string; p_orden?: number; p_texto: string }
+        Returns: {
+          activa: boolean
+          cocina_id: string
+          created_at: string
+          id: string
+          orden: number
+          texto: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "observaciones"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_observaciones: {
+        Args: { p_cocina_slug: string }
+        Returns: {
+          id: string
+          orden: number
+          texto: string
+        }[]
+      }
+      fn_observaciones_admin: {
+        Args: never
+        Returns: {
+          activa: boolean
+          cocina: string
+          cocina_id: string
+          id: string
+          orden: number
+          texto: string
+        }[]
+      }
+      fn_ordenes_de_produccion: {
+        Args: { p_incluir_terminadas?: boolean }
+        Returns: {
+          creada_por: string
+          created_at: string
+          estado: string
+          folio: number
+          id: string
+          listo_estimado: string
+          minutos: number
+          nota: string
+          piezas_hechas: number
+          piezas_pedidas: number
+        }[]
+      }
+      fn_panel_en_vivo: {
+        Args: { p_todos_los_pedidos?: boolean }
+        Returns: Json
+      }
+      fn_pantallas_recargar: {
+        Args: { p_pantalla: string }
+        Returns: undefined
+      }
+      fn_paquetes_del_dia: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          cuadros: number
+          cuadros_libres: number
+          imagen_url: string
+          nombre: string
+          paquetes_posibles: number
+          precio: number
+          producto_id: string
+          sabor: string
+          vendidos: number
+        }[]
+      }
+      fn_pin_fallos_recientes: { Args: { p_origen: string }; Returns: number }
+      fn_pin_registrar_intento: {
+        Args: { p_exito: boolean; p_origen: string }
+        Returns: undefined
+      }
+      fn_precio_linea:
+        | {
+            Args: { p_padre_producto_id: string; p_producto_id: string }
+            Returns: number
+          }
+        | {
+            Args: {
+              p_canal: Database["public"]["Enums"]["canal_orden"]
+              p_padre_producto_id: string
+              p_producto_id: string
+            }
+            Returns: number
+          }
+      fn_produccion_avanzar: {
+        Args: { p_item_id: string; p_moldes: number }
+        Returns: number
+      }
+      fn_produccion_mandar_a_hacer: {
+        Args: { p_items: Json; p_nota?: string }
+        Returns: string
+      }
       fn_producto_mover_categoria: {
         Args: { p_categoria_id: string; p_producto_id: string }
         Returns: undefined
+      }
+      fn_producto_va_en_canal: {
+        Args: {
+          p_canal: Database["public"]["Enums"]["canal_orden"]
+          p_producto_id: string
+        }
+        Returns: boolean
       }
       fn_promos_cliente: {
         Args: { p_cliente: string }
@@ -3568,6 +4570,7 @@ export type Database = {
         Returns: undefined
       }
       fn_reactivacion: { Args: never; Returns: number }
+      fn_recibo_publico: { Args: { p_orden_id: string }; Returns: Json }
       fn_reconciliar_pagos: {
         Args: never
         Returns: {
@@ -3576,6 +4579,17 @@ export type Database = {
           orden_id: string
         }[]
       }
+      fn_respaldar_costosshake: {
+        Args: { p_nota?: string; p_origen?: string }
+        Returns: number
+      }
+      fn_restaurar_costosshake: {
+        Args: { p_respaldo_id: number }
+        Returns: undefined
+      }
+      fn_rewards_admin: { Args: never; Returns: Json }
+      fn_rewards_para_caja: { Args: { p_cliente_id: string }; Returns: Json }
+      fn_rol_staff: { Args: never; Returns: string }
       fn_roles: {
         Args: never
         Returns: {
@@ -3599,8 +4613,25 @@ export type Database = {
           ventas_sin_movimiento_inventario: number
         }[]
       }
+      fn_staff_por_pin: {
+        Args: { p_pin: string }
+        Returns: {
+          auth_user_id: string
+          correo: string
+          empleado_id: string
+          nombre: string
+          rol: string
+          sucursal_id: string
+        }[]
+      }
+      fn_staff_vincular_auth: {
+        Args: { p_auth_user_id: string; p_empleado_id: string }
+        Returns: undefined
+      }
       fn_sync_app_data: { Args: never; Returns: undefined }
       fn_sync_stock_costos: { Args: never; Returns: undefined }
+      fn_tasa_mancuernas: { Args: never; Returns: number }
+      fn_validar_cupon: { Args: { p_codigo: string }; Returns: Json }
       fn_vincular_cliente_auth: {
         Args: { p_nombre?: string }
         Returns: {
@@ -3610,11 +4641,16 @@ export type Database = {
           created_at: string
           email: string | null
           fecha_nacimiento: string | null
+          foto_propia: boolean
+          foto_url: string | null
           id: string
           mancuernas: number
           nombre: string
           notas: string | null
           sabor_favorito: string | null
+          saldo_mancuernas: number
+          sellos_alimento: number
+          sellos_bebida: number
           telefono: string | null
         }
         SetofOptions: {
@@ -3623,6 +4659,16 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      registrar_cliente_wifi: {
+        Args: {
+          p_apellido: string
+          p_beneficio?: string
+          p_dias_vig?: number
+          p_email: string
+          p_nombre: string
+        }
+        Returns: Json
       }
     }
     Enums: {
@@ -3677,9 +4723,15 @@ export type Database = {
       modo_pago_kiosko: "clip" | "pagar_en_caja" | "demo" | "cajero"
       tipo_almacen: "bodega" | "kiosko"
       tipo_conexion_impresora: "usb" | "red"
-      tipo_cupon: "mancuernas" | "cumpleanos"
+      tipo_cupon: "mancuernas" | "cumpleanos" | "bienvenida"
       tipo_documento_impresion: "comanda" | "ticket"
-      tipo_insumo: "proteina" | "shake" | "alimento" | "empaque" | "reventa"
+      tipo_insumo:
+        | "proteina"
+        | "shake"
+        | "alimento"
+        | "empaque"
+        | "reventa"
+        | "limpieza"
       tipo_mancuerna: "ganadas" | "canje" | "ajuste" | "promo" | "proximidad"
       tipo_movimiento: "compra" | "venta" | "traspaso" | "ajuste" | "merma"
       tipo_promocion: "descuento_pct" | "descuento_monto" | "producto_gratis"
@@ -3698,12 +4750,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3727,11 +4779,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3752,11 +4804,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3777,11 +4829,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3794,11 +4846,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -3866,9 +4918,16 @@ export const Constants = {
       modo_pago_kiosko: ["clip", "pagar_en_caja", "demo", "cajero"],
       tipo_almacen: ["bodega", "kiosko"],
       tipo_conexion_impresora: ["usb", "red"],
-      tipo_cupon: ["mancuernas", "cumpleanos"],
+      tipo_cupon: ["mancuernas", "cumpleanos", "bienvenida"],
       tipo_documento_impresion: ["comanda", "ticket"],
-      tipo_insumo: ["proteina", "shake", "alimento", "empaque", "reventa"],
+      tipo_insumo: [
+        "proteina",
+        "shake",
+        "alimento",
+        "empaque",
+        "reventa",
+        "limpieza",
+      ],
       tipo_mancuerna: ["ganadas", "canje", "ajuste", "promo", "proximidad"],
       tipo_movimiento: ["compra", "venta", "traspaso", "ajuste", "merma"],
       tipo_promocion: ["descuento_pct", "descuento_monto", "producto_gratis"],

@@ -382,8 +382,20 @@ export function horaDeSalida(listoEstimado: string): string {
 
 // ------------------- precios por canal (Rappi) -------------------
 
+/**
+ * Lo que la lista de precios dice de un producto en un canal.
+ *
+ * `disponible: false` es la **"X"** de la hoja de precios de la casa: ese
+ * producto no se vende en ese canal. No es lo mismo que no tener fila — sin
+ * fila, el producto se vende al precio de mostrador.
+ */
+export interface PrecioDeCanal {
+  precio: number
+  disponible: boolean
+}
+
 /** `producto_id -> canal -> precio`. Solo trae las excepciones. */
-export type PreciosDeCanal = Record<string, Record<string, number>>
+export type PreciosDeCanal = Record<string, Record<string, PrecioDeCanal>>
 
 /** Los canales que la caja sabe cobrar. */
 export type CanalDeVenta = 'pos' | 'rappi'
@@ -401,13 +413,18 @@ export type CanalDeVenta = 'pos' | 'rappi'
  * de mostrador en todos los canales.
  */
 export async function listarPreciosDeCanal(sb: ShakeClient): Promise<PreciosDeCanal> {
-  const { data, error } = await sb.from('precios_canal').select('producto_id, canal, precio')
+  const { data, error } = await sb
+    .from('precios_canal')
+    .select('producto_id, canal, precio, disponible')
   if (error) throw error
   const mapa: PreciosDeCanal = {}
   for (const f of data ?? []) {
-    const fila = f as { producto_id: string; canal: string; precio: number }
+    const fila = f as { producto_id: string; canal: string; precio: number; disponible: boolean }
     mapa[fila.producto_id] ??= {}
-    mapa[fila.producto_id][fila.canal] = Number(fila.precio)
+    mapa[fila.producto_id][fila.canal] = {
+      precio: Number(fila.precio),
+      disponible: fila.disponible !== false,
+    }
   }
   return mapa
 }
@@ -425,7 +442,29 @@ export function precioEnCanal(
   canal: CanalDeVenta,
   precios: PreciosDeCanal,
 ): number {
-  return precios[producto.id]?.[canal] ?? producto.precio
+  const fila = precios[producto.id]?.[canal]
+  // Una fila marcada como NO disponible guarda precio 0: es una marca, no un
+  // precio. Si se devolviera tal cual, la pantalla ofreceria el producto en
+  // cero -- peor que ofrecerlo caro. Quien no se vende en el canal cae al
+  // precio de mostrador, y `seVendeEnCanal` se encarga de que ni aparezca.
+  if (!fila || !fila.disponible) return producto.precio
+  return fila.precio
+}
+
+/**
+ * ¿Este producto se vende en este canal?
+ *
+ * La caja tiene que ESCONDER lo que no va en la plataforma, no solo dejar que
+ * el servidor lo rechace al cobrar: enterarse al final, con el cliente
+ * enfrente y el pedido armado, es enterarse tarde. Misma regla que
+ * `fn_producto_va_en_canal` en la base; si cambia una, cambia la otra.
+ */
+export function seVendeEnCanal(
+  producto: { id: string },
+  canal: CanalDeVenta,
+  precios: PreciosDeCanal,
+): boolean {
+  return precios[producto.id]?.[canal]?.disponible !== false
 }
 
 /** Guarda (o quita) el precio de un producto en un canal. */
@@ -444,8 +483,12 @@ export async function guardarPrecioDeCanal(
     if (error) throw error
     return
   }
-  const { error } = await sb
-    .from('precios_canal')
-    .upsert({ producto_id: productoId, canal, precio, updated_at: new Date().toISOString() })
+  const { error } = await sb.from('precios_canal').upsert({
+    producto_id: productoId,
+    canal,
+    precio,
+    disponible: true,
+    updated_at: new Date().toISOString(),
+  })
   if (error) throw error
 }

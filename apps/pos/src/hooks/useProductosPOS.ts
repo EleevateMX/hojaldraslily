@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   listarProductosParaVenta, listarProductosExtra, listarExtras, listarPreciosDeCanal,
+  seVendeEnCanal,
 } from '@shake/supabase'
 import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
 import { mensajeDeError } from '@shake/utils'
@@ -16,13 +17,15 @@ export interface CategoriaPOS {
 }
 
 export function useProductosPOS() {
-  const [productos, setProductos] = useState<ProductoVenta[]>([])
+  const [todos, setTodos] = useState<ProductoVenta[]>([])
   const [productosExtra, setProductosExtra] = useState<ProductoVenta[]>([])
   const [extras, setExtras] = useState<ExtraDeProducto[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const setPreciosCanal = usePosStore((s) => s.setPreciosCanal)
+  const canal = usePosStore((s) => s.canal)
+  const preciosCanal = usePosStore((s) => s.preciosCanal)
 
   useEffect(() => {
     // La lista de precios por canal viaja con el catalogo: la caja tiene que
@@ -36,7 +39,7 @@ export function useProductosPOS() {
       listarPreciosDeCanal(sb),
     ])
       .then(([prods, prodsExtra, exs, precios]) => {
-        setProductos(prods)
+        setTodos(prods)
         setProductosExtra(prodsExtra)
         setExtras(exs)
         setPreciosCanal(precios)
@@ -44,6 +47,15 @@ export function useProductosPOS() {
       .catch((e) => setError(mensajeDeError(e)))
       .finally(() => setLoading(false))
   }, [setPreciosCanal])
+
+  // Lo que la hoja de precios marca con "X" no se vende en la plataforma, así
+  // que en modo Rappi ni se muestra. Si se mostrara, la cajera lo agregaría al
+  // ticket y se enteraría hasta el final, cuando `fn_crear_orden` lo rechace:
+  // con el repartidor esperando y el pedido ya armado.
+  const productos = useMemo(
+    () => todos.filter((p) => seVendeEnCanal(p, canal, preciosCanal)),
+    [todos, canal, preciosCanal],
+  )
 
   // Las categorías se derivan del propio catálogo (no hay query aparte).
   const categorias = useMemo<CategoriaPOS[]>(() => {
