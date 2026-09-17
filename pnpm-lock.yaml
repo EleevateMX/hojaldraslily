@@ -29,6 +29,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -75,6 +78,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -121,6 +127,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -176,6 +185,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -242,6 +254,9 @@ importers:
       '@shake/payments':
         specifier: workspace:*
         version: link:../../packages/payments
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -303,6 +318,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -358,6 +376,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -404,6 +425,9 @@ importers:
       '@shake/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@shake/pwa':
+        specifier: workspace:*
+        version: link:../../packages/pwa
       '@shake/supabase':
         specifier: workspace:*
         version: link:../../packages/supabase
@@ -474,6 +498,18 @@ importers:
       vite:
         specifier: ^6.0.0
         version: 6.4.3(@types/node@22.20.0)(jiti@1.21.7)(tsx@4.22.4)
+
+  packages/pwa:
+    devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+      vite:
+        specifier: ^6.0.0
+        version: 6.4.3(@types/node@22.20.0)(jiti@1.21.7)(tsx@4.22.4)
+      vitest:
+        specifier: ^2.1.0
+        version: 2.1.9(@types/node@22.20.0)
 
   packages/supabase:
     dependencies:

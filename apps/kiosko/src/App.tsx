@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { listarAlmacenes, escucharRecargas } from '@shake/supabase'
+import { registrarPwa } from '@shake/pwa/registrar'
 import type { ModoPagoKiosko } from '@shake/types'
 import { resolverModoKiosko } from './lib/modoKiosko'
 import { CandadoCajero } from './components/CandadoCajero'
@@ -71,7 +72,14 @@ export default function App() {
       intentar()
     })
     const vigia = setInterval(intentar, 10_000)
-    return () => { colgar(); clearInterval(vigia) }
+
+    // Una versión nueva de la app se activa con la MISMA condición, y por la
+    // misma razón: activarla recarga la pestaña. Se le pasa `esSeguro` en vez
+    // de escribir una segunda idea de "ahora sí se puede" que se desincronice
+    // de esta.
+    const soltarPwa = registrarPwa({ activarCuando: esSeguro })
+
+    return () => { colgar(); clearInterval(vigia); soltarPwa() }
   }, [esVistaCelular])
 
   if (modo === 'cajero' && !cajero && !esVistaCelular) {

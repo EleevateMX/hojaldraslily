@@ -237,6 +237,13 @@ para arriba** (títulos y cifras grandes); abajo de eso va Karla, y los
 números y etiquetas en versalitas van en DM Mono. Yellowtail es exclusiva
 del logotipo: nunca en texto corrido ni en la interfaz.
 
+**El `manifest.webmanifest` y los iconos de las apps instalables NO son una
+cuarta excepción**, y a propósito: los genera `@shake/pwa` leyendo
+`tokens.css`, y los iconos salen de `scripts/generar-iconos-pwa.mjs`. Se hizo
+así porque ya se habían desviado — los dos manifests escritos a mano traían
+el verde oscuro del motor original (`#14241D`, `#1A2E26`). Ver
+`docs/apps-instalables.md`.
+
 **Las tres excepciones que hay que vigilar**, porque no pasan por el
 empaquetador y se desvían solas:
 
@@ -301,6 +308,7 @@ empaquetador y se desvían solas:
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
+| Tener Admin en el teléfono | Abrirlo en Chrome → menú → **Instalar aplicación** (en iPhone: Compartir → Añadir a pantalla de inicio) |
 
 ---
 
@@ -401,7 +409,22 @@ empaquetador y se desvían solas:
 **Frontend**
 
 - El kiosko **no se recarga a media venta**: la señal de recarga espera a
-  que la pantalla esté en el menú y sin carrito.
+  que la pantalla esté en el menú y sin carrito. **Lo mismo vale para
+  estrenar una versión nueva de la app**: activar un service worker recarga
+  la pestaña, así que el kiosko y la caja le pasan su propia condición de
+  «ahora sí se puede» a `registrarPwa` — la misma función que ya usan para la
+  señal, no una segunda escrita aparte.
+- Un service worker llama a `clients.claim()` al activarse, y eso dispara
+  `controllerchange` **también en la primera instalación**, cuando no hay
+  ninguna versión vieja que reemplazar. Sin distinguir los dos casos, la
+  primera visita a cada app se recarga sola, siempre. Solo hay que recargar
+  si fuimos nosotros los que pedimos el cambio.
+- Y al revés: `updatefound` **puede no llegarle a esta pestaña** si la
+  actualización la instaló otra del mismo origen — en la PC de la tienda eso
+  es lo normal, con la Caja y el Admin abiertos a la vez. Un vigía que solo
+  pregunta «¿ya es seguro?» sin volver a **mirar** si hay una versión
+  esperando deja esa pestaña en la versión vieja para siempre, esperando un
+  evento que ya pasó.
 - Un error que aparece y se va solo en un segundo es peor que ningún
   error: si algo se recupera con un reintento, reintenta en silencio
   (fue el rojo del login de Rewards).
