@@ -24,8 +24,18 @@ Lo que falta para abrir, todo fuera del código:
    `CLIP_TERMINAL_SERIAL`) — sin ellos el cobro con tarjeta no opera.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
-3. **Capturar el catálogo real en Costeos** — el sembrado es una base
-   verosímil, no la lista de precios de la casa.
+3. **Costos, recetas y proveedores en Costeos.** La **lista de precios** ya
+   es la de la casa (mostrador y Rappi, con la "X" de lo que no va en la
+   plataforma), y el **inventario** ya son los 99 insumos reales con su
+   presentación. Lo que sigue faltando es lo que la hoja no traía: **cuánto
+   cuesta** cada insumo, **qué lleva** cada pan y **a quién** se le compra.
+   Sin eso, Costeos no puede costear y el inventario no se descuenta solo al
+   vender — hay que contarlo a mano.
+   Falta también **ponerle mínimo** a las cosas: la lista de compra sale de
+   comparar contra el mínimo, y todo arranca en cero.
+   Y el **menú de temporada** (pan de muerto, rosca de reyes) está sembrado en
+   ceros y apagado, tal como venía en la hoja: cuando llegue la temporada se
+   captura el precio y se prende.
 4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
 
@@ -80,8 +90,12 @@ propósito hasta entonces.
 
 ### 2.0 Hay DOS inventarios, y no son lo mismo
 
-- **Insumos** (Admin → Inventario): harina, jamón, queso, por kilo y por
-  almacén. Es el que sirve para costear, y vino del motor original.
+- **Insumos** (Admin → Inventario): harina, manteca, queso, bolsas, etiquetas
+  y cajas — los **99 renglones de la hoja del negocio**, en seis grupos. Se
+  **cuenta en la presentación** (sacos, cubetas, cartones de 30 huevos), no en
+  gramos: quien cuenta el almacén cuenta sacos, y un sistema que le pide
+  gramos es un sistema que nadie llena. Tiene conteo físico, merma con motivo,
+  mínimos y lista de compra.
 - **Cuadros por sabor** (Admin → **Producción**): la unidad real. El pan sale
   en **moldes de 48 cuadros** (`parametros.cuadros_por_molde`) y de ahí se
   cortan los paquetes conforme se venden — cuatro de 12, dos de 24, uno de
@@ -279,6 +293,10 @@ empaquetador y se desvían solas:
 | Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Almacén** al entregarlo (es lo único que lo descuenta) |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
+| Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia |
+| Apuntar lo que llegó del proveedor | Admin → **Inventario** → **Llegó mercancía** |
+| Saber qué hay que comprar | Admin → **Inventario** → **Qué hay que comprar** (sale lo que bajó de su mínimo) |
+| Apuntar lo que se tiró | Admin → **Inventario** → el `⋯` del renglón |
 | Ver lo apartado y para quién | Admin → **Almacén** |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
@@ -325,6 +343,23 @@ empaquetador y se desvían solas:
 
 **Precios y canales**
 
+- **La ausencia de precio significaba lo contrario de lo que el negocio
+  quiso decir.** `precios_canal` guarda solo las EXCEPCIONES, así que un
+  producto sin fila se vende al precio de mostrador en todos los canales. Pero
+  la lista de la casa marca con **"X"** lo que NO va en Rappi: siete tamaños
+  de hojaldra, la trenza, todo lo de anís. Sin fila, el sistema los habría
+  listado en la plataforma al precio **sin comisión**, y cada venta habría
+  perdido dinero en silencio. Se marca con `disponible = false` y no borrando
+  el precio: *"no lo vendo aquí"* es una decisión, no un dato faltante. La
+  regla vive en **tres lugares** que tienen que coincidir —
+  `fn_producto_va_en_canal`, `seVendeEnCanal` y el filtro del carrito al
+  cambiar de canal — y la fila marcada guarda precio 0, así que quien la lea
+  sin mirar `disponible` ofrecerá el producto **en cero**.
+- **Un precio calculado no es un precio.** Los de Rappi estaban sembrados como
+  mostrador +19 %. La lista real no sigue ningún porcentaje: la Fiesta de 12
+  sube 29 % y la de 24 sólo 11 %. Nueve de dieciocho hojaldras salían a un
+  precio que el negocio nunca puso. Que un número se vea razonable no prueba
+  que sea el suyo.
 - La caja no solo **cobra** el precio del canal: tiene que **mostrarlo**.
   `fn_cobrar_orden` valida el importe contra el total que calculó el
   servidor, así que una pantalla en $160 contra un servidor en $190 rechaza
@@ -332,6 +367,28 @@ empaquetador y se desvían solas:
   misma regla escrita dos veces: si cambia una, cambia la otra.
 - El canal vuelve a **Mostrador** al cobrar. Dejarlo en Rappi le cobraría el
   precio de plataforma al siguiente cliente del mostrador.
+
+**Inventario**
+
+- **Primero el renombre, después el alta.** Nueve insumos del sembrado eran
+  los mismos de la hoja con otro nombre (`Harina de trigo` → `Harina Trigo`).
+  Dar de alta los de la hoja sin renombrar primero deja **dos harinas**: las
+  recetas colgadas del ejemplar viejo y el conteo hecho sobre el nuevo, o sea
+  un inventario que se cuenta y nunca se descuenta. Caso especial: cuando solo
+  cambian las mayúsculas, el viejo y el nuevo **son la misma fila** y el
+  candado anti-duplicado impide el renombre — hay que tratarlo aparte.
+- **Un inventario que solo suma se despega de la realidad.** El motor original
+  lleva 27,783 movimientos, 1,631 insumos sin un solo grupo y **cero mermas**:
+  nunca hubo por dónde preguntar "¿cuánto debería haber contra cuánto hay?".
+  Por eso aquí hay conteo físico, y por eso `contado_at` se mueve **aunque no
+  haya diferencia**: contar y encontrar que estaba bien también es
+  información, y un número sin fecha no se puede creer.
+- **Sin renglón en `inventario_stock`, un insumo es invisible.** Existe en el
+  catálogo y no aparece en ninguna pantalla de almacén. Al dar de alta
+  insumos hay que crearle su existencia en cero.
+- La merma se apunta **con motivo** o reaparece en el siguiente conteo como un
+  faltante sin explicación — y un faltante que nadie puede explicar es lo que
+  hace que se deje de creer en el inventario.
 
 **Indicadores**
 
