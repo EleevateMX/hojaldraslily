@@ -20,8 +20,12 @@ desplegadas.
 
 Lo que falta para abrir, todo fuera del código:
 
-1. **Secretos de Clip** en Supabase (`CLIP_API_KEY`, `CLIP_WEBHOOK_SECRET`,
-   `CLIP_TERMINAL_SERIAL`) — sin ellos el cobro con tarjeta no opera.
+1. **Decidir la terminal, y sus secretos.** Clip ya está escrito y probado;
+   solo faltan sus tres secretos en Supabase (`CLIP_API_KEY`,
+   `CLIP_WEBHOOK_SECRET`, `CLIP_TERMINAL_SERIAL`). Si al final es **Banorte**,
+   el camino es otro y hay que preguntarle cosas al banco primero: ver
+   `docs/terminal-banorte.md`. Cambiar de proveedor **no toca ninguna
+   pantalla** — para eso existe `PaymentProvider` en `packages/payments`.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
 3. **Costos, recetas y proveedores en Costeos.** La **lista de precios** ya
@@ -176,6 +180,11 @@ pago por INSERT directo.
 
 ### 2.3 Clip: la verdad se pregunta, no se escucha
 
+*(Clip es el proveedor implementado hoy. La tienda todavía no decide si se
+queda con él o se va a Banorte; la comparación está en
+`docs/terminal-banorte.md`. Lo de abajo aplica a Clip, pero la lección del
+timbre aplica a cualquiera.)*
+
 El webhook `PINPAD_INTENT_STATUS_CHANGED` **no viene firmado**: es un
 timbre, no una fuente. El estado real siempre se consulta autenticado.
 
@@ -213,6 +222,13 @@ pantallas muestran comandas pero **no sale papel**.
   no se imprime**: vive solo en pantalla.
 - Si el agente "acepta datos y no imprime", el problema es físico
   (papel/tapa/sensor): el autotest con FEED al encender lo confirma.
+- **Si la terminal termina siendo Banorte, el cobro vive aquí también.** Su
+  pinpad se instala como un **puerto COM de Windows**, y un navegador no puede
+  abrir un puerto COM: es la misma frontera que el papel. No iría en una Edge
+  Function sino en este programa, con su cola, como la de impresión. Ojo con
+  la consecuencia: así el cobro **solo funciona con la PC de la tienda
+  encendida**, cosa que con Clip no pasa porque el cobro se pide por internet.
+  Ver `docs/terminal-banorte.md`.
 
 ### 2.5 La identidad es una sola, y vive en `packages/brand`
 
