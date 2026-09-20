@@ -1,10 +1,10 @@
 {
-  "name": "Hojaldras Lily · Caja",
-  "short_name": "Caja",
-  "description": "Arma el pedido, cobra y manda las comandas. Turnos, encargos y corte de caja.",
-  "id": "/hojaldraslily/app/pos/",
-  "start_url": "/hojaldraslily/app/pos/",
-  "scope": "/hojaldraslily/app/pos/",
+  "name": "Hojaldras Lily · Autoservicio",
+  "short_name": "Kiosko",
+  "description": "El menú del día en la barra: el cliente arma su pedido y pasa a pagar.",
+  "id": "/hojaldraslily/app/kiosko/",
+  "start_url": "/hojaldraslily/app/kiosko/",
+  "scope": "/hojaldraslily/app/kiosko/",
   "display": "standalone",
   "display_override": [
     "standalone",
@@ -17,19 +17,19 @@
   "theme_color": "#D81B4A",
   "icons": [
     {
-      "src": "/hojaldraslily/app/pos/icono-192.png",
+      "src": "/hojaldraslily/app/kiosko/icono-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/pos/icono-512.png",
+      "src": "/hojaldraslily/app/kiosko/icono-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/pos/icono-maskable-512.png",
+      "src": "/hojaldraslily/app/kiosko/icono-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
