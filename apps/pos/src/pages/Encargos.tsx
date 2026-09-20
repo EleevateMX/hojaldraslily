@@ -509,6 +509,14 @@ export function Encargos() {
                         #{e.folio}
                         {e.telefono ? ` · ${e.telefono}` : ''}
                       </p>
+                      {/* Lo que Empaque le contesta a la caja: si ya esta en
+                          su caja o todavia no. Sin esto, la cajera tiene que
+                          ir a preguntar cada vez que alguien llega. */}
+                      {e.empacado_at && (
+                        <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink bg-sa-mint/25 rounded-full px-2 py-0.5 inline-block mt-1">
+                          Empacado{e.empacado_por ? ` · ${e.empacado_por}` : ''}
+                        </p>
+                      )}
                     </div>
                     <p
                       className={[

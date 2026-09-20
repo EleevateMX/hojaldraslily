@@ -1,8 +1,9 @@
 # Las apps se instalan
 
-Las nueve apps son **instalables**: el navegador ofrece *Instalar*, y quedan
-con su icono en el escritorio o en la pantalla del teléfono, abriendo a
-pantalla completa sin barra de direcciones.
+**Nueve de las diez apps son instalables**: el navegador ofrece *Instalar*, y
+quedan con su icono en el escritorio o en la pantalla del teléfono, abriendo a
+pantalla completa sin barra de direcciones. La décima, `costos`, es un HTML
+plano sin empaquetador y se queda fuera a propósito.
 
 No es un `.exe`. No hay nada que descargar de ningún lado, nada que firmar y
 nada que pagar: son dos archivos estáticos más (`manifest.webmanifest` y
@@ -58,7 +59,7 @@ pwaDeLily({
 })
 ```
 
-Es un plugin y no ocho archivos JSON escritos a mano por dos razones:
+Es un plugin y no nueve archivos JSON escritos a mano por dos razones:
 
 1. **El color.** Un manifest a mano es un lugar más donde la identidad se
    desvía sola, que es la trampa de CLAUDE.md §2.5 — y ya había pasado: los
@@ -113,7 +114,9 @@ No de palabra: contra Chromium de verdad
 (`Page.getInstallabilityErrors`, que es el mismo criterio con el que Chrome
 decide si ofrece instalar).
 
-- Las **nueve** apps: cero errores de instalabilidad.
+- Las **nueve** apps: cero errores de instalabilidad. La comprobación quedó
+  guardada en `scripts/verificar-instalables.mjs` — antes se hizo a mano y a
+  la siguiente app hubo que volver a escribirla.
 - Con el servidor apagado, la app **abre** y el `#root` está ahí.
 - La caché guarda solo el casco (el HTML y los `assets/` con hash). Nada de
   otro origen.

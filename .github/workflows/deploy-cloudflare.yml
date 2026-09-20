@@ -67,11 +67,13 @@ jobs:
           # lo que va saliendo; lo marcado entra solo al inventario.
           - app: produccion
             project: lily-produccion
-          # El visor de almacen: ocupa el lugar que tenian las pantallas de
-          # comandas de barra y cocina. En una panaderia no se despacha por
-          # comanda, se despacha por encargo.
-          - app: almacen
-            project: lily-almacen
+          # Las dos pantallas nuevas del camino C -> P -> H -> E. Ocupan el
+          # lugar que tenian las de comandas de barra y cocina: en una
+          # panaderia no se despacha por comanda, se despacha por encargo.
+          - app: horno
+            project: lily-horno
+          - app: empaque
+            project: lily-empaque
           - app: cliente-display
             project: lily-cliente-display
           - app: cliente-pwa

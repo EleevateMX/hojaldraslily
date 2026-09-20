@@ -8,26 +8,31 @@ consultar la base real (`fzkdgqqvfkogmxdgqsxj`), no de suponer.
 ## En una línea
 
 **El sistema está completo y funcionando; lo que falta para abrir no es
-código.** Nueve apps compilan, 166 migraciones aplicadas, el indicador de
+código.** Diez apps compilan, 173 migraciones aplicadas, el indicador de
 salud en ceros, y una venta ya corrió de punta a punta contra esta base.
 
 ---
 
-## Las nueve apps
+## Las diez apps
+
+Cuatro de ellas son el camino del pan, **C → P → H → E**: la caja manda a
+hacer, producción arma los moldes, el horno los mete y los saca, y empaque
+los deja listos en su caja.
 
 | App | Para qué | Estado |
 |---|---|---|
 | `kiosko` | El cliente arma su pedido en la barra | Listo. Instalable |
-| `pos` | Caja: cobrar, turnos, encargos, corte | Listo. Instalable |
-| `produccion` | Qué hornear hoy, en moldes, con su hora de salida | Listo. Instalable |
-| `almacen` | Encargos apartados y cobro al entregar | Listo. Instalable |
+| `pos` | **C** — Caja: cobrar, turnos, encargos, corte, y ver el horno | Listo. Instalable |
+| `produccion` | **P** — cuántos moldes van armados (de 48 o de 24) | Listo. Instalable |
+| `horno` | **H** — qué está adentro, cuánto le falta, qué espera turno | Listo. Instalable |
+| `empaque` | **E** — qué hay que empacar, y cobro al entregar | Listo. Instalable |
 | `admin` | Ventas, producción, inventario, la tienda a distancia | Listo. Instalable |
 | `cliente-display` | TV de folios | Listo. Instalable |
 | `cliente-pwa` | Rewards del cliente | Listo, **oculto** a propósito |
 | `web` | La página pública | Listo |
 | `costos` | Costeo e inventario (HTML plano) | Listo, **falta capturar datos** |
 
-Las nueve pasan el criterio de instalación de Chrome sin un solo error, y
+Las diez pasan el criterio de instalación de Chrome sin un solo error, y
 abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 
 ## Lo que hay dentro, contado
@@ -40,7 +45,7 @@ abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 | Renglones de existencia | **112** — ninguno invisible |
 | Recetas | 55 |
 | Empleados | 2 (gerencia y caja — son los de demostración) |
-| Migraciones aplicadas | **166**, y las 166 tienen su archivo en el repo |
+| Migraciones aplicadas | **173**, y las 173 tienen su archivo en el repo |
 | Edge Functions | 7 desplegadas (6 de Clip + `staff-login`) |
 
 **Salud del sistema, ahora mismo:** pagos pendientes 0 · pagos desconocidos 0 ·

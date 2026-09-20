@@ -105,35 +105,36 @@
     </a>
   </div>
 
-  <p class="eyebrow">El horno</p>
-  <p class="eyebrow-nota">Gerencia manda a hacer desde su teléfono; aquí se marca lo que va saliendo y entra solo al inventario.</p>
+  <p class="eyebrow">La trastienda: C → P → H → E</p>
+  <p class="eyebrow-nota">Tres pantallas táctiles colgadas donde se trabaja. La caja manda a hacer, <b>producción</b> arma los moldes (de 48 o de 24), el <b>horno</b> los mete y los saca —y lo que sale es lo único que entra al inventario— y <b>empaque</b> los deja listos en su caja. Lo que pasa en el horno se ve desde la caja sin ir a preguntar.</p>
   <div class="rejilla">
     <a class="app crema" href="app/produccion/">
-      <span class="quien">Quien hornea</span>
+      <span class="quien">P · Los panaderos</span>
       <h3>Producción</h3>
-      <p>Lo que hay que hacer y cuánto lleva hecho. Lo marcado sube solo al inventario.</p>
+      <p>Cuántos moldes van armados, de los que se pidieron. Un molde armado es masa, no es pan: aquí todavía no entra nada al inventario.</p>
+      <span class="pin">PIN de gerencia: 2468 · o el de caja: 1357</span>
+    </a>
+    <a class="app crema" href="app/horno/">
+      <span class="quien">H · Quien hornea</span>
+      <h3>Horno</h3>
+      <p>Qué está adentro y cuánto le falta, qué espera turno y qué no está armado. Sacar del horno es lo que sube el pan al inventario.</p>
+      <span class="pin">PIN de gerencia: 2468 · o el de caja: 1357</span>
+    </a>
+    <a class="app crema" href="app/empaque/">
+      <span class="quien">E · Quien empaca y entrega</span>
+      <h3>Empaque</h3>
+      <p>Qué hay que empacar —sumado por producto, no por cliente— y los encargos por hora de entrega. Al entregarlo se cobra: ahí es cuando se descuenta y el dinero entra al día.</p>
       <span class="pin">PIN de gerencia: 2468 · o el de caja: 1357</span>
     </a>
   </div>
 
-  <p class="eyebrow">El almacén</p>
-  <p class="eyebrow-nota">Lo apartado, de quién es y a qué hora pasan por él. Al entregarlo se cobra: ahí es cuando se descuenta y el dinero entra al día.</p>
-  <div class="rejilla">
-    <a class="app crema" href="app/almacen/">
-      <span class="quien">Quien entrega</span>
-      <h3>Almacén</h3>
-      <p>Los encargos separados, ordenados por quién llega primero.</p>
-      <span class="pin">PIN de gerencia: 2468 · o el de caja: 1357</span>
-    </a>
-  </div>
-
-  <p class="eyebrow">La trastienda</p>
+  <p class="eyebrow">La oficina</p>
   <p class="eyebrow-nota">Donde se decide qué se vende y a cuánto.</p>
   <div class="rejilla">
     <a class="app lila" href="app/admin/">
       <span class="quien">Gerencia</span>
       <h3>Admin</h3>
-      <p><b>Producción</b> (mandar a hacer y ver cuántos quedan), <b>Almacén</b> (lo apartado por encargo), <b>Menús del día</b>, ventas, catálogo y diagnóstico. Se usa desde el teléfono.</p>
+      <p><b>Producción</b> (mandar a hacer y ver cuántos quedan), <b>Almacén</b> (lo apartado por encargo), <b>Inventario</b>, <b>Menús del día</b>, ventas, catálogo y diagnóstico. Se usa desde el teléfono.</p>
       <span class="pin">PIN de gerencia: 2468</span>
     </a>
     <a class="app lila" href="app/costos/">

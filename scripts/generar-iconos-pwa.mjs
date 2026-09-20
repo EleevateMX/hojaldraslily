@@ -46,12 +46,22 @@ function color(token) {
 //
 // El carmin se lo queda el kiosko y Rewards: son las dos que ve el cliente,
 // y ahi la marca manda sobre la comodidad del personal.
+// Con siete pantallas los matices bien separados se acaban: el dorado de
+// Producción y el terracota del Horno se ven IGUALES a 48 px -- probado
+// mirándolos, no supuesto. Cuando el color ya no alcanza, se distingue por
+// FORMA: el Horno va RELLENO (color por fuera, hojaldra en un disco de crema)
+// y los demás van con aro. A 32 px eso se distingue aunque el color falle, y
+// también lo distingue quien no ve bien los colores.
+//
+// Se lo lleva el Horno porque es la pantalla donde no enterarse cuesta pan
+// quemado.
 const APPS = [
   ['kiosko', 'sa-green'], // Autoservicio -- carmín, es la cara al cliente
   ['cliente-pwa', 'sa-green'], // Rewards -- también del cliente
   ['pos', 'sa-green-ink'], // Caja -- morado hojaldra
-  ['produccion', 'sa-banana'], // Horno -- dorado horneado
-  ['almacen', 'sa-blueberry'], // Almacén -- lila
+  ['produccion', 'sa-banana'], // Panaderos -- dorado horneado
+  ['horno', 'sa-mango', 'relleno'], // Horno -- terracota, y RELLENO
+  ['empaque', 'sa-blueberry'], // Empaque -- lila
   ['admin', 'sa-chocolate'], // Gerencia -- cacao
   ['cliente-display', 'sa-mint'], // TV de folios -- verde
   ['web', 'sa-green'],
@@ -61,12 +71,21 @@ const py = `
 import sys
 from PIL import Image, ImageDraw
 
-arte_p, destino, crema, acento, lado, aro_pct, encoge = sys.argv[1:8]
+arte_p, destino, crema, acento, lado, aro_pct, encoge, relleno = sys.argv[1:9]
 lado = int(lado); aro = max(1, round(int(lado) * float(aro_pct))); encoge = float(encoge)
 
 def rgb(h): h = h.lstrip('#'); return tuple(int(h[i:i+2], 16) for i in (0, 2, 4))
 
-lienzo = Image.new('RGBA', (lado, lado), rgb(crema) + (255,))
+# Relleno: el acento ocupa todo el fondo y la hojaldra va sobre un disco de
+# crema. El arte NUNCA va sobre el acento pleno -- tiene relleno carmin y se
+# perderia contra el, que es la misma razon por la que existe logo-negativo.
+if relleno == '1':
+    lienzo = Image.new('RGBA', (lado, lado), rgb(acento) + (255,))
+    d0 = ImageDraw.Draw(lienzo)
+    m = round(lado * 0.10)
+    d0.ellipse([m, m, lado - m - 1, lado - m - 1], fill=rgb(crema) + (255,))
+else:
+    lienzo = Image.new('RGBA', (lado, lado), rgb(crema) + (255,))
 
 # El arte, centrado y a la escala que pidan. \`encoge\` < 1 deja el margen que
 # los iconos maskable necesitan: Android les recorta un circulo y lo que quede
@@ -83,7 +102,7 @@ lienzo.alpha_composite(arte, ((lado - arte.size[0]) // 2, (lado - arte.size[1]) 
 # El aro del acento: es lo que distingue una app de otra en la barra de tareas.
 # Va por dentro del borde para que no se lo coma el recorte redondeado que
 # Windows y Android le aplican al icono.
-if aro_pct != '0':
+if aro_pct != '0' and relleno != '1':
     d = ImageDraw.Draw(lienzo)
     d.ellipse([aro // 2, aro // 2, lado - aro // 2 - 1, lado - aro // 2 - 1],
               outline=rgb(acento) + (255,), width=aro)
@@ -95,13 +114,14 @@ const crema = color('sa-cream')
 const arte = path.join(raiz, 'packages/brand/assets/hojaldra.png')
 let hechos = 0
 
-for (const [app, token] of APPS) {
+for (const [app, token, forma] of APPS) {
   const dir = path.join(raiz, 'apps', app, 'public')
   if (!existsSync(dir)) {
     console.log(`  -- ${app}: no tiene public/, lo salto`)
     continue
   }
   const acento = color(token)
+  const relleno = forma === 'relleno' ? '1' : '0'
 
   // 192 y 512: el icono normal, a sangre. El aro se ve completo.
   // maskable: el arte encogido, sin aro, porque el aro cae justo donde
@@ -117,11 +137,11 @@ for (const [app, token] of APPS) {
 
   for (const [nombre, lado, aroPct, encoge] of piezas) {
     execFileSync('python3', [
-      '-c', py, arte, path.join(dir, nombre), crema, acento, String(lado), aroPct, String(encoge),
+      '-c', py, arte, path.join(dir, nombre), crema, acento, String(lado), aroPct, String(encoge), relleno,
     ])
     hechos++
   }
-  console.log(`  ok  ${app.padEnd(16)} acento ${acento} (--${token})`)
+  console.log(`  ok  ${app.padEnd(16)} acento ${acento} (--${token})${forma ? ' · relleno' : ''}`)
 }
 
 console.log(`\n${hechos} iconos generados desde packages/brand.`)

@@ -2,11 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   listarExistenciasPorSabor,
+  MOLDES,
+  type Molde,
   listarPaquetesDelDia,
   registrarHorneada,
   mandarAProducir,
+  hornoEnVivo,
+  relojDelHorno,
   type ExistenciaPorSabor,
   type PaqueteDelDia,
+  type HornoEnVivo,
 } from '@shake/supabase'
 import { mensajeDeError, urlDeFoto } from '@shake/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
@@ -15,10 +20,10 @@ import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
  * Producción: cuánto se horneó y cuánto queda, en cuadros.
  *
  * La unidad del inventario es el **cuadro**, no el paquete, porque así se
- * hornea: sale un molde de 48 cuadros y de ahí se van cortando los paquetes
- * conforme se venden — cuatro de 12, dos de 24, uno de 48, o una mezcla. Por
- * eso pueden vender pan del día: no se comprometen a un tamaño hasta que
- * alguien lo pide.
+ * hornea: sale un molde —de 48 o de 24 cuadros— y de ahí se van cortando los
+ * paquetes conforme se venden: cuatro de 12, dos de 24, uno de 48, o una
+ * mezcla. Por eso pueden vender pan del día: no se comprometen a un tamaño
+ * hasta que alguien lo pide.
  *
  * Contarlo por paquete obligaba a decidir en el horno algo que se decide en
  * el mostrador, y hacía que «quedan 3 chicas» y «quedan 6 minis» parecieran
@@ -120,6 +125,81 @@ function Fila({
   )
 }
 
+/**
+ * Lo que está pasando en el horno ahora mismo, para gerencia.
+ *
+ * Gerencia manda a hacer desde el teléfono y la pregunta que sigue es «¿y
+ * cómo va?». Sin esto hay que llamar a la tienda. Es la misma consulta
+ * (`fn_horno_en_vivo`) que leen la pantalla del Horno y la Caja: si cada una
+ * calculara lo suyo, terminarían diciendo cosas distintas del mismo horno.
+ *
+ * Si no hay nada en ninguna de las tres pilas no se pinta: una franja que
+ * siempre dice «0» deja de mirarse.
+ */
+function ElHorno() {
+  const [datos, setDatos] = useState<HornoEnVivo | null>(null)
+
+  useEffect(() => {
+    const traer = () => void hornoEnVivo(sb).then(setDatos).catch(() => {})
+    traer()
+    // Cada minuto, no cada segundo: nadie hornea con esa precisión y un
+    // contador corriendo solo distrae.
+    const t = setInterval(traer, 60000)
+    return () => clearInterval(t)
+  }, [])
+
+  const r = datos?.resumen
+  if (!r || r.en_horno + r.esperando + r.sin_armar === 0) return null
+
+  return (
+    <div className={cx.panel}>
+      <div className="flex items-baseline justify-between gap-4">
+        <p className="font-display text-xl text-sa-green-ink">El horno, ahora</p>
+        <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45">
+          {r.en_horno} dentro · {r.esperando} esperando · {r.sin_armar} sin armar
+        </p>
+      </div>
+
+      {datos.adentro.length > 0 ? (
+        <div className="mt-3 space-y-2">
+          {datos.adentro.map((h) => {
+            const f = relojDelHorno(h.listo_en, new Date(datos.ahora))
+            return (
+              <div key={h.item_id} className="flex items-center gap-3">
+                <span className="font-display text-xl text-sa-green-ink w-12 shrink-0 tabular-nums">
+                  {h.moldes}
+                </span>
+                <span className="font-body text-sm text-sa-green-ink flex-1 min-w-0">
+                  {h.sabor}
+                  <span className="text-sa-green-ink/45"> · moldes de {h.molde}</span>
+                </span>
+                <span
+                  className={[
+                    'shrink-0 rounded-full px-3 py-1 font-mono text-[11px] uppercase tracking-wide text-sa-green-ink',
+                    f.tarde ? 'bg-sa-strawberry/25' : 'bg-sa-mint/20',
+                  ].join(' ')}
+                >
+                  {f.texto}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <p className="font-body text-sm text-sa-green-ink/60 mt-2">
+          {/* "Nada en el horno" significa cosas muy distintas segun por que. */}
+          El horno está vacío
+          {r.esperando > 0
+            ? `: hay ${r.esperando} molde${r.esperando === 1 ? '' : 's'} armado${r.esperando === 1 ? '' : 's'} esperando turno.`
+            : r.sin_armar > 0
+              ? `: faltan ${r.sin_armar} molde${r.sin_armar === 1 ? '' : 's'} por armar en producción.`
+              : '.'}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export default function Produccion() {
   const [sabores, setSabores] = useState<ExistenciaPorSabor[]>([])
   const [paquetes, setPaquetes] = useState<PaqueteDelDia[]>([])
@@ -128,6 +208,10 @@ export default function Produccion() {
   const [ocupado, setOcupado] = useState<string | null>(null)
   // Lo que se va a mandar a hacer: sabor -> moldes.
   const [pedido, setPedido] = useState<Record<string, number>>({})
+  // Con qué molde se va a hornear esta tanda: 48 o 24. Es UNA decisión por
+  // envío y no por sabor, porque así se decide en la práctica — se prende el
+  // horno con los moldes que se van a usar, no uno de cada tamaño a la vez.
+  const [molde, setMolde] = useState<Molde>(48)
   const [abrirPedido, setAbrirPedido] = useState(false)
   const [mandando, setMandando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -182,14 +266,15 @@ export default function Produccion() {
   async function mandar() {
     const items = Object.entries(pedido)
       .filter(([, n]) => n > 0)
-      .map(([sabor, moldes]) => ({ sabor, moldes }))
+      .map(([sabor, moldes]) => ({ sabor, moldes, molde }))
     if (items.length === 0) return
     setMandando(true)
     try {
       await mandarAProducir(sb, items)
       const moldes = items.reduce((s, i) => s + i.moldes, 0)
       setAviso(
-        `Mandados a hacer ${moldes} molde${moldes === 1 ? '' : 's'}. Ya salió en la pantalla del horno.`,
+        `Mandados a hacer ${moldes} molde${moldes === 1 ? '' : 's'} de ${molde} ` +
+          `(${moldes * molde} cuadros). Ya salió en la pantalla de Producción.`,
       )
       setPedido({})
       setAbrirPedido(false)
@@ -235,8 +320,10 @@ export default function Produccion() {
     <div className="space-y-6">
       <PageHeader
         title="Producción de hoy"
-        subtitle={`Se hornea por molde (${cpm} cuadros) y se vende por paquete. Lo que se cobre en caja va bajando los cuadros solo.`}
+        subtitle="Se hornea por moldes de 48 o de 24 cuadros y se vende por paquete. Lo que se cobre en caja va bajando los cuadros solo."
       />
+
+      <ElHorno />
 
       {error && <ErrorMsg>{error}</ErrorMsg>}
       {aviso && (
@@ -259,8 +346,8 @@ export default function Produccion() {
           <div>
             <p className="font-display text-xl text-sa-green-ink">Mandar a producir</p>
             <p className="font-body text-sm text-sa-green-ink/60 mt-0.5">
-              Se pide por moldes de {cpm} cuadros. Los tamaños se cortan
-              después, conforme se vendan.
+              Se pide por moldes, eligiendo abajo si son de 48 o de 24. Los
+              tamaños se cortan después, conforme se vendan.
             </p>
           </div>
           <span className="font-mono text-xs uppercase tracking-wide text-sa-green shrink-0">
@@ -309,10 +396,31 @@ export default function Produccion() {
               )
             })}
 
+            {/* El molde. Va abajo, junto al total, porque es lo último que
+                se decide: primero se elige qué sabores y cuántos, y ya con eso
+                enfrente se decide en qué molde entran. */}
+            <div className="flex items-center gap-3 pt-4 flex-wrap">
+              <span className={cx.label}>Molde</span>
+              {MOLDES.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMolde(m)}
+                  aria-pressed={molde === m}
+                  className={
+                    molde === m
+                      ? 'px-5 py-3 rounded-sa bg-sa-green text-sa-cream font-display text-lg'
+                      : 'px-5 py-3 rounded-sa border border-sa-green-ink/15 text-sa-green-ink font-display text-lg hover:bg-sa-cream-soft'
+                  }
+                >
+                  {m} cuadros
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center justify-between gap-4 pt-4">
               <p className="font-body text-sm text-sa-green-ink/70">
                 {aMandar > 0
-                  ? `${aMandar} molde${aMandar === 1 ? '' : 's'} · ${aMandar * cpm} cuadros`
+                  ? `${aMandar} molde${aMandar === 1 ? '' : 's'} de ${molde} · ${aMandar * molde} cuadros`
                   : 'Todavía no ha puesto nada'}
               </p>
               <button
@@ -328,11 +436,14 @@ export default function Produccion() {
       </div>
 
       <div className="grid grid-cols-3 gap-2 sm:gap-4">
+        {/* En CUADROS, igual que sus dos vecinos. Decia "N moldes" dividiendo
+            entre un solo tamano de molde, y con moldes de 48 y de 24 mezclados
+            en el mismo dia ese numero no es de nada: 96 cuadros son dos moldes
+            de 48 o cuatro de 24. El cuadro si es la misma unidad siempre. */}
         <div className={cx.panelChico}>
-          <p className={cx.label}>Salieron del horno</p>
+          <p className={cx.label}>Cuadros horneados</p>
           <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">
-            {Math.round((cuadrosHorneados / cpm) * 10) / 10}
-            <span className="text-base text-sa-green-ink/45"> moldes</span>
+            {cuadrosHorneados}
           </p>
         </div>
         <div className={cx.panelChico}>

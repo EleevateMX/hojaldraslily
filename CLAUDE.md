@@ -2,7 +2,7 @@
 
 Este archivo es para quien retome el trabajo (yo incluido, en otra sesión):
 qué está vivo, cómo se opera y **qué trampas ya nos costaron caro**. Los
-detalles temáticos viven en `docs/` (42 documentos); esto es el mapa.
+detalles temáticos viven en `docs/` (53 documentos); esto es el mapa.
 
 **Este repo es el sistema de Hojaldras Lily**, replicado de un motor que
 ya opera en producción en otro negocio (ver `docs/replicar-el-sistema.md`).
@@ -50,7 +50,7 @@ trajo y por qué, y las tres cosas que sí valdría la pena traer (pago mixto,
 diagnóstico de impresión y cerrar sesión en Costeos).
 
 **La vitrina para enseñar el sistema** vive en
-<https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
+<https://eleevatemx.github.io/hojaldraslily/>: las 10 apps compiladas contra
 la base real, para mostrarlas desde cualquier navegador sin instalar nada.
 La arma sola `.github/workflows/pages-demos.yml` con
 `scripts/publicar-demo-pages.sh` en cada push; los artefactos no se
@@ -72,16 +72,17 @@ reloptions y `search_path`), así que no hubo que regenerarlo.
 ## 1. Qué es esto
 
 Panadería de hojaldras en Mérida (Col. Miguel Alemán). Monorepo pnpm,
-10 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
+11 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
 Cloudflare Pages por GitHub Actions al hacer push a `main`.
 
 | App | Dominio | Quién la usa |
 |---|---|---|
 | `web` | `hojaldraslily.com` | El público (menú vivo, QR de Rewards) |
 | `kiosko` | `kiosko.hojaldraslily.com` | Cliente y cajero en la barra |
-| `pos` | `caja.hojaldraslily.com` | Caja (abrir turno, cobros manuales) |
-| `produccion` | `produccion.hojaldraslily.com` | Quien hornea (órdenes de producción) |
-| `almacen` | `almacen.hojaldraslily.com` | Almacén (entrega y cobra los encargos) |
+| `pos` | `caja.hojaldraslily.com` | **C** — la caja: turno, cobros y encargos |
+| `produccion` | `produccion.hojaldraslily.com` | **P** — los panaderos (arman los moldes) |
+| `horno` | `horno.hojaldraslily.com` | **H** — quien hornea (mete, vigila y saca) |
+| `empaque` | `empaque.hojaldraslily.com` | **E** — quien empaca y entrega los encargos |
 | `cliente-display` | `pantalla.hojaldraslily.com` | TV de folios |
 | `admin` | `admin.hojaldraslily.com` | Gerencia |
 | `cliente-pwa` | `rewards.hojaldraslily.com` | Celular del cliente (y la app de TestFlight) |
@@ -107,17 +108,25 @@ propósito hasta entonces.
   gramos es un sistema que nadie llena. Tiene conteo físico, merma con motivo,
   mínimos y lista de compra.
 - **Cuadros por sabor** (Admin → **Producción**): la unidad real. El pan sale
-  en **moldes de 48 cuadros** (`parametros.cuadros_por_molde`) y de ahí se
-  cortan los paquetes conforme se venden — cuatro de 12, dos de 24, uno de
-  48, o mezclado. Por eso venden pan del día: **no se comprometen a un tamaño
-  hasta que alguien lo pide**.
+  en **moldes de 48 o de 24 cuadros** y de ahí se cortan los paquetes conforme
+  se venden — cuatro de 12, dos de 24, uno de 48, o mezclado. Por eso venden
+  pan del día: **no se comprometen a un tamaño hasta que alguien lo pide**.
+
+**El tamaño del molde va por RENGLÓN, no en un parámetro global.** Vive en
+`orden_produccion_items.cuadros_por_molde` (con `check in (24, 48)`), porque
+en una misma hornada caben tres moldes de 48 de guayaba y dos de 24 de queso:
+un solo número para toda la casa obliga a mentir en uno de los dos renglones,
+y un inventario que arranca con una mentira no se endereza después.
+`parametros.cuadros_por_molde` sigue existiendo, pero ya solo es **el valor
+por omisión** de quien no dice nada.
 
 **Los tamaños NO son inventarios separados.** De 192 cuadros de guayaba salen
 15 paquetes de 12 *o* 7 de 24 *o* 3 de 48: es el mismo pan contado distinto, y
 vender uno baja los otros. Contarlo por paquete (como estaba al principio)
 obligaba a decidir en el horno algo que se decide en el mostrador.
 
-- Se **hornea** por sabor, en moldes → `fn_produccion_mandar_a_hacer`.
+- Se **hornea** por sabor, en moldes → `fn_produccion_mandar_a_hacer`, que
+  ahora recibe el `molde` de cada renglón.
 - Se **vende** por paquete, y cada uno descuenta sus `productos.cuadros`.
 - `fn_existencias_por_sabor` contesta "¿cuánta guayaba queda?" (el horno);
   `fn_paquetes_del_dia`, "¿cuántas chicas puedo vender?" (la caja).
@@ -141,8 +150,7 @@ fue. Cobrar es lo único que descuenta, y pasa por `fn_crear_orden` +
 en el corte de caja. Insertar la orden a mano dejaba el cobro **fuera del
 corte** y el día no cuadraba.
 
-**Lo que se manda a producir entra solo al inventario.** Gerencia crea la
-orden en Admin → Producción, sale en la app `produccion`, y al marcarla hecha
+**Lo que SALE DEL HORNO entra solo al inventario.** Al subir `cantidad_hecha`
 un **trigger** (`fn_produccion_desde_orden`) sube la diferencia. Va en trigger
 y no en la RPC a propósito: así la regla se cumple venga de donde venga el
 UPDATE. Apunta solo el delta, para que marcar "van 12" y luego "van 20" sume
@@ -150,6 +158,59 @@ UPDATE. Apunta solo el delta, para que marcar "van 12" y luego "van 20" sume
 
 Ojo: Producción solo muestra los menús **abiertos** (respeta el interruptor
 de Menús del día). Un menú cerrado esconde sus existencias.
+
+### 2.0b El camino del pan: C → P → H → E
+
+*(Lo que se le explica al negocio está en `docs/camino-del-pan.md`.)*
+
+Cuatro pantallas táctiles, una por mesa, y el pan pasa por las cuatro en ese
+orden. Cada una responde por un gesto y **ninguna puede hacer el del vecino**:
+
+| | Pantalla | Qué marca | Columna |
+|---|---|---|---|
+| **C** | `pos` (caja) | Manda a hacer, y ve lo que pasa en el horno | `moldes` |
+| **P** | `produccion` | Cuántos moldes lleva **armados** | `moldes_armados` |
+| **H** | `horno` | Cuántos **metió** y cuántos **sacó** | `moldes_en_horno`, `cantidad_hecha` |
+| **E** | `empaque` | Qué queda **empacado** y lo entrega | `encargos.empacado_at` |
+
+**El inventario sube en H, no en P.** Un molde armado es masa, no es pan: si
+se contara al armarlo, la caja podría vender una hojaldra que sigue cruda.
+Antes P marcaba "hecho" y eso entraba directo — funcionaba porque P y H eran
+la misma persona; con el horno aparte deja de serlo.
+
+Las cuatro cuentas viven en el mismo renglón y un solo `check`
+(`opi_etapas_coherentes`) impide los estados imposibles:
+
+```
+moldes_armados <= moldes            -- no se arma más de lo pedido
+cantidad_hecha <= moldes_armados    -- no sale del horno lo que no entró
+moldes_en_horno <= moldes_armados - cantidad_hecha
+```
+
+Va en un `check` de tabla y no repartido en los `if` de tres funciones a
+propósito: **la regla se cumple venga de donde venga el UPDATE**, y el viejo
+`fn_produccion_avanzar` —que saltaba el horno— ahora choca contra él en vez
+de colar pan que nunca se horneó.
+
+**La información del horno sube a la caja** (`fn_horno_en_vivo`): el chip de
+la cabecera del POS y la franja de "En el horno" contestan *"¿a qué hora
+salen?"* sin que nadie deje de cobrar para ir a preguntar. Contesta **tres**
+listas, no una — `adentro`, `esperando` y `sin_armar` — porque "no hay nada
+en el horno" significa cosas muy distintas si es porque ya salió todo o
+porque producción no ha armado nada.
+
+**Y los encargos son lo primero.** `empaque` (antes `almacen`) ya no es solo
+una lista de lo apartado: arriba de todo va **qué hay que empacar sumado por
+producto**, porque quien empaca va al mostrador a cortar paquetes y lo que
+necesita es *"ocho Fiesta de 24"*, no ocho tarjetas de clientes para sumar a
+mano. La cola va por **hora de entrega** (`hora_entrega` es texto libre, así
+que `minutosDeHora` lo lee con tolerancia y lo ilegible se va al final), y lo
+ya empacado baja a una repisa compacta.
+
+**Empacar no cobra ni descuenta**, igual que apartar. Lo único que mueve el
+inventario y el corte sigue siendo `fn_encargo_cobrar`. `empacado_at` es una
+fecha y no un "sí" por la misma razón que `contado_at`: un dato sin fecha no
+se puede creer.
 
 ### 2.1 Costeos es la fuente de la verdad del catálogo
 
@@ -316,17 +377,21 @@ empaquetador y se desvían solas:
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
-| Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, no en paquetes |
-| Apuntar lo que salió del horno | En la pantalla de **Producción** del local, o Admin → Producción con +1 / +5 / +10 |
+| Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
+| Apuntar los moldes que ya se armaron | Pantalla de **Producción**: +1, +2 o **Ya está**. Esto **todavía no** entra al inventario |
+| Meter y sacar del horno | Pantalla del **Horno**. Lo que se **saca** es lo que sube al inventario |
+| Saber qué se está horneando, desde la caja | Sale solo en la cabecera de la **Caja** y en la franja de "En el horno" |
+| Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
-| Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Almacén** al entregarlo (es lo único que lo descuenta) |
+| Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
+| Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Empaque** al entregarlo (es lo único que lo descuenta) |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
 | Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia |
 | Apuntar lo que llegó del proveedor | Admin → **Inventario** → **Llegó mercancía** |
 | Saber qué hay que comprar | Admin → **Inventario** → **Qué hay que comprar** (sale lo que bajó de su mínimo) |
 | Apuntar lo que se tiró | Admin → **Inventario** → el `⋯` del renglón |
-| Ver lo apartado y para quién | Admin → **Almacén** |
+| Ver lo apartado, para quién y si ya está empacado | Admin → **Almacén**, o la caja en **Encargos** |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
@@ -370,6 +435,18 @@ empaquetador y se desvían solas:
   `pg_get_functiondef`, **verificar que el ancla aparece exactamente N
   veces**, reemplazar y `execute`. Si el ancla no cuadra, abortar — así el
   parche falla ruidosamente en vez de corromper la función.
+- **Agregarle un escalón a una cadena de estados es DOS cambios, no uno.**
+  `fn_produccion_refrescar_estado` empezó a poner `'en_horno'` y el
+  `ordenes_produccion_estado_check` lo rechazó: el estado nuevo hay que
+  meterlo también en el `check`. Salió al probar la cadena completa contra la
+  base, no leyendo el código — un `check` no aparece en ningún `select`.
+- **Una regla que cruza tres funciones va en un `check` de tabla**, no
+  repartida en los `if` de cada una. Las etapas del horno
+  (`opi_etapas_coherentes`) valen igual para `fn_produccion_armar`,
+  `fn_horno_meter`, `fn_horno_sacar` y para el viejo `fn_produccion_avanzar`
+  que ya nadie llama: con la regla en la tabla, esa función vieja **choca**
+  en vez de colar pan que nunca se horneó. Es la misma razón por la que lo
+  que entra al inventario va en un trigger.
 - **El estado final no es la migración.** Si falta un archivo de migración, no
   se deduce mirando cómo quedó la base: eso da el destino, no el camino. Dos
   de tres reconstruidas así salieron mal —les faltaba el relleno de datos
@@ -459,6 +536,33 @@ empaquetador y se desvían solas:
   (fue el rojo del login de Rewards).
 - En el kiosko, las imágenes van como fondo CSS y el menú contextual está
   apagado: si no, mantener el dedo sobre la hojaldra abre "buscar imagen".
+- **Lo que importa `vite.config.ts` lo carga Node, no Vite.** Vite empaqueta
+  la config pero deja fuera lo que vive en `node_modules`, y pnpm mete ahí
+  los paquetes del monorepo como enlaces — así que Node termina abriendo el
+  archivo él mismo y se niega: `ERR_UNKNOWN_FILE_EXTENSION ".ts"`. Por eso
+  `packages/pwa/src/plugin.mjs` es **JavaScript y tiene que seguir siéndolo**.
+  Ojo con cómo se descubrió: en local pasaba y en CI no, porque en local
+  había un `dist/` viejo. Reproducir el paso de CI tal cual es lo que lo
+  encontró.
+- **Cuando los matices se acaban, se distingue por FORMA.** Con siete apps
+  instaladas en la PC, el dorado de Producción y el terracota del Horno se
+  ven **iguales** a 48 px, que es el tamaño al que de verdad se usa un icono.
+  No se arregla partiendo el matiz más fino: el Horno va **relleno** (color a
+  sangre, hojaldra sobre un disco de crema) y los demás con aro. Eso se
+  distingue aunque el color falle, y también lo distingue quien no ve bien
+  los colores. Se comprueba **mirando una hoja de contactos a 48 y 32 px**,
+  no suponiendo.
+- Y el color no es lo único que se repite: el `short_name` del manifest es lo
+  que se lee **debajo** del icono. Producción decía "Horno" —de cuando
+  producir y hornear eran la misma mesa— y al nacer la app del Horno quedaron
+  dos iconos distintos con la misma etiqueta. Lo encontró
+  `scripts/verificar-instalables.mjs`, que ahora imprime el nombre de cada
+  una justamente para eso.
+- **`hora_entrega` es texto libre**, capturado a mano en la caja: llega
+  «10:00», «6 pm», «6» y «por la tarde». `minutosDeHora` lee lo que puede y
+  devuelve `null` con lo demás, que se va al final de la cola. No le inventa
+  doce horas a un «6» pelón: adivinarle a un dato es peor que dejarlo al
+  final.
 
 **Este entorno**
 

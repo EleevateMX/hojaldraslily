@@ -1,5 +1,5 @@
 # =============================================================================
-#  HOJALDRAS LILY - abrir las tres pantallas, cada una en su monitor
+#  HOJALDRAS LILY - abrir las pantallas del local, cada una en su monitor
 # =============================================================================
 #  Antes esto vivia dentro del .bat con las coordenadas de los monitores
 #  escritas a mano (0,0 / 1080,150 / 1848,139). Dos cosas lo rompieron:
@@ -12,9 +12,14 @@
 #      lugar equivocado para siempre.
 #
 #  Por eso aqui no se adivina nada: se le pregunta a Windows donde estan los
-#  monitores, se reparte por TAMANO (el grande es del cliente, los dos
-#  chicos son las estaciones) y despues se EMPUJA cada ventana a su sitio
-#  con la API de Windows, que Chrome no puede ignorar.
+#  monitores, se reparte por TAMANO (el grande es del cliente, los chicos son
+#  las estaciones) y despues se EMPUJA cada ventana a su sitio con la API de
+#  Windows, que Chrome no puede ignorar.
+#
+#  Las estaciones son el camino del pan: produccion, horno y empaque, en ese
+#  orden de izquierda a derecha, que es como estan puestas en la mesa. Si hay
+#  menos monitores que estaciones, las ultimas comparten el de mas a la
+#  derecha; asi la PC con dos monitores sigue abriendo todo.
 #
 #  Si algun dia el reparto automatico se equivoca, se corrige sin tocar
 #  codigo: C:\Hojaldras Lily\pantallas.txt con estas tres lineas, donde el
@@ -24,7 +29,8 @@
 #
 #      kiosko=1
 #      produccion=2
-#      almacen=3
+#      horno=3
+#      empaque=4
 # =============================================================================
 
 param(
@@ -86,15 +92,21 @@ if (-not $NAV) {
 Apunta ("Navegador: " + [IO.Path]::GetFileName($NAV))
 
 # -----------------------------------------------------------------------------
-#  2. Las tres apps
+#  2. Las apps que se abren en el local
 # -----------------------------------------------------------------------------
 $APPS = @(
   [pscustomobject]@{ clave = 'produccion'; titulo = 'Produccion'; url = 'https://produccion.hojaldraslily.com'; perfil = 'lily-produccion' }
-  [pscustomobject]@{ clave = 'almacen';    titulo = 'Almacen';    url = 'https://almacen.hojaldraslily.com';    perfil = 'lily-almacen'    }
+  [pscustomobject]@{ clave = 'horno';      titulo = 'Horno';      url = 'https://horno.hojaldraslily.com';      perfil = 'lily-horno'      }
+  [pscustomobject]@{ clave = 'empaque';    titulo = 'Empaque';    url = 'https://empaque.hojaldraslily.com';    perfil = 'lily-empaque'    }
   [pscustomobject]@{ clave = 'kiosko';     titulo = 'Kiosko';     url = 'https://kiosko.hojaldraslily.com';     perfil = 'lily-kiosko'     }
 )
 # El kiosko va al FINAL a proposito: es la ventana que debe quedar al frente
 # cuando termine todo, con el PIN listo para que el cajero entre.
+
+# Las estaciones tactiles, EN EL ORDEN EN QUE ESTAN PUESTAS de izquierda a
+# derecha, que es el camino del pan: produccion arma, el horno hornea, empaque
+# empaca. El kiosko no va aqui: ese siempre se lleva el monitor grande.
+$ESTACIONES = @('produccion', 'horno', 'empaque')
 
 # -----------------------------------------------------------------------------
 #  3. Repartir los monitores
@@ -117,31 +129,34 @@ function Reparte-Monitores {
 
   $mapa = @{}
 
-  # Regla: la pantalla del cliente es la GRANDE. Las estaciones son los dos
-  # tactiles chicos, y se reparten como estan puestos fisicamente: produccion
-  # a la izquierda, almacen a la derecha.
-  if ($pantallas.Count -ge 3) {
-    $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
-    # Las estaciones son los dos tactiles CHICOS, no "los dos siguientes":
-    # si algun dia se cuelga un cuarto monitor, esto sigue acertando.
-    $chicos = @($pantallas |
-      Where-Object { $_.DeviceName -ne $grande.DeviceName } |
-      Sort-Object { $_.Bounds.Width * $_.Bounds.Height } |
-      Select-Object -First 2 |
-      Sort-Object { $_.Bounds.X })
-    $mapa['kiosko']  = $grande
-    $mapa['produccion'] = $chicos[0]
-    $mapa['almacen']  = $chicos[1]
-  }
-  elseif ($pantallas.Count -eq 2) {
-    Apunta '[!] Solo hay 2 monitores: produccion y almacen van a compartir el segundo.'
-    $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
-    $otro   = @($pantallas | Where-Object { $_.DeviceName -ne $grande.DeviceName })[0]
-    $mapa['kiosko'] = $grande; $mapa['produccion'] = $otro; $mapa['almacen'] = $otro
+  # Regla: la pantalla del cliente es la GRANDE. Las estaciones son los
+  # tactiles chicos y se reparten como estan puestas en la mesa, de izquierda
+  # a derecha: produccion, horno, empaque -- que es el camino del pan.
+  $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
+  $mapa['kiosko'] = $grande
+
+  # Los chicos, ordenados por donde estan fisicamente. Se toman TODOS los que
+  # no son el grande: si manana cuelgan un cuarto monitor, cada estacion se
+  # va sola a uno en vez de seguir compartiendo.
+  $chicos = @($pantallas |
+    Where-Object { $_.DeviceName -ne $grande.DeviceName } |
+    Sort-Object { $_.Bounds.X })
+
+  if ($chicos.Count -eq 0) {
+    Apunta '[!] Solo hay 1 monitor: todas las ventanas van encima (alt+tab para cambiar).'
+    foreach ($e in $ESTACIONES) { $mapa[$e] = $pantallas[0] }
   }
   else {
-    Apunta '[!] Solo hay 1 monitor: las tres ventanas van encima (alt+tab para cambiar).'
-    $mapa['kiosko'] = $pantallas[0]; $mapa['produccion'] = $pantallas[0]; $mapa['almacen'] = $pantallas[0]
+    if ($chicos.Count -lt $ESTACIONES.Count) {
+      Apunta ("[!] Hay {0} estaciones y {1} monitor(es) para ellas: las ultimas comparten." -f $ESTACIONES.Count, $chicos.Count)
+    }
+    for ($i = 0; $i -lt $ESTACIONES.Count; $i++) {
+      # El ultimo monitor recoge lo que sobra, en vez de dar la vuelta: dos
+      # ventanas encimadas en el monitor de la derecha se resuelven con
+      # alt+tab; repartidas al azar, nadie sabe donde quedo cada una.
+      $n = [Math]::Min($i, $chicos.Count - 1)
+      $mapa[$ESTACIONES[$i]] = $chicos[$n]
+    }
   }
 
   # La salida de emergencia: si el reparto automatico se equivoca, este
@@ -150,7 +165,7 @@ function Reparte-Monitores {
   if (Test-Path $cfg) {
     Apunta 'Hay pantallas.txt: se respeta lo que diga ese archivo.'
     foreach ($linea in (Get-Content $cfg)) {
-      if ($linea -match '^\s*(kiosko|produccion|almacen)\s*=\s*(\d+)\s*$') {
+      if ($linea -match '^\s*(kiosko|produccion|horno|empaque)\s*=\s*(\d+)\s*$') {
         $clave = $Matches[1]; $n = [int]$Matches[2]
         if ($n -ge 1 -and $n -le $pantallas.Count) {
           $mapa[$clave] = $pantallas[$n - 1]

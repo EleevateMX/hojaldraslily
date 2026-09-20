@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   listarOrdenesDeProduccion,
-  avanzarProduccion,
+  armarMoldes,
   entrarConPin,
   empleadoDeLaSesion,
   salirDeSesion,
@@ -9,15 +9,20 @@ import {
   type ItemDeProduccion,
   type EmpleadoSesion,
 } from '@shake/supabase'
+import { CandadoDeEstacion } from '@shake/ui'
 import { mensajeDeError, urlDeFoto } from '@shake/utils'
 import { sb } from './lib/sb'
 
 /**
- * La pantalla de producción.
+ * La pantalla de producción: la **P** del camino C → P → H → E.
  *
- * Va colgada donde trabaja la gente que hornea. Muestra lo que gerencia mandó
- * a hacer y deja marcar cuánto va saliendo; **lo que se marca entra solo al
- * inventario**, sin que nadie lo capture otra vez en otro lado.
+ * Va colgada donde trabajan los panaderos. Muestra lo que gerencia mandó a
+ * hacer y deja marcar **cuántos moldes van armados**. Lo armado pasa a la
+ * pantalla del Horno, que es quien los mete, los vigila y los saca.
+ *
+ * Ojo con lo que cambió: aquí ya **no** entra nada al inventario. Un molde
+ * armado es masa, no es pan. Si se contara aquí, la caja podría vender una
+ * hojaldra que sigue cruda. El inventario sube cuando el pan SALE del horno.
  *
  * Está pensada para usarse con las manos ocupadas y de lejos: números
  * grandes, botones grandes, y una sola pregunta por renglón — «¿cuántas
@@ -31,77 +36,7 @@ import { sb } from './lib/sb'
 
 const REFRESCO_MS = 20000
 
-function Candado({ onEntra }: { onEntra: (e: EmpleadoSesion) => void }) {
-  const [pin, setPin] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [entrando, setEntrando] = useState(false)
-
-  async function entrar(valor: string) {
-    if (valor.length < 4 || entrando) return
-    setEntrando(true)
-    setError(null)
-    const r = await entrarConPin(sb, valor)
-    setPin('')
-    if (!r.ok || !r.empleado) setError(r.error ?? 'PIN incorrecto')
-    else onEntra(r.empleado)
-    setEntrando(false)
-  }
-
-  return (
-    <div className="min-h-screen bg-sa-green-deep flex flex-col items-center justify-center p-6 text-sa-cream">
-      <img
-        src={`${import.meta.env.BASE_URL}logo-negativo.png`}
-        alt="Hojaldras Lily"
-        className="w-[200px] h-auto mb-6 drop-shadow-2xl"
-      />
-      <p className="font-display text-3xl mb-1">Producción</p>
-      <p className="font-body text-sa-cream/70 mb-8">Marque su PIN para empezar</p>
-
-      <div className="font-mono text-4xl tracking-[0.4em] h-12 mb-6">
-        {'•'.repeat(pin.length)}
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-        {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map((n) => (
-          <button
-            key={n}
-            onClick={() => setPin((p) => (p + n).slice(0, 6))}
-            className="h-20 rounded-sa-lg bg-sa-cream/10 hover:bg-sa-cream/20 active:scale-95 font-display text-3xl transition-all"
-          >
-            {n}
-          </button>
-        ))}
-        <button
-          onClick={() => setPin('')}
-          className="h-20 rounded-sa-lg bg-sa-cream/5 font-mono text-sm uppercase tracking-wide active:scale-95"
-        >
-          Borrar
-        </button>
-        <button
-          onClick={() => setPin((p) => (p + '0').slice(0, 6))}
-          className="h-20 rounded-sa-lg bg-sa-cream/10 hover:bg-sa-cream/20 active:scale-95 font-display text-3xl transition-all"
-        >
-          0
-        </button>
-        <button
-          onClick={() => void entrar(pin)}
-          disabled={pin.length < 4 || entrando}
-          className="h-20 rounded-sa-lg bg-sa-cream text-sa-green-deep font-display text-xl active:scale-95 disabled:opacity-40 transition-all"
-        >
-          Entrar
-        </button>
-      </div>
-
-      {error && (
-        <p className="mt-6 font-body text-sa-strawberry bg-sa-cream/10 rounded-sa px-4 py-2">
-          {error}
-        </p>
-      )}
-    </div>
-  )
-}
-
-/** Un renglón: un sabor y cuántas llevan hechas de las que se pidieron. */
+/** Un renglón: un sabor y cuántos moldes van armados de los que se pidieron. */
 function Renglon({
   item,
   ocupado,
@@ -109,11 +44,13 @@ function Renglon({
 }: {
   item: ItemDeProduccion
   ocupado: boolean
-  onMarcar: (hechas: number) => void
+  onMarcar: (armados: number) => void
 }) {
   const foto = urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)
-  const falta = Math.max(0, item.moldes - item.hechos)
+  const falta = Math.max(0, item.moldes - item.armados)
   const listo = falta === 0
+  // No se puede desarmar lo que ya se fue al horno o ya salió de él.
+  const piso = item.enHorno + item.horneados
 
   return (
     <div
@@ -127,16 +64,23 @@ function Renglon({
         <div className="min-w-0 flex-1">
           <p className="font-display text-2xl leading-tight text-sa-green-ink">{item.sabor}</p>
           <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            moldes de 48 cuadros
+            moldes de {item.molde} cuadros
           </p>
+          {(item.enHorno > 0 || item.horneados > 0) && (
+            <p className="font-body text-xs text-sa-green-ink/55 mt-1">
+              {item.enHorno > 0 && `${item.enHorno} en el horno`}
+              {item.enHorno > 0 && item.horneados > 0 && ' · '}
+              {item.horneados > 0 && `${item.horneados} ya salieron`}
+            </p>
+          )}
         </div>
         <div className="text-right shrink-0">
           <p className="font-display text-4xl leading-none text-sa-green-ink">
-            {item.hechos}
+            {item.armados}
             <span className="text-2xl text-sa-green-ink/35"> / {item.moldes}</span>
           </p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-            {listo ? '¡listo!' : `faltan ${falta} molde${falta === 1 ? '' : 's'}`}
+            {listo ? 'todo armado' : `faltan ${falta} molde${falta === 1 ? '' : 's'}`}
           </p>
         </div>
       </div>
@@ -146,7 +90,7 @@ function Renglon({
           <button
             key={n}
             disabled={ocupado}
-            onClick={() => onMarcar(item.hechos + n)}
+            onClick={() => onMarcar(item.armados + n)}
             className="flex-1 h-14 rounded-sa bg-sa-green text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-50"
           >
             +{n} molde{n === 1 ? '' : 's'}
@@ -162,8 +106,8 @@ function Renglon({
           Ya está
         </button>
         <button
-          disabled={ocupado || item.hechos === 0}
-          onClick={() => onMarcar(Math.max(0, item.hechos - 1))}
+          disabled={ocupado || item.armados <= piso}
+          onClick={() => onMarcar(Math.max(piso, item.armados - 1))}
           className="w-14 h-14 rounded-sa border-2 border-sa-green-ink/15 text-sa-green-ink/60 font-display text-2xl active:scale-95 transition-transform disabled:opacity-25"
           title="Me pasé, quitar uno"
         >
@@ -181,10 +125,10 @@ function Tarjeta({
 }: {
   orden: OrdenDeProduccion
   ocupado: string | null
-  onMarcar: (item: ItemDeProduccion, hechas: number) => void
+  onMarcar: (item: ItemDeProduccion, armados: number) => void
 }) {
   const total = orden.items.reduce((s, i) => s + i.moldes, 0)
-  const hecho = orden.items.reduce((s, i) => s + Math.min(i.hechos, i.moldes), 0)
+  const hecho = orden.items.reduce((s, i) => s + Math.min(i.armados, i.moldes), 0)
   const pct = total > 0 ? Math.round((hecho / total) * 100) : 0
 
   return (
@@ -261,11 +205,11 @@ export default function App() {
     setOrdenes((antes) =>
       antes.map((o) => ({
         ...o,
-        items: o.items.map((i) => (i.id === item.id ? { ...i, hechos: moldes } : i)),
+        items: o.items.map((i) => (i.id === item.id ? { ...i, armados: moldes } : i)),
       })),
     )
     try {
-      await avanzarProduccion(sb, item.id, moldes)
+      await armarMoldes(sb, item.id, moldes)
     } catch (e) {
       setError(mensajeDeError(e))
     } finally {
@@ -284,10 +228,22 @@ export default function App() {
     )
   }
 
-  if (!empleado) return <Candado onEntra={setEmpleado} />
+  if (!empleado)
+    return (
+      <CandadoDeEstacion
+        estacion="Producción"
+        logo={`${import.meta.env.BASE_URL}logo-negativo.png`}
+        onEntrar={async (pin) => {
+          const r = await entrarConPin(sb, pin)
+          if (!r.ok || !r.empleado) return r.error ?? 'PIN incorrecto'
+          setEmpleado(r.empleado)
+          return null
+        }}
+      />
+    )
 
   const pendientes = ordenes.reduce(
-    (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.moldes - i.hechos), 0),
+    (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.moldes - i.armados), 0),
     0,
   )
 

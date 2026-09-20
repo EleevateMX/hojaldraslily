@@ -209,3 +209,85 @@ recetas colgadas del ejemplar viejo y el conteo hecho sobre el nuevo. Ojo con
 el caso especial: cuando solo cambian las mayúsculas, el viejo y el nuevo son
 la misma fila y el candado anti-duplicado impide el renombre — hay que
 tratarlo aparte (pasó con `Pasta de guayaba`).
+
+## Las siete funciones de inventario estaban protegidas por una sola capa (20 de septiembre)
+
+| Versión | Qué hace |
+|---|---|
+| `20260920100000` | `revoke ... from public, anon` en las siete de inventario |
+
+Las siete se habían **otorgado** a `authenticated` y nunca **revocado** de
+`PUBLIC`. Un `grant` no quita nada: suma. Postgres le da EXECUTE a `PUBLIC`
+por omisión en cada función nueva, así que quedaban ejecutables con la llave
+publicable — protegidas solo por el `fn_es_staff()` de adentro.
+
+No lo explotó nadie (el `if` hacía su trabajo), pero **una sola capa no es una
+capa, es un punto de falla**: el día que alguien edite la función y se le
+olvide el `if`, el GRANT es lo único que queda.
+
+Ojo al buscarlo en `pg_proc.proacl`: PUBLIC aparece como una entrada con el
+beneficiario **vacío** (`=X/postgres`), y un `like '%=X%'` también empata con
+`authenticated=X`. Lo que sí sirve es `aclexplode(proacl)` y buscar
+`grantee = 0`.
+
+## El camino C → P → H → E (20 de septiembre)
+
+El negocio pasó su diagrama: **C**aja → **P**roducción → **H**orno →
+**E**mpaque, cada una una pantalla táctil en su mesa. Y una corrección de
+fondo: los moldes **no son todos de 48**, hay de 48 y de 24.
+
+| Versión | Qué hace |
+|---|---|
+| `20260920110000` | `cuadros_por_molde` por renglón (48 o 24), no un parámetro global |
+| `20260920111000` | Las etapas: `moldes_armados`, `moldes_en_horno`, y el `check` que las ordena |
+| `20260920112000` | `fn_produccion_armar`, `fn_horno_meter`, `fn_horno_sacar` |
+| `20260920113000` | `fn_horno_en_vivo`: lo que el horno le contesta a la caja |
+| `20260920114000` | `fn_produccion_mandar_a_hacer` recibe el molde de cada renglón |
+| `20260920115000` | `'en_horno'` en el `check` de estados (ver abajo) |
+| `20260920120000` | `encargos.empacado_at`: Empaque marca lo que ya está listo |
+
+### El tamaño del molde va por renglón
+
+`parametros.cuadros_por_molde` servía cuando todo era de 48. Con dos tamaños,
+un solo número para toda la casa obliga a mentir en uno de los dos renglones
+de la misma hornada — y un inventario que arranca con una mentira no se
+endereza después. Ahora vive en `orden_produccion_items.cuadros_por_molde`
+con `check (cuadros_por_molde in (24, 48))`; el parámetro global quedó como el
+valor por omisión de quien no dice nada, para que una pantalla vieja siga
+mandando a hacer en vez de reventar.
+
+### El inventario sube en H, no en P
+
+Antes producción marcaba «hecho» y eso entraba directo al inventario.
+Funcionaba porque producción y horno eran la misma persona. Con el horno en su
+propia mesa deja de serlo, y **un molde armado es masa, no es pan**: si se
+contara al armarlo, la caja podría vender una hojaldra que sigue cruda.
+
+Las cuatro cuentas viven en el mismo renglón y un solo `check`
+(`opi_etapas_coherentes`) impide los estados imposibles: no se arma más de lo
+pedido, no sale del horno lo que no entró, y no hay más en el horno que lo
+armado menos lo que ya salió.
+
+Va en un `check` de tabla y no repartido en los `if` de las tres funciones a
+propósito. Así el viejo `fn_produccion_avanzar` —que saltaba el horno— **choca
+contra la regla** en vez de colar pan que nunca se horneó. Comprobado contra
+la base: con el renglón sin armar, `fn_produccion_avanzar` falla.
+
+### El escalón que faltaba en el `check` de estados
+
+`20260920115000` va **después** de las funciones a propósito, porque así pasó:
+`fn_produccion_refrescar_estado` ya ponía `'en_horno'` y el `check` viejo lo
+rechazaba. El error salió al probar la cadena completa contra la base, no
+leyendo el código — un `check` no aparece en ningún `select`. Se deja en su
+lugar real del historial: el estado final da el destino, no el camino.
+
+### Empacar no cobra
+
+`encargos.empacado_at` es lo que le permite a la mesa de empaque contestar
+«¿cuánto falta?» y evitar que dos personas empaquen el mismo encargo. **No
+descuenta ni cobra nada**: lo único que mueve inventario y corte sigue siendo
+`fn_encargo_cobrar`. Apartar no es vender, y empacar tampoco.
+
+Es una **fecha** y no una bandera por la misma razón que
+`inventario_stock.contado_at`: un «sí» no dice cuándo, y un dato sin fecha no
+se puede creer.

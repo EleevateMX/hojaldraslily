@@ -87,6 +87,12 @@ function TarjetaEncargo({
             Encargo #{e.folio}
             {e.telefono ? ` · ${e.telefono}` : ''}
           </p>
+          {/* Lo que Empaque le contesta a gerencia. */}
+          {e.empacado_at && (
+            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink bg-sa-mint/25 rounded-full px-2 py-0.5 inline-block mt-1">
+              Empacado{e.empacado_por ? ` · ${e.empacado_por}` : ''}
+            </p>
+          )}
         </div>
         <div className="text-right shrink-0">
           <p

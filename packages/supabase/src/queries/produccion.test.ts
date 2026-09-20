@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { faltaPara, precioEnCanal, seVendeEnCanal } from './produccion'
+import {
+  faltaPara,
+  precioEnCanal,
+  seVendeEnCanal,
+  minutosDeHora,
+  loQueHayQueEmpacar,
+  type Encargo,
+} from './produccion'
 
 describe('faltaPara', () => {
   const ahora = new Date('2026-08-27T10:00:00Z')
@@ -70,5 +77,92 @@ describe('precios por canal', () => {
 
   it('sin renglón, se vende: la ausencia no es una prohibición', () => {
     expect(seVendeEnCanal({ id: 'otro' }, 'rappi', precios)).toBe(true)
+  })
+})
+
+describe('minutosDeHora', () => {
+  // `hora_entrega` es texto libre: la caja lo teclea a mano. Estas son las
+  // formas que de verdad se escriben en un mostrador.
+  it('lee la hora escrita como toca', () => {
+    expect(minutosDeHora('10:00')).toBe(600)
+    expect(minutosDeHora('9:30')).toBe(570)
+  })
+
+  it('entiende la tarde', () => {
+    expect(minutosDeHora('6 pm')).toBe(18 * 60)
+    expect(minutosDeHora('1:30 p.m.')).toBe(13 * 60 + 30)
+    expect(minutosDeHora('7 de la tarde')).toBe(19 * 60)
+  })
+
+  it('no le inventa doce horas a un número pelón', () => {
+    // «6» son las 6. Si el negocio quiere las seis de la tarde lo escribe.
+    expect(minutosDeHora('6')).toBe(6 * 60)
+  })
+
+  it('las 12 de la mañana son la medianoche', () => {
+    expect(minutosDeHora('12 am')).toBe(0)
+  })
+
+  it('lo que no se puede leer se queda sin hora, no se adivina', () => {
+    expect(minutosDeHora('por la tarde')).toBe(null)
+    expect(minutosDeHora('')).toBe(null)
+    expect(minutosDeHora(null)).toBe(null)
+    expect(minutosDeHora('99:99')).toBe(null)
+  })
+})
+
+describe('loQueHayQueEmpacar', () => {
+  // Quien empaca no empaca por cliente: empaca por producto. La pregunta que
+  // contesta esta función es «¿cuántas Fiesta de 24 corto?», no «¿qué pidió
+  // doña Mari?».
+  const encargo = (id: string, items: [string, string, number][]): Encargo =>
+    ({
+      id,
+      folio: 1,
+      cliente: 'X',
+      telefono: null,
+      fecha_entrega: null,
+      hora_entrega: null,
+      estado: 'apartado',
+      anticipo: 0,
+      nota: null,
+      creado_por: null,
+      created_at: '',
+      empacado_at: null,
+      empacado_por: null,
+      items: items.map(([pid, nombre, cantidad], n) => ({
+        id: `${id}-${n}`,
+        producto_id: pid,
+        producto: nombre,
+        imagen_url: null,
+        cantidad,
+        precio_unitario: 0,
+      })),
+      total: 0,
+      piezas: items.reduce((s, [, , c]) => s + c, 0),
+    }) as Encargo
+
+  it('suma el mismo producto de encargos distintos', () => {
+    const r = loQueHayQueEmpacar([
+      encargo('a', [['f24', 'Fiesta 24', 2]]),
+      encargo('b', [['f24', 'Fiesta 24', 3]]),
+    ])
+    expect(r).toHaveLength(1)
+    expect(r[0].cantidad).toBe(5)
+    expect(r[0].encargos).toBe(2)
+  })
+
+  it('pone primero lo más numeroso, que es por donde conviene empezar', () => {
+    const r = loQueHayQueEmpacar([
+      encargo('a', [
+        ['g12', 'Guayaba 12', 1],
+        ['f24', 'Fiesta 24', 4],
+      ]),
+    ])
+    expect(r.map((x) => x.producto)).toEqual(['Fiesta 24', 'Guayaba 12'])
+  })
+
+  it('sin encargos no hay nada que empacar', () => {
+    expect(loQueHayQueEmpacar([])).toEqual([])
   })
 })

@@ -1,5 +1,5 @@
 {
-  "name": "@shake/almacen",
+  "name": "@shake/horno",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,6 +14,7 @@
     "@shake/pwa": "workspace:*",
     "@shake/supabase": "workspace:*",
     "@shake/types": "workspace:*",
+    "@shake/ui": "workspace:*",
     "@shake/utils": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"

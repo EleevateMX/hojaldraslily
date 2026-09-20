@@ -26,10 +26,16 @@ export interface ItemDeProduccion {
   /** El sabor que hay que hornear. El tamaño se decide al vender, no aquí. */
   sabor: string
   imagen_url: string | null
-  /** Moldes pedidos. Cada molde rinde `cuadros_por_molde` (48). */
+  /** Moldes pedidos. */
   moldes: number
-  /** Moldes ya hechos. Es un TOTAL, no un incremento. */
-  hechos: number
+  /** De cuántos cuadros es cada molde de ESTE renglón: 48 o 24. */
+  molde: Molde
+  /** Moldes que producción ya armó. Es un TOTAL, no un incremento. */
+  armados: number
+  /** Cuántos hay dentro del horno ahorita. */
+  enHorno: number
+  /** Moldes que ya salieron del horno: lo único que es pan de verdad. */
+  horneados: number
   terminado_por: string | null
 }
 
@@ -37,7 +43,7 @@ export interface OrdenDeProduccion {
   id: string
   folio: number
   fecha: string
-  estado: 'pendiente' | 'en_proceso' | 'terminada' | 'cancelada'
+  estado: 'pendiente' | 'en_proceso' | 'en_horno' | 'terminada' | 'cancelada'
   nota: string | null
   creada_por: string | null
   created_at: string
@@ -57,6 +63,9 @@ interface FilaOrden {
     id: string
     sabor: string | null
     moldes: number | null
+    cuadros_por_molde: number
+    moldes_armados: number
+    moldes_en_horno: number
     cantidad_hecha: number
     terminado_por: string | null
   }[]
@@ -75,12 +84,15 @@ export async function listarOrdenesDeProduccion(
     .from('ordenes_produccion')
     .select(
       'id, folio, fecha, estado, nota, creada_por, created_at,' +
-        ' orden_produccion_items(id, sabor, moldes, cantidad_hecha, terminado_por)',
+        ' orden_produccion_items(id, sabor, moldes, cuadros_por_molde,' +
+        ' moldes_armados, moldes_en_horno, cantidad_hecha, terminado_por)',
     )
     .order('created_at', { ascending: false })
     .limit(50)
 
-  if (!incluirTerminadas) q = q.in('estado', ['pendiente', 'en_proceso'])
+  // `en_horno` también sigue abierta: la orden no terminó hasta que el pan
+  // salió. Dejarla fuera escondía del tablero justo lo que está en el horno.
+  if (!incluirTerminadas) q = q.in('estado', ['pendiente', 'en_proceso', 'en_horno'])
 
   const { data, error } = await q
   if (error) throw error
@@ -98,7 +110,10 @@ export async function listarOrdenesDeProduccion(
       sabor: i.sabor ?? '—',
       imagen_url: null,
       moldes: i.moldes ?? 0,
-      hechos: i.cantidad_hecha,
+      molde: (i.cuadros_por_molde === 24 ? 24 : 48) as Molde,
+      armados: i.moldes_armados,
+      enHorno: i.moldes_en_horno,
+      horneados: i.cantidad_hecha,
       terminado_por: i.terminado_por,
     })),
   }))
@@ -114,7 +129,7 @@ export async function listarOrdenesDeProduccion(
  */
 export async function mandarAProducir(
   sb: ShakeClient,
-  items: { sabor: string; moldes: number }[],
+  items: { sabor: string; moldes: number; molde?: Molde }[],
   nota?: string,
 ): Promise<string> {
   const { data, error } = await sb.rpc('fn_produccion_mandar_a_hacer', {
@@ -168,6 +183,15 @@ export interface Encargo {
   nota: string | null
   creado_por: string | null
   created_at: string
+  /**
+   * Cuándo quedó empacado. Nulo = todavía está en la mesa de empaque.
+   *
+   * Es una fecha y no un «sí» a propósito: a las seis de la tarde importa
+   * saber si se empacó temprano o se acaba de empacar. Empacar no cobra ni
+   * descuenta nada — eso sigue siendo `cobrarEncargo`.
+   */
+  empacado_at: string | null
+  empacado_por: string | null
   items: ItemDeEncargo[]
   /** Lo que se le cotizó al cliente: suma de los precios congelados. */
   total: number
@@ -186,6 +210,8 @@ interface FilaEncargo {
   nota: string | null
   creado_por: string | null
   created_at: string
+  empacado_at: string | null
+  empacado_por: string | null
   encargo_items: {
     id: string
     producto_id: string
@@ -208,7 +234,7 @@ export async function listarEncargos(
     .from('encargos')
     .select(
       'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo,' +
-        ' nota, creado_por, created_at,' +
+        ' nota, creado_por, created_at, empacado_at, empacado_por,' +
         ' encargo_items(id, producto_id, cantidad, precio_unitario,' +
         ' productos(nombre, imagen_url))',
     )
@@ -244,6 +270,8 @@ export async function listarEncargos(
       nota: e.nota,
       creado_por: e.creado_por,
       created_at: e.created_at,
+      empacado_at: e.empacado_at,
+      empacado_por: e.empacado_por,
       items,
       total: items.reduce((s, i) => s + i.cantidad * i.precio_unitario, 0),
       piezas: items.reduce((s, i) => s + i.cantidad, 0),
@@ -274,6 +302,103 @@ export async function crearEncargo(sb: ShakeClient, e: NuevoEncargo): Promise<st
   })
   if (error) throw error
   return data as unknown as string
+}
+
+/**
+ * Marca el encargo como empacado (o lo desmarca, si alguien se equivocó).
+ *
+ * Empacar **no cobra ni descuenta**: lo único que mueve inventario sigue
+ * siendo `cobrarEncargo`. Esto solo dice «ya está en su caja y con su nombre»,
+ * que es lo que evita que dos empacadores hagan el mismo encargo dos veces.
+ *
+ * Se manda el estado al que se quiere llegar, no un alternar: en una pantalla
+ * táctil dos toques por nervios tienen que dejarlo empacado, no
+ * empacado-y-desempacado.
+ */
+export async function marcarEmpacado(
+  sb: ShakeClient,
+  encargoId: string,
+  empacado = true,
+): Promise<void> {
+  const { error } = await sb.rpc('fn_encargo_empacar', {
+    p_encargo_id: encargoId,
+    p_empacado: empacado,
+  })
+  if (error) throw error
+}
+
+/**
+ * La hora de entrega en minutos desde medianoche, para poder ordenar.
+ *
+ * `hora_entrega` es **texto libre** —la caja lo captura a mano, con un
+ * `placeholder` de «10:00»— así que aquí llega de todo: «10:00», «6 pm», «6»,
+ * «por la tarde». Se lee lo que se pueda y lo que no, se devuelve `null`: un
+ * encargo sin hora legible va al final, que es donde estaba antes de que
+ * existiera esta función.
+ *
+ * No se adivina lo que no está dicho: un «6» pelón se toma como las 6, no
+ * como las 18. Si el negocio quiere las seis de la tarde, escribe «6 pm» —
+ * inventarle doce horas a un dato es peor que dejarlo al final.
+ */
+export function minutosDeHora(hora: string | null): number | null {
+  if (!hora) return null
+  const t = hora.toLowerCase()
+  const m = /(\d{1,2})\s*[:.]?\s*(\d{2})?/.exec(t)
+  if (!m) return null
+  let h = Number(m[1])
+  const min = Number(m[2] ?? 0)
+  if (h > 23 || min > 59) return null
+  const tarde = /p\.?\s?m|tarde|noche/.test(t)
+  const manana = /a\.?\s?m|ma(n|ñ)ana/.test(t)
+  if (tarde && h < 12) h += 12
+  if (manana && h === 12) h = 0
+  return h * 60 + min
+}
+
+/** Un renglón de la lista de «qué hay que empacar»: un producto y su total. */
+export interface PorEmpacar {
+  producto_id: string
+  producto: string
+  imagen_url: string | null
+  cantidad: number
+  /** De cuántos encargos distintos sale ese total. */
+  encargos: number
+}
+
+/**
+ * Lo que hay que empacar, sumado por producto.
+ *
+ * Quien empaca **no empaca por cliente, empaca por producto**: va al mostrador,
+ * corta los paquetes y los reparte. Preguntarle «¿cuántas Fiesta de 24 saco?»
+ * a una lista de ocho tarjetas de clientes es hacer la suma a mano cada vez, y
+ * la suma a mano se equivoca justo el sábado, que es cuando hay ocho tarjetas.
+ *
+ * Se suma en el navegador y no en la base a propósito: los encargos ya
+ * vinieron completos con sus renglones, así que una consulta más solo agregaría
+ * una forma de que las dos listas no coincidan.
+ */
+export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
+  const por = new Map<string, PorEmpacar>()
+  for (const e of encargos) {
+    for (const i of e.items) {
+      const y = por.get(i.producto_id)
+      if (y) {
+        y.cantidad += i.cantidad
+        y.encargos += 1
+      } else {
+        por.set(i.producto_id, {
+          producto_id: i.producto_id,
+          producto: i.producto,
+          imagen_url: i.imagen_url,
+          cantidad: i.cantidad,
+          encargos: 1,
+        })
+      }
+    }
+  }
+  // Lo más numeroso primero: es lo que más tarda y por lo que conviene
+  // empezar.
+  return [...por.values()].sort((a, b) => b.cantidad - a.cantidad)
 }
 
 /**
@@ -491,4 +616,145 @@ export async function guardarPrecioDeCanal(
     updated_at: new Date().toISOString(),
   })
   if (error) throw error
+}
+
+// ---------------------------------------------------------------------------
+// El camino del pan: Producción → Horno → Empaque
+//
+// Tres manos y tres momentos. Lo que importa entender es **cuándo hay pan**:
+// un molde armado no es pan, un molde dentro del horno tampoco. El inventario
+// sube cuando SALE del horno, y por eso `sacarDelHorno` es la única de las
+// tres que mueve existencias.
+//
+// Si se contara al armar, la caja podría vender una hojaldra que todavía es
+// masa cruda.
+// ---------------------------------------------------------------------------
+
+/** Los dos moldes que existen en la casa. */
+export const MOLDES = [48, 24] as const
+export type Molde = (typeof MOLDES)[number]
+
+export interface EnElHorno {
+  item_id: string
+  folio: number
+  sabor: string
+  /** Moldes que hay dentro ahorita. */
+  moldes: number
+  /** De cuántos cuadros es cada molde: 48 o 24. */
+  molde: Molde
+  cuadros: number
+  entro_en: string
+  listo_en: string
+  minutos: number
+  tarde: boolean
+}
+
+export interface EsperandoHorno {
+  item_id: string
+  folio: number
+  sabor: string
+  moldes: number
+  molde: Molde
+  cuadros: number
+  minutos: number
+}
+
+export interface SinArmar {
+  item_id: string
+  folio: number
+  sabor: string
+  moldes: number
+  molde: Molde
+}
+
+export interface HornoEnVivo {
+  ahora: string
+  adentro: EnElHorno[]
+  esperando: EsperandoHorno[]
+  sin_armar: SinArmar[]
+  resumen: {
+    en_horno: number
+    esperando: number
+    sin_armar: number
+    /** Cuántas tandas ya se pasaron de su hora. */
+    tarde: number
+  }
+}
+
+/**
+ * Qué hay en el horno, qué espera turno y qué falta armar.
+ *
+ * La usan tres pantallas: el propio Horno, la Caja (que necesita saber qué
+ * contestarle a un cliente que pregunta) y Admin. Una sola consulta para las
+ * tres, porque si cada una calculara lo suyo terminarían diciendo cosas
+ * distintas del mismo horno.
+ */
+export async function hornoEnVivo(sb: ShakeClient): Promise<HornoEnVivo> {
+  const { data, error } = await sb.rpc('fn_horno_en_vivo')
+  if (error) throw error
+  return data as unknown as HornoEnVivo
+}
+
+/**
+ * Producción armó moldes. Se manda el TOTAL, no un incremento.
+ *
+ * La pantalla muestra «van 3»; quien corrige escribe el número que ve, no la
+ * diferencia. Es la misma razón por la que el conteo de inventario pide lo
+ * contado y no el ajuste.
+ */
+export async function armarMoldes(
+  sb: ShakeClient,
+  itemId: string,
+  moldes: number,
+): Promise<{ armados: number; pedidos: number }> {
+  const { data, error } = await sb.rpc('fn_produccion_armar', {
+    p_item_id: itemId,
+    p_moldes: moldes,
+  })
+  if (error) throw error
+  return data as unknown as { armados: number; pedidos: number }
+}
+
+/** Al horno. Devuelve a qué hora sale, para arrancar el reloj. */
+export async function meterAlHorno(
+  sb: ShakeClient,
+  itemId: string,
+  moldes = 1,
+): Promise<{ en_horno: number; minutos: number; listo_en: string }> {
+  const { data, error } = await sb.rpc('fn_horno_meter', {
+    p_item_id: itemId,
+    p_moldes: moldes,
+  })
+  if (error) throw error
+  return data as unknown as { en_horno: number; minutos: number; listo_en: string }
+}
+
+/**
+ * Del horno al inventario. **Este es el momento en que hay pan.**
+ *
+ * Sin `moldes` sale todo lo que haya adentro, que es el gesto normal y
+ * conviene que sea de un solo toque: quien saca una charola tiene las manos
+ * ocupadas y guantes puestos.
+ */
+export async function sacarDelHorno(
+  sb: ShakeClient,
+  itemId: string,
+  moldes?: number,
+): Promise<{ sacados: number; sabor: string; cuadros: number; libres: number }> {
+  const { data, error } = await sb.rpc('fn_horno_sacar', {
+    p_item_id: itemId,
+    p_moldes: moldes ?? undefined,
+  })
+  if (error) throw error
+  return data as unknown as { sacados: number; sabor: string; cuadros: number; libres: number }
+}
+
+/**
+ * Cuánto falta para que salga, en palabras.
+ *
+ * Reusa `faltaPara`, que ya sabe decir «5 min tarde» en vez de «en −5 min».
+ * Un horno que promete un número negativo no lo lee nadie.
+ */
+export function relojDelHorno(listoEn: string, ahora = new Date()) {
+  return faltaPara(listoEn, ahora)
 }

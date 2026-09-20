@@ -6,9 +6,9 @@ export default defineConfig({
   plugins: [
     react(),
     pwaDeLily({
-      nombre: "Hojaldras Lily · Almacén",
-      corto: "Almacén",
-      descripcion: "Los encargos apartados, a qué hora los recogen, y el cobro al entregar.",
+      nombre: "Hojaldras Lily · Empaque",
+      corto: "Empaque",
+      descripcion: 'Qué hay que empacar y para qué hora, y entregar y cobrar el encargo.',
     }),
   ],
   server: { port: 5189 },

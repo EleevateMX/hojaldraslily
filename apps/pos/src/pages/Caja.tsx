@@ -9,6 +9,7 @@ import {
 } from '@shake/supabase'
 import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
+import { ChipDelHorno } from '../components/pos/ChipDelHorno'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
 import { mensajeDeError } from '@shake/utils'
 
@@ -189,6 +190,9 @@ export function Caja() {
           <span className="font-display text-lg text-sa-cream">
             {empleado?.nombre.split(' ')[0]}
           </span>
+          {/* Lo que el horno le contesta a la caja. Va antes de las colas
+              porque es información, no una tarea: se mira, no se atiende. */}
+          <ChipDelHorno />
           <button
             onClick={() => navigate('/pendientes')}
             className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"

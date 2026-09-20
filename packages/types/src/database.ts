@@ -784,6 +784,8 @@ export type Database = {
           cliente: string
           creado_por: string | null
           created_at: string
+          empacado_at: string | null
+          empacado_por: string | null
           estado: string
           fecha_entrega: string | null
           folio: number
@@ -799,6 +801,8 @@ export type Database = {
           cliente: string
           creado_por?: string | null
           created_at?: string
+          empacado_at?: string | null
+          empacado_por?: string | null
           estado?: string
           fecha_entrega?: string | null
           folio?: never
@@ -814,6 +818,8 @@ export type Database = {
           cliente?: string
           creado_por?: string | null
           created_at?: string
+          empacado_at?: string | null
+          empacado_por?: string | null
           estado?: string
           fecha_entrega?: string | null
           folio?: never
@@ -1680,8 +1686,12 @@ export type Database = {
         Row: {
           cantidad_hecha: number
           cantidad_pedida: number | null
+          cuadros_por_molde: number
+          horno_entro_en: string | null
           id: string
           moldes: number | null
+          moldes_armados: number
+          moldes_en_horno: number
           orden_id: string
           producto_id: string | null
           sabor: string | null
@@ -1691,8 +1701,12 @@ export type Database = {
         Insert: {
           cantidad_hecha?: number
           cantidad_pedida?: number | null
+          cuadros_por_molde: number
+          horno_entro_en?: string | null
           id?: string
           moldes?: number | null
+          moldes_armados?: number
+          moldes_en_horno?: number
           orden_id: string
           producto_id?: string | null
           sabor?: string | null
@@ -1702,8 +1716,12 @@ export type Database = {
         Update: {
           cantidad_hecha?: number
           cantidad_pedida?: number | null
+          cuadros_por_molde?: number
+          horno_entro_en?: string | null
           id?: string
           moldes?: number | null
+          moldes_armados?: number
+          moldes_en_horno?: number
           orden_id?: string
           producto_id?: string | null
           sabor?: string | null
@@ -3920,6 +3938,10 @@ export type Database = {
         }
         Returns: string
       }
+      fn_encargo_empacar: {
+        Args: { p_empacado?: boolean; p_encargo_id: string }
+        Returns: Json
+      }
       fn_encolar_comanda_para_pedido: {
         Args: { p_pedido_id: string }
         Returns: undefined
@@ -4190,6 +4212,15 @@ export type Database = {
           p_sabor: string
         }
         Returns: number
+      }
+      fn_horno_en_vivo: { Args: never; Returns: Json }
+      fn_horno_meter: {
+        Args: { p_item_id: string; p_moldes?: number }
+        Returns: Json
+      }
+      fn_horno_sacar: {
+        Args: { p_item_id: string; p_moldes?: number }
+        Returns: Json
       }
       fn_imprimir_confirmar: {
         Args: { p_token: string; p_trabajo_id: string }
@@ -4521,6 +4552,10 @@ export type Database = {
             }
             Returns: number
           }
+      fn_produccion_armar: {
+        Args: { p_item_id: string; p_moldes: number }
+        Returns: Json
+      }
       fn_produccion_avanzar: {
         Args: { p_item_id: string; p_moldes: number }
         Returns: number
@@ -4528,6 +4563,10 @@ export type Database = {
       fn_produccion_mandar_a_hacer: {
         Args: { p_items: Json; p_nota?: string }
         Returns: string
+      }
+      fn_produccion_refrescar_estado: {
+        Args: { p_orden_id: string }
+        Returns: undefined
       }
       fn_producto_mover_categoria: {
         Args: { p_categoria_id: string; p_producto_id: string }
