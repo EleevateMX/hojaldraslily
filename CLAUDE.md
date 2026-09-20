@@ -23,8 +23,9 @@ Lo que falta para abrir, todo fuera del código:
 1. **Decidir la terminal, y sus secretos.** Clip ya está escrito y probado;
    solo faltan sus tres secretos en Supabase (`CLIP_API_KEY`,
    `CLIP_WEBHOOK_SECRET`, `CLIP_TERMINAL_SERIAL`). Si al final es **Banorte**,
-   el camino es otro y hay que preguntarle cosas al banco primero: ver
-   `docs/terminal-banorte.md`. Cambiar de proveedor **no toca ninguna
+   el camino es otro y hay que preguntarle cosas al banco primero: el análisis
+   está en `docs/terminal-banorte.md` y la hoja de qué pedir —con el correo
+   listo para el ejecutivo— en `docs/banorte-que-pedir.md`. Cambiar de proveedor **no toca ninguna
    pantalla** — para eso existe `PaymentProvider` en `packages/payments`.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
@@ -42,6 +43,11 @@ Lo que falta para abrir, todo fuera del código:
    captura el precio y se prende.
 4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
+
+**Cómo va todo, con números contra la base:** `docs/estado-del-pos.md`. Ahí
+está también la comparación tabla por tabla contra Shakeaholic — qué no se
+trajo y por qué, y las tres cosas que sí valdría la pena traer (pago mixto,
+diagnóstico de impresión y cerrar sesión en Costeos).
 
 **La vitrina para enseñar el sistema** vive en
 <https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
