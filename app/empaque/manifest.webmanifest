@@ -1,10 +1,10 @@
 {
-  "name": "Hojaldras Lily · Almacén",
-  "short_name": "Almacén",
-  "description": "Los encargos apartados, a qué hora los recogen, y el cobro al entregar.",
-  "id": "/hojaldraslily/app/almacen/",
-  "start_url": "/hojaldraslily/app/almacen/",
-  "scope": "/hojaldraslily/app/almacen/",
+  "name": "Hojaldras Lily · Empaque",
+  "short_name": "Empaque",
+  "description": "Qué hay que empacar y para qué hora, y entregar y cobrar el encargo.",
+  "id": "/hojaldraslily/app/empaque/",
+  "start_url": "/hojaldraslily/app/empaque/",
+  "scope": "/hojaldraslily/app/empaque/",
   "display": "standalone",
   "display_override": [
     "standalone",
@@ -17,19 +17,19 @@
   "theme_color": "#D81B4A",
   "icons": [
     {
-      "src": "/hojaldraslily/app/almacen/icono-192.png",
+      "src": "/hojaldraslily/app/empaque/icono-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/almacen/icono-512.png",
+      "src": "/hojaldraslily/app/empaque/icono-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/almacen/icono-maskable-512.png",
+      "src": "/hojaldraslily/app/empaque/icono-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

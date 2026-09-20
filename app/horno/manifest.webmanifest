@@ -1,10 +1,10 @@
 {
-  "name": "Hojaldras Lily · Producción",
-  "short_name": "Producción",
-  "description": "Cuántos moldes van armados, de los que se pidieron.",
-  "id": "/hojaldraslily/app/produccion/",
-  "start_url": "/hojaldraslily/app/produccion/",
-  "scope": "/hojaldraslily/app/produccion/",
+  "name": "Hojaldras Lily · Horno",
+  "short_name": "Horno",
+  "description": "Lo que espera para entrar, lo que está adentro con su reloj, y lo que sale.",
+  "id": "/hojaldraslily/app/horno/",
+  "start_url": "/hojaldraslily/app/horno/",
+  "scope": "/hojaldraslily/app/horno/",
   "display": "standalone",
   "display_override": [
     "standalone",
@@ -17,19 +17,19 @@
   "theme_color": "#D81B4A",
   "icons": [
     {
-      "src": "/hojaldraslily/app/produccion/icono-192.png",
+      "src": "/hojaldraslily/app/horno/icono-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/produccion/icono-512.png",
+      "src": "/hojaldraslily/app/horno/icono-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/hojaldraslily/app/produccion/icono-maskable-512.png",
+      "src": "/hojaldraslily/app/horno/icono-maskable-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
