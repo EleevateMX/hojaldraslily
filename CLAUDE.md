@@ -356,12 +356,16 @@ empaquetador y se desvían solas:
   permiso dejaba la tienda cerrada si nadie estaba ahí para aceptarla.
 - `scripts/pantallas.ps1` — acomoda cada app en su monitor. **No hay
   coordenadas escritas a mano**: le pregunta a Windows dónde están los
-  monitores y reparte por tamaño (el grande es del cliente, los dos chicos
-  son las estaciones, izquierda = bebidas). Después **empuja** cada ventana
-  con `SetWindowPos`, porque Chrome recuerda en el perfil la última
-  posición e ignora `--window-position`. Escape: `C:\Hojaldras Lily\pantallas.txt`
-  con `kiosko=1` / `bebidas=2` / `cocina=3` manda sobre el automático.
-  Cada arranque deja su bitácora en `C:\Hojaldras Lily\ultimo-arranque.log`.
+  monitores y reparte por tamaño. El grande es del cliente (kiosko); los
+  chicos son las estaciones y van **de izquierda a derecha en el orden del
+  camino del pan**: producción, horno, empaque. Si hay menos monitores que
+  estaciones, las últimas comparten el de más a la derecha — así una PC con
+  dos monitores sigue abriendo todo. Después **empuja** cada ventana con
+  `SetWindowPos`, porque Chrome recuerda en el perfil la última posición e
+  ignora `--window-position`. Escape: `C:\Hojaldras Lily\pantallas.txt` con
+  `kiosko=1` / `produccion=2` / `horno=3` / `empaque=4` manda sobre el
+  automático. Cada arranque deja su bitácora en
+  `C:\Hojaldras Lily\ultimo-arranque.log`.
 - `scripts/abrir-caja-y-admin.bat` — POS y Admin, que ya no van en el
   arranque (el turno se abre desde el kiosko).
 - Los `.bat`/`.ps1` deben ser **ASCII puro**:
