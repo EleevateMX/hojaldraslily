@@ -1,6 +1,26 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import type { Plugin } from 'vite'
+
+// ---------------------------------------------------------------------------
+// OJO: este archivo es JavaScript, no TypeScript, y tiene que seguir siéndolo.
+//
+// A `vite.config.ts` lo carga **Node**, no Vite: Vite empaqueta la config pero
+// deja FUERA lo que viene de `node_modules`, y los paquetes del monorepo entran
+// por ahí (pnpm los enlaza). Node se topa entonces con un `.ts` dentro de
+// `node_modules` y se niega a leerlo -- ahí no aplica el quitado de tipos.
+//
+// Local pasaba y en CI no, que es lo peor que puede pasar: el build de las
+// nueve apps se rompió con
+//   ERR_UNKNOWN_FILE_EXTENSION: Unknown file extension ".ts"
+// y la vitrina se quedó publicada en la versión anterior sin avisar.
+//
+// La regla para este paquete:
+//   - `plugin.mjs`  -> lo carga Node (vite.config). **JavaScript.**
+//   - `registrar.ts`-> lo importa el código de las apps, que sí compila Vite.
+//     **TypeScript, y está bien.**
+//
+// Los tipos viven en JSDoc, así que `tsc` y el editor siguen ayudando.
+// ---------------------------------------------------------------------------
 
 /**
  * Hace instalable una app del monorepo.
@@ -30,36 +50,34 @@ import type { Plugin } from 'vite'
  *    qué.
  */
 
-export interface OpcionesDePwa {
-  /** Como aparece en la lista de apps instaladas. */
-  nombre: string
-  /** Lo que cabe debajo del icono. Máximo ~12 caracteres o se recorta. */
-  corto: string
-  descripcion: string
-  /**
-   * Icono dentro de `public/`, sin el `base`. Sobre superficies de carmín va
-   * el negativo (CLAUDE.md §2.5).
-   */
-  icono?: string
-  /** `portrait` en lo que se usa con el teléfono en la mano; `any` en las pantallas del local. */
-  orientacion?: 'any' | 'portrait' | 'landscape'
-  /** Para la tienda de apps de Android; solo tiene sentido en lo que ve el cliente. */
-  categorias?: string[]
-  /**
-   * Atajos del menú contextual del icono (mantener presionado en Android,
-   * clic derecho en el escritorio).
-   */
-  atajos?: { nombre: string; corto: string; descripcion: string; ruta: string }[]
-  /**
-   * Capturas para el diálogo de instalación de Android. Sin ellas el diálogo
-   * sale chico y sin explicar nada, así que solo valen la pena donde hay que
-   * convencer a alguien de instalar: la app del cliente.
-   */
-  capturas?: { archivo: string; ancho: number; alto: number; texto: string }[]
-}
+/**
+ * @typedef {Object} OpcionesDePwa
+ * @property {string} nombre
+ *   Como aparece en la lista de apps instaladas.
+ * @property {string} corto
+ *   Lo que cabe debajo del icono. Máximo ~12 caracteres o se recorta.
+ * @property {string} descripcion
+ * @property {string} [icono]
+ *   Icono dentro de `public/`, sin el `base`. Sobre superficies de carmín va
+ *   el negativo (CLAUDE.md §2.5).
+ * @property {'any'|'portrait'|'landscape'} [orientacion]
+ *   `portrait` en lo que se usa con el teléfono en la mano; `any` en las
+ *   pantallas del local.
+ * @property {string[]} [categorias]
+ *   Para la tienda de apps de Android; solo tiene sentido en lo que ve el
+ *   cliente.
+ * @property {{nombre: string, corto: string, descripcion: string, ruta: string}[]} [atajos]
+ *   Atajos del menú contextual del icono (mantener presionado en Android,
+ *   clic derecho en el escritorio).
+ * @property {{archivo: string, ancho: number, alto: number, texto: string}[]} [capturas]
+ *   Capturas para el diálogo de instalación de Android. Sin ellas el diálogo
+ *   sale chico y sin explicar nada, así que solo valen la pena donde hay que
+ *   convencer a alguien de instalar: la app del cliente.
+ */
 
 /** Los colores salen de `tokens.css`, no de una copia. */
-function colorDelToken(token: string, porOmision: string): string {
+/** @param {string} token @param {string} porOmision @returns {string} */
+function colorDelToken(token, porOmision) {
   const require = createRequire(import.meta.url)
   try {
     const ruta = require.resolve('@shake/brand/tokens.css')
@@ -73,7 +91,11 @@ function colorDelToken(token: string, porOmision: string): string {
   }
 }
 
-export function pwaDeLily(opciones: OpcionesDePwa): Plugin {
+/**
+ * @param {OpcionesDePwa} opciones
+ * @returns {import('vite').Plugin}
+ */
+export function pwaDeLily(opciones) {
   let base = '/'
   const icono = opciones.icono ?? 'icono-512.png'
 
@@ -88,7 +110,7 @@ export function pwaDeLily(opciones: OpcionesDePwa): Plugin {
 
     transformIndexHtml: {
       order: 'post',
-      handler(html) {
+      handler(/** @type {string} */ html) {
         const tema = colorDelToken('sa-green', '#D81B4A')
         // Se quitan los que hubiera escritos a mano: si no, quedan dos
         // `theme-color` y gana el primero -- que era el verde del otro
@@ -237,7 +259,8 @@ export function pwaDeLily(opciones: OpcionesDePwa): Plugin {
  *   se recarga a media venta** (CLAUDE.md §4): quien decide cuándo es seguro
  *   es la app, que sabe si hay un carrito abierto.
  */
-function serviceWorker(base: string, casco: string[]): string {
+/** @param {string} base @param {string[]} casco @returns {string} */
+function serviceWorker(base, casco) {
   return `// Generado por @shake/pwa. No editar a mano: se reescribe en cada build.
 const CASCO = ${JSON.stringify(casco)}
 const CACHE = 'lily-casco-' + ${JSON.stringify(hashDe(casco))}
@@ -315,7 +338,8 @@ self.addEventListener('fetch', (e) => {
 }
 
 /** Un nombre de caché que cambia cuando cambia el contenido del casco. */
-function hashDe(casco: string[]): string {
+/** @param {string[]} casco @returns {string} */
+function hashDe(casco) {
   let h = 0
   for (const s of casco) {
     for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0

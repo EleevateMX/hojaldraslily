@@ -1,7 +1,13 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "types": []
+    // `vite/client` por `import.meta.env.BASE_URL`, que es lo que usa el
+    // registro para saber bajo qué ruta se publicó la app.
+    "types": ["vite/client"],
+    // El plugin es .mjs a propósito (lo carga Node, no Vite). Se le revisan
+    // los tipos igual, desde el JSDoc.
+    "allowJs": true,
+    "checkJs": true
   },
   "include": ["src"]
 }

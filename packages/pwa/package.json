@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/plugin.ts",
+    ".": "./src/plugin.mjs",
     "./registrar": "./src/registrar.ts"
   },
   "devDependencies": {
