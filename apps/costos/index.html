@@ -350,7 +350,18 @@ function wireAuth(){
   document.getElementById("toLogin").onclick=()=>{document.getElementById("regForm").style.display="none";document.getElementById("loginForm").style.display="block";authMsg("","");};
   document.getElementById("li_pass").addEventListener("keydown",e=>{if(e.key==="Enter")doLogin();});
   document.getElementById("rg_pass2").addEventListener("keydown",e=>{if(e.key==="Enter")doRegister();});}
-function logout(){localStorage.removeItem(SESS);location.reload();}
+/* Salir de verdad: vencer el TOKEN, no solo olvidarlo aqui.
+   Antes esto solo borraba el localStorage y el token seguia vivo en el
+   servidor sus 12 horas completas: quien "salia" en una computadora prestada
+   dejaba ahi una sesion que podia cargar costos, margenes y proveedores.
+   Borrar la llave de tu bolsillo no cierra la puerta.
+   Si la llamada falla (sin internet), igual se sale de esta pantalla: es
+   mejor eso que dejar la sesion abierta esperando a que haya red. */
+async function logout(){
+  const t=tokenSesion();
+  if(t){try{await sb.rpc('fn_costos_salir',{p_token:t});}catch(e){}}
+  localStorage.removeItem(SESS);location.reload();
+}
 /* El token que entrego el login. Dura 12 horas; si vencio, guardar avisa y
    manda a entrar de nuevo en vez de fallar en silencio. */
 function tokenSesion(){const s=lsGet(SESS);return (s&&s.token)||null;}
@@ -1756,7 +1767,7 @@ function wireToolbar(){
     if(k===null)return;
     if(k!==String(state.params.clave)){alert("Clave incorrecta. No se borró nada.");return;}
     state=defaultState();persist();render();};
-  document.getElementById("logout").onclick=logout;}
+  document.getElementById("logout").onclick=()=>{logout();};}
 
 /* ---------------- ARRANQUE ---------------- */
 async function showApp(user){

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { crearOrden, cobrarOrden } from '@lily/supabase'
+import { crearOrden, cobrarOrden, cobrarOrdenMixto } from '@lily/supabase'
 import { imprimirTicket, type TicketData } from '@lily/ui'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
@@ -50,6 +50,11 @@ export function Cobro() {
   } = usePosStore()
 
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo')
+  // Pago mixto: "le doy $200 en efectivo y el resto con tarjeta". Se captura
+  // SOLO la parte en efectivo; el resto es lo que queda, para que no haya
+  // forma de teclear dos números que no sumen el total.
+  const [mixto, setMixto] = useState(false)
+  const [parteEfectivo, setParteEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
   const [recibido, setRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
@@ -65,8 +70,12 @@ export function Cobro() {
   const metodoSel = METODOS.find((m) => m.key === metodo)!
   const recibidoNum = parseFloat(recibido) || 0
   const cambio = recibidoNum - totalNeto
-  const listo =
-    metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
+  const efectivoMixto = Math.round((parseFloat(parteEfectivo) || 0) * 100) / 100
+  const tarjetaMixto = Math.round((totalNeto - efectivoMixto) * 100) / 100
+  const mixtoValido = mixto && efectivoMixto > 0 && tarjetaMixto > 0
+  const listo = mixto
+    ? mixtoValido
+    : metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
 
   async function confirmarPago() {
     if (procesando) return
@@ -91,15 +100,23 @@ export function Cobro() {
           personalizacion: l.personalizacion,
         })),
       )
-      // Cupón: canjear (marca usado + liga a la orden) antes de cobrar.
-      // Promo: registrar su aplicación (throttle + reporte).
-      // Cobro inmediato aprobado → el trigger descuenta inventario y manda a cocina.
-      // idempotencyKey: si esta llamada se reintenta (timeout de red, doble
-      // tap) la base devuelve el mismo pago en vez de crear uno duplicado.
-      await cobrarOrden(sb, orden.id, metodo, totalNeto, {
-        referencia: referencia.trim() || undefined,
-        idempotencyKey: crypto.randomUUID(),
-      })
+      // Cobro inmediato aprobado → el trigger descuenta inventario y manda a
+      // cocina. `idempotencyKey`: si esta llamada se reintenta (timeout de
+      // red, doble toque) la base devuelve el mismo pago en vez de crear uno
+      // duplicado.
+      if (mixto) {
+        await cobrarOrdenMixto(sb, orden.id, efectivoMixto, tarjetaMixto, {
+          metodoTarjeta: 'tarjeta',
+          referencia: referencia.trim() || undefined,
+          autorizadoPor: empleado?.id,
+          idempotencyKey: crypto.randomUUID(),
+        })
+      } else {
+        await cobrarOrden(sb, orden.id, metodo, totalNeto, {
+          referencia: referencia.trim() || undefined,
+          idempotencyKey: crypto.randomUUID(),
+        })
+      }
 
       const ticket: TicketData = {
         folio: orden.folio,
@@ -112,9 +129,11 @@ export function Cobro() {
           precioUnitario: precioDe(l.producto),
         })),
         descuento: descuentoTotal(),
-        metodoPago: metodoSel.label,
+        metodoPago: mixto
+          ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
+          : metodoSel.label,
         referenciaPago: referencia.trim() || null,
-        recibido: metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
+        recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
       }
       imprimirTicket(ticket)
 
@@ -154,14 +173,14 @@ export function Cobro() {
       <div className="flex-1 flex overflow-hidden">
         {/* Izquierda: método de pago */}
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="grid grid-cols-2 gap-4 mb-3">
             {METODOS.map((m) => (
               <button
                 key={m.key}
-                onClick={() => setMetodo(m.key)}
-                aria-pressed={metodo === m.key}
+                onClick={() => { setMetodo(m.key); setMixto(false) }}
+                aria-pressed={!mixto && metodo === m.key}
                 className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
-                  metodo === m.key
+                  !mixto && metodo === m.key
                     ? 'bg-sa-green text-white shadow-sa'
                     : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
                 }`}
@@ -172,8 +191,75 @@ export function Cobro() {
             ))}
           </div>
 
+          {/* Mixto. Va como una tercera opción chica y no como un tercer botón
+              grande a propósito: pasa seguido, pero no tanto como los otros
+              dos, y ocupando lo mismo le robaría el dedo a lo de siempre. */}
+          <button
+            onClick={() => { setMixto((v) => !v); setParteEfectivo('') }}
+            aria-pressed={mixto}
+            className={`w-full mb-5 py-3 rounded-sa font-display text-lg transition-all ${
+              mixto
+                ? 'bg-sa-green text-white shadow-sa'
+                : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
+            }`}
+          >
+            Una parte y otra parte
+          </button>
+
+          {/* Se captura SOLO el efectivo; el resto se calcula. Pedir los dos
+              números deja teclear dos que no sumen el total, y eso lo rechaza
+              el servidor con el cliente enfrente. */}
+          {mixto && totalNeto > 0 && (
+            <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
+              <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                ¿Cuánto da en efectivo?
+              </label>
+              <div className="relative mb-4">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sa-green-ink/40 text-xl">$</span>
+                <input
+                  type="number"
+                  value={parteEfectivo}
+                  onChange={(e) => setParteEfectivo(e.target.value)}
+                  placeholder="0.00"
+                  className="w-full pl-10 pr-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+                />
+              </div>
+              <div className="flex gap-2 mb-3">
+                {[100, 200, 500].filter((v) => v < totalNeto).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setParteEfectivo(String(v))}
+                    className="flex-1 py-2.5 bg-sa-cream-warm hover:bg-sa-banana rounded-full font-mono text-sm text-sa-green-ink transition-colors"
+                  >
+                    ${v}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setParteEfectivo((totalNeto / 2).toFixed(2))}
+                  className="flex-1 py-2.5 bg-sa-banana/40 hover:bg-sa-banana rounded-full font-mono text-sm text-sa-green-ink transition-colors"
+                >
+                  Mitad
+                </button>
+              </div>
+              {mixtoValido ? (
+                <div className="flex justify-between items-center bg-sa-mint/25 rounded-sa px-4 py-3 border border-sa-mint/50">
+                  <span className="font-mono text-sm uppercase tracking-wide text-sa-green-ink/70">
+                    Con la terminal
+                  </span>
+                  <span className="font-display text-2xl text-sa-green">{mxn(tarjetaMixto)}</span>
+                </div>
+              ) : (
+                <p className="font-mono text-xs text-sa-green-ink/50 leading-relaxed">
+                  {efectivoMixto >= totalNeto && efectivoMixto > 0
+                    ? 'Eso es todo el total: si paga completo en efectivo, use el botón de Efectivo.'
+                    : 'El resto se cobra con la terminal. Lo que se apunte aquí es lo que el corte va a esperar en el cajón.'}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Efectivo: recibido + cambio */}
-          {metodo === 'efectivo' && totalNeto > 0 && (
+          {!mixto && metodo === 'efectivo' && totalNeto > 0 && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
               <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
                 Recibido
@@ -215,7 +301,7 @@ export function Cobro() {
           )}
 
           {/* Referencia para Clip / Otro */}
-          {metodoSel.pideRef && (
+          {(mixto || metodoSel.pideRef) && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
               <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
                 Folio del voucher (opcional)

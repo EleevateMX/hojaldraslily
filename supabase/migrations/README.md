@@ -291,3 +291,63 @@ descuenta ni cobra nada**: lo único que mueve inventario y corte sigue siendo
 Es una **fecha** y no una bandera por la misma razón que
 `inventario_stock.contado_at`: un «sí» no dice cuándo, y un dato sin fecha no
 se puede creer.
+
+## Las tres de Shakeaholic que faltaban (20 de septiembre)
+
+| Versión | Qué hace |
+|---|---|
+| `20260920130000` | `fn_horno_en_vivo` devuelve la foto del sabor |
+| `20260920140000` | Pago mixto: `pago_partes`, `vw_pagos_por_metodo`, `fn_cobrar_orden_mixto` |
+| `20260920150000` | `fn_imprimir_prueba_staff` y `fn_costos_salir` |
+
+### El pago mixto NO son dos pagos
+
+La tentación es insertar dos renglones en `pagos`. No se puede, y está bien
+que no se pueda: `uq_pagos_un_aprobado_por_orden` —único por orden donde
+`estado = 'aprobado'`— **es lo que hace imposible el doble cobro**. Es la red
+que atrapó el doble cobro en las primeras ventas reales del motor original.
+Aflojarla para caber aquí sería cambiar un problema de contabilidad por uno de
+dinero.
+
+Así que: **un solo pago aprobado** por el total, y el desglose en
+`pago_partes`. El motor original sí lo hizo con dos pagos (uno aprobado y otro
+pendiente con `proveedor = 'mixto_efectivo'`, que alguien aprobaba después);
+su propio código trae un `delete` de los que quedaban colgados y un comentario
+sobre "efectivos fantasma". No se trajo ese camino.
+
+**Y el desglose tiene que llegar al corte.** `vw_corte_resumen` calcula el
+efectivo esperado sumando los pagos de método `efectivo`, y es contra ese
+número que la cajera cuenta el cajón. Si la parte en efectivo de un mixto no
+apareciera ahí, el corte pediría de menos y el día cerraría con una diferencia
+que nadie puede explicar. Por eso la vista ahora lee `vw_pagos_por_metodo`.
+
+Ojo al recrear `vw_corte_resumen`: `create or replace view` **borra las
+reloptions**, así que hay que volver a declarar `security_invoker = true` o la
+vista queda insegura en silencio.
+
+Comprobado contra la base con rollback: $220 partidos en $88 + $132 dejan UN
+pago aprobado, el corte sube $88 de efectivo (no $220) y el efectivo esperado
+del cajón sube exactamente $88. El doble cobro sigue rebotando.
+
+### La prueba de impresión no tocó el agente
+
+`fn_imprimir_prueba` ya existía pero pide el **token del agente**, que solo
+está en la PC de la tienda. `fn_imprimir_prueba_staff` hace lo mismo por id de
+impresora, autorizado por ser personal, así que gerencia puede probar una
+impresora desde el teléfono.
+
+Usa el **mismo payload** `prueba: true` que el agente ya sabe dibujar desde su
+versión 1.0. El motor original inventó un `diagnostico: true` y le quedó un
+`raise exception` avisando que el agente de la tienda era viejo y no sabía
+imprimirlo; reusar el payload que ya existe se salta esa conversación entera.
+
+### Salir de Costeos vence el token, no lo borra
+
+El botón "Salir" existía y **solo borraba el localStorage**: el token seguía
+vivo en el servidor sus 12 horas. Quien "salía" en una computadora prestada
+dejaba ahí una sesión que podía cargar costos, márgenes y proveedores — justo
+lo que `20260826220000` cerró para que no lo viera cualquiera con la llave.
+
+Se vence (`token_expira = now()`) y no se borra, para que quede el rastro de
+que ese usuario tuvo una sesión. Un token vencido ya no pasa
+`fn_costos_usuario_del_token`, que es por donde entra todo lo demás.

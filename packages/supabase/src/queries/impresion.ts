@@ -87,6 +87,21 @@ export async function activarImpresora(sb: ClienteLily, id: string, activa: bool
   await rpc(sb, 'fn_activar_impresora', { p_id: id, p_activa: activa })
 }
 
+/**
+ * Manda una etiqueta de prueba a una impresora, desde Admin.
+ *
+ * Ya existía `fn_imprimir_prueba`, pero pide el **token del agente**, que solo
+ * está en la PC de la tienda: para saber si una impresora responde había que
+ * ir al local. Gerencia, desde el teléfono, no podía.
+ *
+ * Si sale papel, la cadena completa sirve —base, cola, agente, red e
+ * impresora—. Si el trabajo se marca impreso y no sale papel, el problema es
+ * físico: papel, tapa o sensor.
+ */
+export async function mandarPruebaDeImpresion(sb: ClienteLily, impresoraId: string): Promise<void> {
+  await rpc(sb, 'fn_imprimir_prueba_staff', { p_impresora_id: impresoraId })
+}
+
 /** Rota el token de una impresora (sospecha de compromiso, o se perdió printers.config.json). Devuelve el nuevo token UNA vez. */
 export async function rotarTokenImpresora(sb: ClienteLily, id: string): Promise<string> {
   return rpc<string>(sb, 'fn_rotar_token_impresora', { p_id: id })

@@ -8,7 +8,7 @@ consultar la base real (`fzkdgqqvfkogmxdgqsxj`), no de suponer.
 ## En una línea
 
 **El sistema está completo y funcionando; lo que falta para abrir no es
-código.** Nueve apps compilan, 175 migraciones aplicadas, el indicador de
+código.** Nueve apps compilan, 176 migraciones aplicadas, el indicador de
 salud en ceros, y una venta ya corrió de punta a punta contra esta base.
 
 ---
@@ -44,7 +44,7 @@ abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 | Renglones de existencia | **112** — ninguno invisible |
 | Recetas | 55 |
 | Empleados | 2 (gerencia y caja — son los de demostración) |
-| Migraciones aplicadas | **175**, y las 175 tienen su archivo en el repo |
+| Migraciones aplicadas | **176**, y las 176 tienen su archivo en el repo |
 | Edge Functions | 7 desplegadas (6 de Clip + `staff-login`) |
 
 **Salud del sistema, ahora mismo:** pagos pendientes 0 · pagos desconocidos 0 ·

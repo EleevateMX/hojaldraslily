@@ -113,6 +113,44 @@ export async function cobrarOrden(
   })
 }
 
+/**
+ * Cobra una orden repartida entre efectivo y tarjeta.
+ *
+ * «Le doy $200 en efectivo y el resto con tarjeta» pasa todos los días en un
+ * mostrador. Hasta hoy había que mentir —cobrar todo de un lado— y el corte
+ * mostraba efectivo que no estaba en el cajón, o al revés.
+ *
+ * Queda **un solo pago aprobado** con su desglose, no dos pagos: el índice
+ * `uq_pagos_un_aprobado_por_orden` es lo que hace imposible el doble cobro y
+ * no se afloja para caber aquí. El corte lee el desglose, así que la parte en
+ * efectivo sí cuenta como efectivo y el cajón cuadra.
+ *
+ * Las dos partes tienen que sumar el total que calculó el servidor; si no,
+ * rebota, igual que un cobro normal con el monto cambiado.
+ */
+export async function cobrarOrdenMixto(
+  sb: ClienteLily,
+  ordenId: string,
+  efectivo: number,
+  tarjeta: number,
+  opts: {
+    metodoTarjeta?: 'tarjeta' | 'clip'
+    referencia?: string
+    autorizadoPor?: string
+    idempotencyKey?: string
+  } = {},
+): Promise<Pago> {
+  return rpc<Pago>(sb, 'fn_cobrar_orden_mixto', {
+    p_orden_id: ordenId,
+    p_efectivo: efectivo,
+    p_tarjeta: tarjeta,
+    p_metodo_tarjeta: opts.metodoTarjeta ?? 'tarjeta',
+    p_referencia: opts.referencia ?? null,
+    p_autorizado_por: opts.autorizadoPor ?? null,
+    p_idempotency_key: opts.idempotencyKey ?? null,
+  })
+}
+
 export async function cancelarOrden(sb: ClienteLily, ordenId: string): Promise<void> {
   const { error } = await sb.from('ordenes').update({ estado: 'cancelada' }).eq('id', ordenId)
   if (error) throw error

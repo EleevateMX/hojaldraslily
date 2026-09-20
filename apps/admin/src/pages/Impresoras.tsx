@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   listarImpresoras, crearImpresora, actualizarImpresora, activarImpresora, rotarTokenImpresora, listarCocinasParaImpresoras,
+  mandarPruebaDeImpresion,
   listarTrabajosImpresion, suscribirTrabajosImpresion, reimprimirTrabajo,
   listarAlmacenes, type ImpresoraAdmin,
 } from '@lily/supabase'
@@ -192,6 +193,29 @@ export default function Impresoras() {
     }
   }
 
+  /**
+   * Probar una impresora sin ir a la tienda.
+   *
+   * Es la pregunta de «¿la de cocina sigue viva?» contestada desde el
+   * teléfono. Ojo con lo que prueba y lo que no: si sale papel, la cadena
+   * entera sirve. Si el trabajo se marca impreso y NO sale papel, el problema
+   * es físico —papel, tapa o sensor—, no del sistema.
+   */
+  async function probarImpresora(imp: ImpresoraAdmin) {
+    setError(null); setOk(null)
+    try {
+      await mandarPruebaDeImpresion(sb, imp.id)
+      setOk(
+        `Etiqueta de prueba encolada para ${imp.nombre}. Si en un momento no sale ` +
+          'papel, revisa que el agente esté abierto en la PC y que la impresora ' +
+          'tenga papel y la tapa cerrada.',
+      )
+      await cargar()
+    } catch (e) {
+      setError(mensajeDeError(e))
+    }
+  }
+
   async function reimprimir(trabajo: TrabajoImpresion) {
     setError(null); setOk(null)
     const motivo = window.prompt('Motivo de la reimpresión (opcional):') ?? undefined
@@ -368,6 +392,17 @@ export default function Impresoras() {
                     <div className="inline-flex gap-2">
                       <button className={cx.btnPrimary} onClick={() => void rotarToken(imp)}>
                         Conectar agente
+                      </button>
+                      {/* Probar va junto a Editar y no escondido en un menu:
+                          es lo primero que alguien quiere tocar cuando dice
+                          "no esta saliendo el papel". */}
+                      <button
+                        className={cx.btnSec}
+                        onClick={() => void probarImpresora(imp)}
+                        disabled={!imp.activa}
+                        title="Manda una etiqueta de prueba a esta impresora"
+                      >
+                        Probar
                       </button>
                       <button className={cx.btnSec} onClick={() => editar(imp)}>Editar</button>
                       <button className={cx.btnSec} onClick={() => void toggleActiva(imp)}>{imp.activa ? 'Desactivar' : 'Activar'}</button>

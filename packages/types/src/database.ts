@@ -1953,6 +1953,48 @@ export type Database = {
         }
         Relationships: []
       }
+      pago_partes: {
+        Row: {
+          created_at: string
+          id: string
+          metodo: Database["public"]["Enums"]["metodo_pago"]
+          monto: number
+          orden: number
+          pago_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          metodo: Database["public"]["Enums"]["metodo_pago"]
+          monto: number
+          orden?: number
+          pago_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          metodo?: Database["public"]["Enums"]["metodo_pago"]
+          monto?: number
+          orden?: number
+          pago_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pago_partes_pago_id_fkey"
+            columns: ["pago_id"]
+            isOneToOne: false
+            referencedRelation: "pagos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pago_partes_pago_id_fkey"
+            columns: ["pago_id"]
+            isOneToOne: false
+            referencedRelation: "vw_pagos_por_metodo"
+            referencedColumns: ["pago_id"]
+          },
+        ]
+      }
       pagos: {
         Row: {
           autorizado_por: string | null
@@ -3197,6 +3239,13 @@ export type Database = {
             referencedRelation: "pagos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "venta_confirmaciones_pago_id_fkey"
+            columns: ["pago_id"]
+            isOneToOne: false
+            referencedRelation: "vw_pagos_por_metodo"
+            referencedColumns: ["pago_id"]
+          },
         ]
       }
       ventas: {
@@ -3317,6 +3366,24 @@ export type Database = {
           precio_sugerido: number | null
         }
         Relationships: []
+      }
+      vw_pagos_por_metodo: {
+        Row: {
+          estado: Database["public"]["Enums"]["estado_pago"] | null
+          metodo: Database["public"]["Enums"]["metodo_pago"] | null
+          monto: number | null
+          orden_id: string | null
+          pago_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_orden_id_fkey"
+            columns: ["orden_id"]
+            isOneToOne: false
+            referencedRelation: "ordenes"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_producto_extras: {
         Row: {
@@ -3702,6 +3769,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      fn_cobrar_orden_mixto: {
+        Args: {
+          p_autorizado_por?: string
+          p_efectivo: number
+          p_idempotency_key?: string
+          p_metodo_tarjeta?: Database["public"]["Enums"]["metodo_pago"]
+          p_orden_id: string
+          p_referencia?: string
+          p_tarjeta: number
+        }
+        Returns: {
+          autorizado_por: string | null
+          clip_payload: Json | null
+          clip_payment_id: string | null
+          clip_terminal_id: string | null
+          created_at: string
+          estado: Database["public"]["Enums"]["estado_pago"]
+          estado_transaccion: Database["public"]["Enums"]["estado_transaccion_pago"]
+          id: string
+          idempotency_key: string | null
+          metodo: Database["public"]["Enums"]["metodo_pago"]
+          monto: number
+          orden_id: string
+          proveedor: string
+          proveedor_error: string | null
+          proveedor_payment_id: string | null
+          referencia: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "pagos"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fn_cocina_de_producto: {
         Args: { p_producto_id: string }
         Returns: string
@@ -3761,6 +3864,7 @@ export type Database = {
         Args: { p_contrasena: string; p_usuario: string }
         Returns: string
       }
+      fn_costos_salir: { Args: { p_token: string }; Returns: undefined }
       fn_costos_usuario_del_token: {
         Args: { p_token: string }
         Returns: string
@@ -4237,6 +4341,39 @@ export type Database = {
       fn_imprimir_liberar_vencidos: { Args: never; Returns: number }
       fn_imprimir_prueba: {
         Args: { p_token: string }
+        Returns: {
+          claim_expires_at: string | null
+          claimed_by: string | null
+          copia_de: string | null
+          created_at: string
+          error_ultimo: string | null
+          estacion_id: string | null
+          estado: Database["public"]["Enums"]["estado_trabajo_impresion"]
+          failed_at: string | null
+          id: string
+          idempotency_key: string | null
+          intentos: number
+          max_intentos: number
+          next_retry_at: string | null
+          numero_copia: number
+          orden_id: string | null
+          payload: Json
+          pedido_id: string | null
+          printed_at: string | null
+          printer_id: string | null
+          processing_at: string | null
+          queued_at: string
+          tipo_documento: Database["public"]["Enums"]["tipo_documento_impresion"]
+        }
+        SetofOptions: {
+          from: "*"
+          to: "trabajos_impresion"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_imprimir_prueba_staff: {
+        Args: { p_impresora_id: string }
         Returns: {
           claim_expires_at: string | null
           claimed_by: string | null

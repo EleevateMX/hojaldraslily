@@ -46,8 +46,8 @@ Lo que falta para abrir, todo fuera del código:
 
 **Cómo va todo, con números contra la base:** `docs/estado-del-pos.md`. Ahí
 está también la comparación tabla por tabla contra Shakeaholic — qué no se
-trajo y por qué, y las tres cosas que sí valdría la pena traer (pago mixto,
-diagnóstico de impresión y cerrar sesión en Costeos).
+trajo y por qué. **Las tres que faltaban ya están**: pago mixto, prueba de
+impresión desde Admin y cerrar sesión de verdad en Costeos (§2.8).
 
 **La vitrina para enseñar el sistema** vive en
 <https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
@@ -388,6 +388,9 @@ empaquetador y se desvían solas:
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
 | Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Empaque** al entregarlo (es lo único que lo descuenta) |
+| Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |
+| Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
+| Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
 | Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia |
@@ -612,6 +615,43 @@ con datos no se deshace. Están ahí, sin nadie que las lea.
 imprimía un bloque `SHAKE AHOLIC REWARDS` con mancuernas y saldo al pie de
 cada ticket. Nunca se vio porque el campo venía vacío, pero el día que
 alguien identificara a un cliente habría salido en papel, en el mostrador.
+
+### 2.8 Las tres que sí se trajeron del otro sistema
+
+**Pago mixto** — «le doy $200 en efectivo y el resto con tarjeta». Pasa todos
+los días y hasta hoy había que mentir: cobrar todo de un lado dejaba el corte
+pidiendo efectivo que no estaba en el cajón, o al revés.
+
+Queda **un solo pago aprobado** con su desglose en `pago_partes`, no dos
+pagos. El índice `uq_pagos_un_aprobado_por_orden` es lo que hace imposible el
+doble cobro y no se afloja para caber aquí. *(El motor original sí lo hizo con
+dos pagos —uno aprobado y otro pendiente que alguien aprobaba después— y su
+propio código trae un `delete` de los que quedaban colgados, con un comentario
+sobre «efectivos fantasma». No se trajo ese camino.)*
+
+Y el desglose **tiene que llegar al corte**: `vw_corte_resumen` saca el
+efectivo esperado sumando los pagos de método `efectivo`, y contra ese número
+se cuenta el cajón. Ahora lee `vw_pagos_por_metodo`, que da las partes si las
+hay y el pago entero si no.
+
+**Prueba de impresión desde Admin** (`fn_imprimir_prueba_staff`) — ya existía
+`fn_imprimir_prueba`, pero pide el **token del agente**, que solo está en la
+PC de la tienda: para saber si una impresora responde había que ir al local.
+Ahora hay un botón **Probar** en Admin → Impresoras.
+
+**El agente no se tocó**: usa el mismo payload `prueba: true` que ya sabe
+dibujar. El otro sistema inventó un `diagnostico: true` y le quedó un
+`raise exception` avisando que el agente de la tienda era viejo y no sabía
+imprimirlo — reusar el payload que ya existe se salta esa conversación.
+
+**Cerrar sesión en Costeos** (`fn_costos_salir`) — el botón «Salir» existía y
+**solo borraba el localStorage**: el token seguía vivo en el servidor sus 12
+horas completas. Quien «salía» en una computadora prestada dejaba ahí una
+sesión que podía cargar costos, márgenes y proveedores. Borrar la llave de tu
+bolsillo no cierra la puerta.
+
+Ahora vence el token. **No lo borra**: queda el rastro de que ese usuario tuvo
+una sesión.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 
