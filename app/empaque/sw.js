@@ -1,4 +1,4 @@
-// Generado por @shake/pwa. No editar a mano: se reescribe en cada build.
+// Generado por @lily/pwa. No editar a mano: se reescribe en cada build.
 const CASCO = ["/hojaldraslily/app/empaque/","/hojaldraslily/app/empaque/assets/index-CqgkyZeX.css","/hojaldraslily/app/empaque/assets/index-DC9q5NU4.js"]
 const CACHE = 'lily-casco-' + "c0uqoq"
 
