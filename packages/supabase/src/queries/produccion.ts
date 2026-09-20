@@ -1,4 +1,4 @@
-import type { ShakeClient } from '../client'
+import type { ClienteLily } from '../client'
 
 /**
  * Órdenes de producción y encargos.
@@ -77,7 +77,7 @@ interface FilaOrden {
  * la vista de gerencia, donde sí interesa lo que ya salió.
  */
 export async function listarOrdenesDeProduccion(
-  sb: ShakeClient,
+  sb: ClienteLily,
   incluirTerminadas = false,
 ): Promise<OrdenDeProduccion[]> {
   let q = sb
@@ -128,7 +128,7 @@ export async function listarOrdenesDeProduccion(
  * mostrador.
  */
 export async function mandarAProducir(
-  sb: ShakeClient,
+  sb: ClienteLily,
   items: { sabor: string; moldes: number; molde?: Molde }[],
   nota?: string,
 ): Promise<string> {
@@ -148,7 +148,7 @@ export async function mandarAProducir(
  * Regresa cuántos cuadros quedan libres de ese sabor.
  */
 export async function avanzarProduccion(
-  sb: ShakeClient,
+  sb: ClienteLily,
   itemId: string,
   moldes: number,
 ): Promise<number> {
@@ -227,7 +227,7 @@ interface FilaEncargo {
  * cancelados, para consultar.
  */
 export async function listarEncargos(
-  sb: ShakeClient,
+  sb: ClienteLily,
   incluirCerrados = false,
 ): Promise<Encargo[]> {
   let q = sb
@@ -290,7 +290,7 @@ export interface NuevoEncargo {
 }
 
 /** Aparta. NO descuenta del inventario: eso pasa al cobrar. */
-export async function crearEncargo(sb: ShakeClient, e: NuevoEncargo): Promise<string> {
+export async function crearEncargo(sb: ClienteLily, e: NuevoEncargo): Promise<string> {
   const { data, error } = await sb.rpc('fn_encargo_crear', {
     p_cliente: e.cliente,
     p_items: e.items,
@@ -316,7 +316,7 @@ export async function crearEncargo(sb: ShakeClient, e: NuevoEncargo): Promise<st
  * empacado-y-desempacado.
  */
 export async function marcarEmpacado(
-  sb: ShakeClient,
+  sb: ClienteLily,
   encargoId: string,
   empacado = true,
 ): Promise<void> {
@@ -409,7 +409,7 @@ export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
  * Regresa el total cobrado, que se recalcula con el precio de hoy.
  */
 export async function cobrarEncargo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   encargoId: string,
   metodo: 'efectivo' | 'tarjeta' = 'efectivo',
 ): Promise<number> {
@@ -422,7 +422,7 @@ export async function cobrarEncargo(
 }
 
 export async function cancelarEncargo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   encargoId: string,
   motivo?: string,
 ): Promise<void> {
@@ -458,7 +458,7 @@ export interface OrdenConTiempo {
  * solas en vez de quedarse con una estimación vieja congelada.
  */
 export async function listarOrdenesConTiempo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   incluirTerminadas = false,
 ): Promise<OrdenConTiempo[]> {
   const { data, error } = await sb.rpc('fn_ordenes_de_produccion', {
@@ -537,7 +537,7 @@ export type CanalDeVenta = 'pos' | 'rappi'
  * Solo se guardan las excepciones: un producto sin fila aquí vale su precio
  * de mostrador en todos los canales.
  */
-export async function listarPreciosDeCanal(sb: ShakeClient): Promise<PreciosDeCanal> {
+export async function listarPreciosDeCanal(sb: ClienteLily): Promise<PreciosDeCanal> {
   const { data, error } = await sb
     .from('precios_canal')
     .select('producto_id, canal, precio, disponible')
@@ -594,7 +594,7 @@ export function seVendeEnCanal(
 
 /** Guarda (o quita) el precio de un producto en un canal. */
 export async function guardarPrecioDeCanal(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
   canal: CanalDeVenta,
   precio: number | null,
@@ -694,7 +694,7 @@ export interface HornoEnVivo {
  * tres, porque si cada una calculara lo suyo terminarían diciendo cosas
  * distintas del mismo horno.
  */
-export async function hornoEnVivo(sb: ShakeClient): Promise<HornoEnVivo> {
+export async function hornoEnVivo(sb: ClienteLily): Promise<HornoEnVivo> {
   const { data, error } = await sb.rpc('fn_horno_en_vivo')
   if (error) throw error
   return data as unknown as HornoEnVivo
@@ -708,7 +708,7 @@ export async function hornoEnVivo(sb: ShakeClient): Promise<HornoEnVivo> {
  * contado y no el ajuste.
  */
 export async function armarMoldes(
-  sb: ShakeClient,
+  sb: ClienteLily,
   itemId: string,
   moldes: number,
 ): Promise<{ armados: number; pedidos: number }> {
@@ -722,7 +722,7 @@ export async function armarMoldes(
 
 /** Al horno. Devuelve a qué hora sale, para arrancar el reloj. */
 export async function meterAlHorno(
-  sb: ShakeClient,
+  sb: ClienteLily,
   itemId: string,
   moldes = 1,
 ): Promise<{ en_horno: number; minutos: number; listo_en: string }> {
@@ -742,7 +742,7 @@ export async function meterAlHorno(
  * ocupadas y guantes puestos.
  */
 export async function sacarDelHorno(
-  sb: ShakeClient,
+  sb: ClienteLily,
   itemId: string,
   moldes?: number,
 ): Promise<{ sacados: number; sabor: string; cuadros: number; libres: number }> {

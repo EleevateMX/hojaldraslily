@@ -7,7 +7,7 @@ import { CorteCaja } from './pages/CorteCaja'
 import { PedidosPendientes } from './pages/PedidosPendientes'
 import { Encargos } from './pages/Encargos'
 import { usePosStore } from './store/posStore'
-import { registrarPwa } from '@shake/pwa/registrar'
+import { registrarPwa } from '@lily/pwa/registrar'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const empleado = usePosStore((s) => s.empleado)

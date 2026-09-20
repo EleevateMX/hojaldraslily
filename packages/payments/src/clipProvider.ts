@@ -1,5 +1,5 @@
-import type { ShakeClient } from '@shake/supabase'
-import type { EstadoTransaccionPago } from '@shake/types'
+import type { ClienteLily } from '@lily/supabase'
+import type { EstadoTransaccionPago } from '@lily/types'
 import type {
   PaymentProvider,
   CrearPagoParams,
@@ -23,9 +23,9 @@ import type {
  */
 export class ClipPaymentProvider implements PaymentProvider {
   readonly nombre = 'clip'
-  private readonly sb: ShakeClient
+  private readonly sb: ClienteLily
 
-  constructor(sb: ShakeClient) {
+  constructor(sb: ClienteLily) {
     this.sb = sb
   }
 

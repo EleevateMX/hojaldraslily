@@ -1,9 +1,9 @@
-import type { VentaDiaria, ProductoVendido, Orden } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { VentaDiaria, ProductoVendido, Orden } from '@lily/types'
+import type { ClienteLily } from '../client'
 
 /** Ventas por día (vw_ventas_diarias), últimos N días. */
 export async function ventasDiarias(
-  sb: ShakeClient,
+  sb: ClienteLily,
   diasAtras = 30,
   sucursalId?: string,
 ): Promise<VentaDiaria[]> {
@@ -16,7 +16,7 @@ export async function ventasDiarias(
 }
 
 export async function productosMasVendidos(
-  sb: ShakeClient,
+  sb: ClienteLily,
   limite = 10,
 ): Promise<ProductoVendido[]> {
   const { data, error } = await sb.from('vw_productos_mas_vendidos').select('*').limit(limite)
@@ -26,7 +26,7 @@ export async function productosMasVendidos(
 
 /** Órdenes pagadas recientes de una sucursal (para dashboard/admin). */
 export async function ordenesRecientes(
-  sb: ShakeClient,
+  sb: ClienteLily,
   sucursalId: string,
   horas = 8,
 ): Promise<Orden[]> {

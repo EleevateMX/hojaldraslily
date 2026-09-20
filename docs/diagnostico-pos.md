@@ -84,8 +84,8 @@ apunte al esquema desplegado (el de costos).** Justificación:
 3. El desajuste vive en una sola capa (`@pos/supabase`), así que el costo
    de reescritura está acotado y no toca las UIs.
 
-En vez de mantener dos paquetes `@pos/supabase` (demo) y `@shake/supabase`
-(nuestro), las apps migradas importarán de **`@shake/supabase`**, que ya
+En vez de mantener dos paquetes `@pos/supabase` (demo) y `@lily/supabase`
+(nuestro), las apps migradas importarán de **`@lily/supabase`**, que ya
 tiene `crearOrden`, `cobrarOrden`, `listarPedidosCocina`,
 `suscribirPedidosCocina`, `abrirCaja`, `cerrarCaja`, `resumenCorte`. Se le
 agregarán las funciones que falten (menú admin, clientes, reportes de
@@ -118,7 +118,7 @@ ventas) conforme se migre cada app.
 
 - **npm vs pnpm**: el demo usa npm workspaces + Turborepo; nuestro monorepo
   usa pnpm. Al integrar las apps hay que unificar (recomendado: pnpm, ya
-  configurado) y renombrar scopes `@pos/*` → `@shake/*`.
+  configurado) y renombrar scopes `@pos/*` → `@lily/*`.
 - **Enum `metodo_pago`**: agregar valores a un enum en Postgres es aditivo
   y seguro, pero quitar/renombrar no. Cualquier cambio, aditivo.
 - **`orden_items.cocina_id` vs `cocina_slug`**: no reintroducir `cocina_id`;

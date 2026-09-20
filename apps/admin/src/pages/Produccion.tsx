@@ -12,8 +12,8 @@ import {
   type ExistenciaPorSabor,
   type PaqueteDelDia,
   type HornoEnVivo,
-} from '@shake/supabase'
-import { mensajeDeError, urlDeFoto, enMoldes } from '@shake/utils'
+} from '@lily/supabase'
+import { mensajeDeError, urlDeFoto, enMoldes } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**

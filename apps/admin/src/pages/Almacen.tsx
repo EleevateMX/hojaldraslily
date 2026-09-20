@@ -9,8 +9,8 @@ import {
   partirNombreDeVenta,
   type Encargo,
   type PaqueteDelDia,
-} from '@shake/supabase'
-import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
+} from '@lily/supabase'
+import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**

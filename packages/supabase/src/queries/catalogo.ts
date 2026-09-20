@@ -11,12 +11,12 @@ import type {
   Receta,
   RecetaInsert,
   ComboVista,
-} from '@shake/types'
-import type { ShakeClient } from '../client'
+} from '@lily/types'
+import type { ClienteLily } from '../client'
 
 // ------------------------------ insumos ------------------------------
 
-export async function listarInsumos(sb: ShakeClient): Promise<Insumo[]> {
+export async function listarInsumos(sb: ClienteLily): Promise<Insumo[]> {
   const { data, error } = await sb
     .from('insumos')
     .select('*')
@@ -27,14 +27,14 @@ export async function listarInsumos(sb: ShakeClient): Promise<Insumo[]> {
   return data
 }
 
-export async function crearInsumo(sb: ShakeClient, insumo: InsumoInsert): Promise<Insumo> {
+export async function crearInsumo(sb: ClienteLily, insumo: InsumoInsert): Promise<Insumo> {
   const { data, error } = await sb.from('insumos').insert(insumo).select().single()
   if (error) throw error
   return data
 }
 
 export async function actualizarInsumo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   id: string,
   cambios: InsumoUpdate,
 ): Promise<Insumo> {
@@ -44,12 +44,12 @@ export async function actualizarInsumo(
 }
 
 /** Baja lógica: nunca se borra un insumo (histórico de recetas/kardex). */
-export async function desactivarInsumo(sb: ShakeClient, id: string): Promise<void> {
+export async function desactivarInsumo(sb: ClienteLily, id: string): Promise<void> {
   const { error } = await sb.from('insumos').update({ activo: false }).eq('id', id)
   if (error) throw error
 }
 
-export async function listarInsumoCategorias(sb: ShakeClient): Promise<InsumoCategoria[]> {
+export async function listarInsumoCategorias(sb: ClienteLily): Promise<InsumoCategoria[]> {
   const { data, error } = await sb.from('insumo_categorias').select('*').eq('activa', true).order('nombre')
   if (error) throw error
   return data
@@ -57,20 +57,20 @@ export async function listarInsumoCategorias(sb: ShakeClient): Promise<InsumoCat
 
 // ------------------------------ productos ----------------------------
 
-export async function listarProductos(sb: ShakeClient): Promise<Producto[]> {
+export async function listarProductos(sb: ClienteLily): Promise<Producto[]> {
   const { data, error } = await sb.from('productos').select('*').eq('activo', true).order('nombre')
   if (error) throw error
   return data
 }
 
-export async function crearProducto(sb: ShakeClient, producto: ProductoInsert): Promise<Producto> {
+export async function crearProducto(sb: ClienteLily, producto: ProductoInsert): Promise<Producto> {
   const { data, error } = await sb.from('productos').insert(producto).select().single()
   if (error) throw error
   return data
 }
 
 export async function actualizarProducto(
-  sb: ShakeClient,
+  sb: ClienteLily,
   id: string,
   cambios: ProductoUpdate,
 ): Promise<Producto> {
@@ -86,7 +86,7 @@ export async function actualizarProducto(
  * navegador no siga mostrando la anterior por caché.
  */
 export async function subirFotoProducto(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
   archivo: File,
 ): Promise<string> {
@@ -105,25 +105,25 @@ export async function subirFotoProducto(
 }
 
 /** Quita la foto del producto (deja el emoji por defecto del catálogo). */
-export async function quitarFotoProducto(sb: ShakeClient, productoId: string): Promise<void> {
+export async function quitarFotoProducto(sb: ClienteLily, productoId: string): Promise<void> {
   const { error } = await sb.from('productos').update({ imagen_url: null }).eq('id', productoId)
   if (error) throw error
 }
 
-export async function listarCategorias(sb: ShakeClient): Promise<Categoria[]> {
+export async function listarCategorias(sb: ClienteLily): Promise<Categoria[]> {
   const { data, error } = await sb.from('categorias').select('*').eq('activa', true).order('orden').order('nombre')
   if (error) throw error
   return data
 }
 
 /** Baja lógica de producto: no se borra (histórico de órdenes/recetas). */
-export async function desactivarProducto(sb: ShakeClient, id: string): Promise<void> {
+export async function desactivarProducto(sb: ClienteLily, id: string): Promise<void> {
   const { error } = await sb.from('productos').update({ activo: false }).eq('id', id)
   if (error) throw error
 }
 
 export async function crearCategoria(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cat: { nombre: string; cocina_id: string },
 ): Promise<Categoria> {
   const { data, error } = await sb.from('categorias').insert(cat).select().single()
@@ -133,7 +133,7 @@ export async function crearCategoria(
 
 /** Renombrar, cambiar de estación o reordenar una categoría. */
 export async function actualizarCategoria(
-  sb: ShakeClient,
+  sb: ClienteLily,
   id: string,
   cambios: { nombre?: string; cocina_id?: string; orden?: number },
 ): Promise<void> {
@@ -141,7 +141,7 @@ export async function actualizarCategoria(
   if (error) throw error
 }
 
-export async function listarCocinas(sb: ShakeClient): Promise<Cocina[]> {
+export async function listarCocinas(sb: ClienteLily): Promise<Cocina[]> {
   const { data, error } = await sb.from('cocinas').select('*').order('nombre')
   if (error) throw error
   return data
@@ -183,7 +183,7 @@ export function menuApagado(p: ProductoVenta): boolean {
  * Excluye los extras: no son tarjetas del catálogo, se ofrecen solo
  * dentro del producto al que pertenecen (ver `listarExtrasDeProducto`).
  */
-export async function listarProductosParaVenta(sb: ShakeClient): Promise<ProductoVenta[]> {
+export async function listarProductosParaVenta(sb: ClienteLily): Promise<ProductoVenta[]> {
   const { data, error } = await sb
     .from('productos')
     .select('*, categorias(id, nombre, orden, activa, cocinas(id, nombre, slug))')
@@ -199,7 +199,7 @@ export async function listarProductosParaVenta(sb: ShakeClient): Promise<Product
 
 /** Catálogo activo de una estación de cocina ('alimentos' | 'bebidas'). */
 export async function listarProductosPorCocina(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cocinaSlug: string,
 ): Promise<ProductoVenta[]> {
   const { data, error } = await sb
@@ -214,7 +214,7 @@ export async function listarProductosPorCocina(
 
 // ------------------------------ recetas ------------------------------
 
-export async function obtenerReceta(sb: ShakeClient, productoId: string): Promise<Receta[]> {
+export async function obtenerReceta(sb: ClienteLily, productoId: string): Promise<Receta[]> {
   const { data, error } = await sb.from('recetas').select('*').eq('producto_id', productoId)
   if (error) throw error
   return data
@@ -225,7 +225,7 @@ export async function obtenerReceta(sb: ShakeClient, productoId: string): Promis
  * e inserta las nuevas). Las cantidades van en la unidad del insumo.
  */
 export async function guardarReceta(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
   lineas: Omit<RecetaInsert, 'producto_id'>[],
 ): Promise<void> {
@@ -245,14 +245,14 @@ export async function guardarReceta(
 // — aquí solo se gestiona la cabecera y los componentes.
 
 /** Todos los combos (activos e inactivos, para poder gestionarlos). */
-export async function listarCombos(sb: ShakeClient): Promise<ComboVista[]> {
+export async function listarCombos(sb: ClienteLily): Promise<ComboVista[]> {
   const { data, error } = await sb.from('vw_combos').select('*').order('nombre')
   if (error) throw error
   return data
 }
 
 export async function crearCombo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   combo: { nombre: string; precio: number; categoria_id: string | null },
 ): Promise<Producto> {
   const { data, error } = await sb
@@ -270,7 +270,7 @@ export async function crearCombo(
  * sean de la misma estación (cocina) y recalcula la receta del combo.
  */
 export async function agregarComponenteCombo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   comboId: string,
   productoId: string,
   cantidad: number,
@@ -282,7 +282,7 @@ export async function agregarComponenteCombo(
 }
 
 export async function quitarComponenteCombo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   comboId: string,
   productoId: string,
 ): Promise<void> {
@@ -326,7 +326,7 @@ export interface ExtraDeProducto {
  * El POS los necesita para poder meterlos al ticket cuando el cajero los
  * elige dentro de un alimento.
  */
-export async function listarProductosExtra(sb: ShakeClient): Promise<ProductoVenta[]> {
+export async function listarProductosExtra(sb: ClienteLily): Promise<ProductoVenta[]> {
   const { data, error } = await sb
     .from('productos')
     .select('*, categorias(id, nombre, orden, cocinas(id, nombre, slug))')
@@ -338,7 +338,7 @@ export async function listarProductosExtra(sb: ShakeClient): Promise<ProductoVen
 }
 
 /** Extras ofrecidos por producto (todos de una, para cachear en el POS). */
-export async function listarExtras(sb: ShakeClient): Promise<ExtraDeProducto[]> {
+export async function listarExtras(sb: ClienteLily): Promise<ExtraDeProducto[]> {
   const { data, error } = await sb
     .from('vw_producto_extras')
     .select('*')
@@ -360,7 +360,7 @@ export interface IngredienteExtraible {
 }
 
 export async function extrasDisponibles(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
 ): Promise<IngredienteExtraible[]> {
   const { data, error } = await (sb.rpc as unknown as (
@@ -375,7 +375,7 @@ export async function extrasDisponibles(
 
 /** Crea/actualiza el extra de un insumo y lo ofrece en ese producto. */
 export async function guardarExtra(
-  sb: ShakeClient,
+  sb: ClienteLily,
   input: { productoId: string; insumoId: string; nombre: string; precio: number; cantidad?: number | null },
 ): Promise<void> {
   const { error } = await (sb.rpc as unknown as (
@@ -410,7 +410,7 @@ export interface ExtraBebidaAdmin {
 type RpcCatalogo = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
 
 /** Todos los extras de bebida, incluidos los apagados (para poder volver a prenderlos). */
-export async function listarExtrasBebidaAdmin(sb: ShakeClient): Promise<ExtraBebidaAdmin[]> {
+export async function listarExtrasBebidaAdmin(sb: ClienteLily): Promise<ExtraBebidaAdmin[]> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_extras_bebida_admin', {})
   if (error) throw error
   return (data ?? []) as ExtraBebidaAdmin[]
@@ -425,7 +425,7 @@ export async function listarExtrasBebidaAdmin(sb: ShakeClient): Promise<ExtraBeb
  * clásica".
  */
 export async function guardarExtraBebida(
-  sb: ShakeClient,
+  sb: ClienteLily,
   input: { nombre: string; precio: number; aplicar: 'shakes' | 'clasico' },
 ): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_extra_bebida_guardar', {
@@ -441,7 +441,7 @@ export async function guardarExtraBebida(
  * desaparece del kiosko en la siguiente carga; sus vínculos se conservan,
  * así que volver a prenderlo lo deja exactamente como estaba.
  */
-export async function activarExtraBebida(sb: ShakeClient, id: string, activo: boolean): Promise<void> {
+export async function activarExtraBebida(sb: ClienteLily, id: string, activo: boolean): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_extra_bebida_activar', {
     p_id: id,
     p_activo: activo,
@@ -467,7 +467,7 @@ export interface ProductoDeExtra {
  * "todo lo activo de la estación de bebidas", no una fija: un producto nuevo
  * capturado en costeo aparece aquí solo, listo para ligarle sus bases.
  */
-export async function productosDeExtra(sb: ShakeClient, extraId: string): Promise<ProductoDeExtra[]> {
+export async function productosDeExtra(sb: ClienteLily, extraId: string): Promise<ProductoDeExtra[]> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_extra_bebida_productos', {
     p_extra_id: extraId,
   })
@@ -477,7 +477,7 @@ export async function productosDeExtra(sb: ShakeClient, extraId: string): Promis
 
 /** Prende o apaga el extra en UN producto. */
 export async function vincularExtraBebida(
-  sb: ShakeClient,
+  sb: ClienteLily,
   extraId: string,
   productoId: string,
   ofrecer: boolean,
@@ -498,7 +498,7 @@ export async function vincularExtraBebida(
  * sin tener que duplicar productos para cada combinación.
  */
 export async function precioExtraEnProducto(
-  sb: ShakeClient,
+  sb: ClienteLily,
   extraId: string,
   productoId: string,
   precio: number | null,
@@ -513,7 +513,7 @@ export async function precioExtraEnProducto(
 
 /** Grupo del extra en ese producto: los del mismo grupo se eligen entre sí. */
 export async function grupoExtraEnProducto(
-  sb: ShakeClient,
+  sb: ClienteLily,
   extraId: string,
   productoId: string,
   grupo: string | null,
@@ -544,7 +544,7 @@ export interface ObservacionAdmin extends Observacion {
 }
 
 /** Las activas de una estación, para el kiosko. */
-export async function listarObservaciones(sb: ShakeClient, cocinaSlug: string): Promise<Observacion[]> {
+export async function listarObservaciones(sb: ClienteLily, cocinaSlug: string): Promise<Observacion[]> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_observaciones', {
     p_cocina_slug: cocinaSlug,
   })
@@ -553,14 +553,14 @@ export async function listarObservaciones(sb: ShakeClient, cocinaSlug: string): 
 }
 
 /** Todas, incluidas las apagadas, para Admin. */
-export async function listarObservacionesAdmin(sb: ShakeClient): Promise<ObservacionAdmin[]> {
+export async function listarObservacionesAdmin(sb: ClienteLily): Promise<ObservacionAdmin[]> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_observaciones_admin', {})
   if (error) throw error
   return (data ?? []) as ObservacionAdmin[]
 }
 
 export async function guardarObservacion(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cocinaSlug: string,
   texto: string,
   orden = 100,
@@ -573,7 +573,7 @@ export async function guardarObservacion(
   if (error) throw error
 }
 
-export async function activarObservacion(sb: ShakeClient, id: string, activa: boolean): Promise<void> {
+export async function activarObservacion(sb: ClienteLily, id: string, activa: boolean): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_observacion_activar', {
     p_id: id,
     p_activa: activa,
@@ -581,7 +581,7 @@ export async function activarObservacion(sb: ShakeClient, id: string, activa: bo
   if (error) throw error
 }
 
-export async function borrarObservacion(sb: ShakeClient, id: string): Promise<void> {
+export async function borrarObservacion(sb: ClienteLily, id: string): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_observacion_borrar', { p_id: id })
   if (error) throw error
 }
@@ -593,7 +593,7 @@ export async function borrarObservacion(sb: ShakeClient, id: string): Promise<vo
  * respeta la categoría del JSON en alta y actualización.
  */
 export async function moverCategoriaProducto(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
   categoriaId: string | null,
 ): Promise<void> {
@@ -605,7 +605,7 @@ export async function moverCategoriaProducto(
 }
 
 export async function quitarExtra(
-  sb: ShakeClient,
+  sb: ClienteLily,
   productoId: string,
   extraId: string,
 ): Promise<void> {
@@ -647,7 +647,7 @@ export interface CategoriaPantalla {
   productos_activos: number
 }
 
-export async function listarCategoriasPantalla(sb: ShakeClient): Promise<CategoriaPantalla[]> {
+export async function listarCategoriasPantalla(sb: ClienteLily): Promise<CategoriaPantalla[]> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_categorias_pantalla', {})
   if (error) throw error
   return (data ?? []) as CategoriaPantalla[]
@@ -658,7 +658,7 @@ export async function listarCategoriasPantalla(sb: ShakeClient): Promise<Categor
  * `cocinaSlug` null = no va a ninguna (se vende, pero nadie lo prepara).
  */
 export async function guardarCategoriaPantalla(
-  sb: ShakeClient,
+  sb: ClienteLily,
   categoriaId: string,
   cocinaSlug: string | null,
 ): Promise<void> {
@@ -740,7 +740,7 @@ export function agruparCategorias<T extends CategoriaAgrupable>(
  * tener un pedido a medias para no tirarle el carrito a un cliente.
  */
 export function escucharRecargas(
-  sb: ShakeClient,
+  sb: ClienteLily,
   pantalla: 'kiosko' | 'barra' | 'cocina' | 'pantalla',
   alRecibir: () => void,
 ): () => void {
@@ -780,7 +780,7 @@ export interface CambiosCatalogo {
  * rato": si alguien guardó el lunes y publica el jueves, tiene que ver los
  * tres días de cambios juntos.
  */
-export async function cambiosDelCatalogo(sb: ShakeClient): Promise<CambiosCatalogo> {
+export async function cambiosDelCatalogo(sb: ClienteLily): Promise<CambiosCatalogo> {
   const { data, error } = await (sb.rpc as unknown as RpcCatalogo)('fn_catalogo_cambios', {})
   if (error) throw error
   return data as CambiosCatalogo
@@ -808,7 +808,7 @@ export function contarCambios(c: CambiosCatalogo | null): number {
  *
  * No pide clave: quien está en Admin ya tiene sesión de gerencia.
  */
-export async function publicarCatalogo(sb: ShakeClient): Promise<void> {
+export async function publicarCatalogo(sb: ClienteLily): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_catalogo_publicar', {
     p_clave: null,
     p_quien: null,
@@ -818,7 +818,7 @@ export async function publicarCatalogo(sb: ShakeClient): Promise<void> {
 
 /** Admin: recargar UNA pantalla que se quedó atorada. */
 export async function pedirRecargaPantallas(
-  sb: ShakeClient,
+  sb: ClienteLily,
   pantalla: 'kiosko' | 'barra' | 'cocina' | 'pantalla' | 'todas',
 ): Promise<void> {
   const { error } = await (sb.rpc as unknown as RpcCatalogo)('fn_pantallas_recargar', {
@@ -872,7 +872,7 @@ export interface MenuDelDia {
  * Las cuentas del dia van en la misma consulta porque la decision ("¿dejo
  * abierto Por encargo?") se toma mirando las dos cosas juntas.
  */
-export async function listarMenusDelDia(sb: ShakeClient): Promise<MenuDelDia[]> {
+export async function listarMenusDelDia(sb: ClienteLily): Promise<MenuDelDia[]> {
   const { data, error } = await sb.rpc('fn_menus_del_dia')
   if (error) throw error
   return (data ?? []) as MenuDelDia[]
@@ -880,7 +880,7 @@ export async function listarMenusDelDia(sb: ShakeClient): Promise<MenuDelDia[]> 
 
 /** Abre o cierra un menu completo. Sobrevive al siguiente guardado de Costeos. */
 export async function cambiarMenuActivo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   categoriaId: string,
   activa: boolean,
 ): Promise<void> {
@@ -927,7 +927,7 @@ export interface PaqueteDelDia {
 
 /** Cuadros por sabor: la unidad real del inventario. */
 export async function listarExistenciasPorSabor(
-  sb: ShakeClient,
+  sb: ClienteLily,
   fecha?: string,
 ): Promise<ExistenciaPorSabor[]> {
   const { data, error } = await sb.rpc('fn_existencias_por_sabor', { p_fecha: fecha ?? undefined })
@@ -943,7 +943,7 @@ export async function listarExistenciasPorSabor(
  * mismo pan contado de otra forma. Vender uno baja los otros.
  */
 export async function listarPaquetesDelDia(
-  sb: ShakeClient,
+  sb: ClienteLily,
   fecha?: string,
 ): Promise<PaqueteDelDia[]> {
   const { data, error } = await sb.rpc('fn_paquetes_del_dia', { p_fecha: fecha ?? undefined })
@@ -958,7 +958,7 @@ export async function listarPaquetesDelDia(
  * el signo. Regresa cuántos cuadros quedan libres de ese sabor.
  */
 export async function registrarHorneada(
-  sb: ShakeClient,
+  sb: ClienteLily,
   sabor: string,
   cuadros: number,
   motivo: 'horneado' | 'merma' | 'ajuste' = 'horneado',

@@ -1,5 +1,5 @@
 // El logotipo va sobre carmin pleno (barra lateral): version en negativo.
-import logo from '@shake/brand/logo-negativo.png'
+import logo from '@lily/brand/logo-negativo.png'
 import { useState, type ReactElement } from 'react'
 import Dashboard from './pages/Dashboard'
 import EnVivo from './pages/EnVivo'

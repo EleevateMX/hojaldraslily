@@ -2,8 +2,8 @@ import { useState } from 'react'
 import {
   pedirRecargaPantallas, publicarCatalogo, cambiosDelCatalogo, contarCambios,
   type CambiosCatalogo,
-} from '@shake/supabase'
-import { mensajeDeError } from '@shake/utils'
+} from '@lily/supabase'
+import { mensajeDeError } from '@lily/utils'
 import { sb } from './lib/sb'
 import { cx } from './ui'
 import { ResumenCambios } from './ResumenCambios'

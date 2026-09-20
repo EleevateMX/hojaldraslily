@@ -8,8 +8,8 @@ import {
   type HornoEnVivo,
   type Molde,
   type ExistenciaPorSabor,
-} from '@shake/supabase'
-import { mensajeDeError, urlDeFoto, enMoldes } from '@shake/utils'
+} from '@lily/supabase'
+import { mensajeDeError, urlDeFoto, enMoldes } from '@lily/utils'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../../lib/sb'
 

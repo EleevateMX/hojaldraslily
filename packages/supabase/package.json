@@ -1,5 +1,5 @@
 {
-  "name": "@shake/supabase",
+  "name": "@lily/supabase",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -14,7 +14,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@shake/types": "workspace:*",
+    "@lily/types": "workspace:*",
     "@supabase/supabase-js": "^2.47.0"
   },
   "devDependencies": {

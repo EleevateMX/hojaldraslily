@@ -1,5 +1,5 @@
-import type { PedidoCocina, CocinaItem, EstadoCocina } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { PedidoCocina, CocinaItem, EstadoCocina } from '@lily/types'
+import type { ClienteLily } from '../client'
 
 export interface CocinaItemConProducto extends CocinaItem {
   productos: {
@@ -21,7 +21,7 @@ export interface CocinaItemConProducto extends CocinaItem {
  * Glow" es Collagen y "Lemon Lime" es Amino — con muchas en cola, el sabor
  * solo no alcanza. Cuando la categoría tiene nombre en singular se antepone
  * ("Hydration Drink - Lemon Twist"); si no lo tiene, el nombre va solo,
- * porque un shake no necesita que le digan "Shake -".
+ * porque una hojaldra no necesita que le digan "Hojaldra -".
  *
  * Vive en el paquete y no en cada app: las dos pantallas de cocina son
  * copias literales una de la otra y duplicar esto garantiza que un día
@@ -44,7 +44,7 @@ export interface PedidoConItems extends PedidoCocina {
 
 /** Pedidos activos de una estación ('alimentos' | 'bebidas'). */
 export async function listarPedidosCocina(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cocinaSlug: string,
 ): Promise<PedidoConItems[]> {
   const { data: cocina, error: cocinaError } = await sb
@@ -65,7 +65,7 @@ export async function listarPedidosCocina(
 }
 
 /** Pedidos activos de TODAS las estaciones (cliente-display). */
-export async function listarPedidosActivos(sb: ShakeClient): Promise<PedidoConItems[]> {
+export async function listarPedidosActivos(sb: ClienteLily): Promise<PedidoConItems[]> {
   const { data, error } = await sb
     .from('pedidos_cocina')
     .select('*, cocina_items(*, productos(nombre, onzas, categorias(*))), ordenes(folio, canal, nombre_cliente)')
@@ -76,7 +76,7 @@ export async function listarPedidosActivos(sb: ShakeClient): Promise<PedidoConIt
 }
 
 export async function cambiarEstadoPedido(
-  sb: ShakeClient,
+  sb: ClienteLily,
   pedidoId: string,
   estado: EstadoCocina,
 ): Promise<void> {
@@ -89,14 +89,14 @@ export async function cambiarEstadoPedido(
  * Devuelve la función para desuscribirse.
  */
 export function suscribirPedidosCocina(
-  sb: ShakeClient,
+  sb: ClienteLily,
   onCambio: () => void,
 ): () => void {
   // El canal en vivo puede morir en silencio (la red parpadea, el socket
   // caduca) y el navegador no avisa a nadie. Si pasa, aquí se vuelve a
   // suscribir solo: una pantalla de cocina congelada es una comanda que
   // nadie prepara mientras el cliente espera en barra.
-  let canal: ReturnType<ShakeClient['channel']> | null = null
+  let canal: ReturnType<ClienteLily['channel']> | null = null
   let apagado = false
   let reintento: ReturnType<typeof setTimeout> | null = null
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { cerrarSesion } from '@shake/supabase'
+import { cerrarSesion } from '@lily/supabase'
 import { sb } from '@/lib/sb'
 import { HistorialPedidos } from '@/components/HistorialPedidos'
 import type { ItemCarrito } from '@/store/carritoStore'

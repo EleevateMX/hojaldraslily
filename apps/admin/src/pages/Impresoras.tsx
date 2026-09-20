@@ -4,10 +4,10 @@ import {
   listarImpresoras, crearImpresora, actualizarImpresora, activarImpresora, rotarTokenImpresora, listarCocinasParaImpresoras,
   listarTrabajosImpresion, suscribirTrabajosImpresion, reimprimirTrabajo,
   listarAlmacenes, type ImpresoraAdmin,
-} from '@shake/supabase'
-import type { Cocina, TrabajoImpresion, TipoConexionImpresora, AnchoPapel, EstadoTrabajoImpresion } from '@shake/types'
+} from '@lily/supabase'
+import type { Cocina, TrabajoImpresion, TipoConexionImpresora, AnchoPapel, EstadoTrabajoImpresion } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 interface FormState {
   id: string | null

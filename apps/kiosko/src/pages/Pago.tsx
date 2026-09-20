@@ -3,15 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import {
   crearOrden, crearOrdenKioskoCaja, cobrarOrden, listarAlmacenes,
   listarCajas, corteAbierto, nombresPedidoFrecuentes,
-} from '@shake/supabase'
-import { obtenerPaymentProvider } from '@shake/payments'
-import type { Almacen, CajaCorte, MetodoPago } from '@shake/types'
-import type { ModoPagoKiosko } from '@shake/types'
+} from '@lily/supabase'
+import { obtenerPaymentProvider } from '@lily/payments'
+import type { Almacen, CajaCorte, MetodoPago } from '@lily/types'
+import type { ModoPagoKiosko } from '@lily/types'
 import { useCarrito, type ItemCarrito } from '@/store/carritoStore'
 import { TecladoNombre } from '@/components/TecladoNombre'
 import { sb } from '@/lib/sb'
 import { resolverModoKiosko } from '@/lib/modoKiosko'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 type EstadoPago = 'cargando' | 'eligiendo' | 'procesando' | 'no_disponible'
 

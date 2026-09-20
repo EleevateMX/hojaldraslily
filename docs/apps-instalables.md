@@ -48,7 +48,7 @@ Lo que **no**, y conviene no prometerlo:
 
 ## Cómo está hecho
 
-Un plugin de Vite, `@shake/pwa`, que se le pone a cada app en su
+Un plugin de Vite, `@lily/pwa`, que se le pone a cada app en su
 `vite.config.ts`:
 
 ```ts

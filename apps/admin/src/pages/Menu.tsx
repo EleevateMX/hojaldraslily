@@ -13,10 +13,10 @@ import {
   quitarFotoProducto,
   listarCategoriasPantalla,
   guardarCategoriaPantalla,
-} from '@shake/supabase'
-import type { Producto, Categoria, Cocina } from '@shake/types'
-import type { CategoriaPantalla } from '@shake/supabase'
-import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
+} from '@lily/supabase'
+import type { Producto, Categoria, Cocina } from '@lily/types'
+import type { CategoriaPantalla } from '@lily/supabase'
+import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
 import { Panel, PageHeader, Field, Loading, ErrorMsg, OkMsg, Chip, cx } from '../ui'
 
 interface FormProducto {

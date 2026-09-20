@@ -1,5 +1,5 @@
 {
-  "name": "@shake/payments",
+  "name": "@lily/payments",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@shake/types": "workspace:*",
-    "@shake/supabase": "workspace:*",
+    "@lily/types": "workspace:*",
+    "@lily/supabase": "workspace:*",
     "@supabase/supabase-js": "^2.47.0"
   },
   "devDependencies": {

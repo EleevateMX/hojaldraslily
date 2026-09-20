@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { listarProductosParaVenta, type ProductoVenta } from '@shake/supabase'
-import { mxn } from '@shake/utils'
+import { listarProductosParaVenta, type ProductoVenta } from '@lily/supabase'
+import { mxn } from '@lily/utils'
 import { sb } from './lib/sb'
 
 const WHATSAPP = 'https://wa.me/529999267151'

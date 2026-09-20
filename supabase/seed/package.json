@@ -1,5 +1,5 @@
 {
-  "name": "@shake/seed",
+  "name": "@lily/seed",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,8 +8,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@shake/supabase": "workspace:*",
-    "@shake/types": "workspace:*"
+    "@lily/supabase": "workspace:*",
+    "@lily/types": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",

@@ -1,9 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@shake/types'
+import type { Database } from '@lily/types'
 
 /**
  * Cliente server-side con service_role. SOLO para scripts (ETL) y
- * funciones server-side. Importar desde '@shake/supabase/admin'.
+ * funciones server-side. Importar desde '@lily/supabase/admin'.
  * PROHIBIDO usarlo en cualquier app de apps/ (frontend).
  */
 export function getSupabaseAdmin(): SupabaseClient<Database> {

@@ -1,6 +1,6 @@
 # Flujo POS
 
-Todo el flujo ya está soportado por la base y `@shake/supabase`.
+Todo el flujo ya está soportado por la base y `@lily/supabase`.
 
 ## 1. Apertura de caja
 

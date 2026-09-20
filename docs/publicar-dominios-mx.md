@@ -128,7 +128,7 @@ repositorio `EleevateMX/ventashake`:
 | Campo | Valor |
 |---|---|
 | Nombre del proyecto | `shake-web` |
-| Build command | `pnpm install && pnpm --filter @shake/web build` |
+| Build command | `pnpm install && pnpm --filter @lily/web build` |
 | Build output directory | `apps/web/dist` |
 | Variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_URL_REWARDS` |
 

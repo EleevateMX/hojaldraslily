@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { ventasDiarias, productosMasVendidos } from '@shake/supabase'
-import type { VentaDiaria, ProductoVendido } from '@shake/types'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { ventasDiarias, productosMasVendidos } from '@lily/supabase'
+import type { VentaDiaria, ProductoVendido } from '@lily/types'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, Panel, cx } from '../ui'
 
 export default function Ventas() {

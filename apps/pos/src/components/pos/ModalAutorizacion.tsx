@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { sb } from '../../lib/sb'
-import { loginCajero } from '@shake/supabase'
+import { loginCajero } from '@lily/supabase'
 
 interface Props {
   open: boolean

@@ -218,7 +218,7 @@ solo, con su foto, su descripción y su precio.
 |---|---|
 | Nombre del proyecto | `shake-web` |
 | Repositorio | `EleevateMX/ventashake`, rama `main` |
-| Build command | `pnpm install --frozen-lockfile && pnpm --filter @shake/web build` |
+| Build command | `pnpm install --frozen-lockfile && pnpm --filter @lily/web build` |
 | Build output directory | `apps/web/dist` |
 | Root directory | *(la raíz del repo, se deja vacío)* |
 

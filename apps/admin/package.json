@@ -1,5 +1,5 @@
 {
-  "name": "@shake/admin",
+  "name": "@lily/admin",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,11 +10,11 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@shake/brand": "workspace:*",
-    "@shake/pwa": "workspace:*",
-    "@shake/supabase": "workspace:*",
-    "@shake/types": "workspace:*",
-    "@shake/utils": "workspace:*",
+    "@lily/brand": "workspace:*",
+    "@lily/pwa": "workspace:*",
+    "@lily/supabase": "workspace:*",
+    "@lily/types": "workspace:*",
+    "@lily/utils": "workspace:*",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

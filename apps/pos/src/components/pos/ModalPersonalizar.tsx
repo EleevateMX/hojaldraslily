@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
-import { mxn } from '@shake/utils'
-import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
-import { nombreParaOrdenar } from '@shake/supabase'
+import { mxn } from '@lily/utils'
+import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
+import { nombreParaOrdenar } from '@lily/supabase'
 
 interface Props {
   producto: ProductoVenta | null

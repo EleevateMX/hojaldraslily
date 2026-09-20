@@ -1,25 +1,25 @@
-import type { CosteoProducto, Parametros } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { CosteoProducto, Parametros } from '@lily/types'
+import type { ClienteLily } from '../client'
 
 /**
  * Costeo por producto calculado en la base (vw_costeo_producto).
  * Al cambiar el costo de un insumo, la vista refleja el recálculo
  * de todos los productos relacionados automáticamente.
  */
-export async function listarCosteo(sb: ShakeClient): Promise<CosteoProducto[]> {
+export async function listarCosteo(sb: ClienteLily): Promise<CosteoProducto[]> {
   const { data, error } = await sb.from('vw_costeo_producto').select('*').order('nombre')
   if (error) throw error
   return data
 }
 
-export async function obtenerParametros(sb: ShakeClient): Promise<Parametros> {
+export async function obtenerParametros(sb: ClienteLily): Promise<Parametros> {
   const { data, error } = await sb.from('parametros').select('*').eq('id', 'default').single()
   if (error) throw error
   return data
 }
 
 export async function actualizarParametros(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cambios: Partial<Pick<Parametros, 'iva' | 'food_cost_meta' | 'merma_default' | 'mano_obra'>>,
 ): Promise<void> {
   const { error } = await sb.from('parametros').update(cambios).eq('id', 'default')

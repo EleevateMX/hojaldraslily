@@ -2,10 +2,10 @@ import React, { useEffect, useState } from 'react'
 import {
   listarAlmacenes, listarCajas, corteAbierto, abrirCaja, cerrarCaja, resumenCorte,
   entrarConPin, salirDeSesion, empleadoDeLaSesion,
-} from '@shake/supabase'
-import type { EmpleadoSesion } from '@shake/supabase'
-import type { Caja, CajaCorte, CorteResumen } from '@shake/types'
-import { mxn, mensajeDeError } from '@shake/utils'
+} from '@lily/supabase'
+import type { EmpleadoSesion } from '@lily/supabase'
+import type { Caja, CajaCorte, CorteResumen } from '@lily/types'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { sb } from '@/lib/sb'
 
 interface Props {

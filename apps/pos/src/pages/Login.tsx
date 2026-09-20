@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { listarEmpleadosActivos, entrarConPin } from '@shake/supabase'
-import type { Empleado } from '@shake/supabase'
+import { listarEmpleadosActivos, entrarConPin } from '@lily/supabase'
+import type { Empleado } from '@lily/supabase'
 
 export function Login() {
   const navigate = useNavigate()

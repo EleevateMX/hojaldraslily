@@ -1,4 +1,4 @@
-import type { ShakeClient } from '../client'
+import type { ClienteLily } from '../client'
 
 /**
  * El recibo digital que abre el QR de la pantalla de confirmación.
@@ -15,7 +15,7 @@ import type { ShakeClient } from '../client'
 // rpc no está en los tipos generados; se castea el nombre (mismo patrón que
 // ordenes.ts).
 type RpcFn = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
-async function rpc<T>(sb: ShakeClient, fn: string, args: Record<string, unknown>): Promise<T> {
+async function rpc<T>(sb: ClienteLily, fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await (sb.rpc as unknown as RpcFn)(fn, args)
   if (error) throw error
   return data as T
@@ -40,7 +40,7 @@ export interface ReciboPublico {
 }
 
 export async function reciboPublico(
-  sb: ShakeClient,
+  sb: ClienteLily,
   ordenId: string,
 ): Promise<ReciboPublico | null> {
   return rpc<ReciboPublico | null>(sb, 'fn_recibo_publico', { p_orden_id: ordenId })

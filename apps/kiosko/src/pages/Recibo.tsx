@@ -1,7 +1,7 @@
-import hojaldra from '@shake/brand/hojaldra.png'
+import hojaldra from '@lily/brand/hojaldra.png'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { reciboPublico, type ReciboPublico } from '@shake/supabase'
+import { reciboPublico, type ReciboPublico } from '@lily/supabase'
 import { sb } from '@/lib/sb'
 
 /**

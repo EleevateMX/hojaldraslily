@@ -2,14 +2,14 @@ import { create } from 'zustand'
 import {
   precioEnCanal,
   seVendeEnCanal,
-} from '@shake/supabase'
-import type { ProductoVenta, CanalDeVenta, PreciosDeCanal } from '@shake/supabase'
+} from '@lily/supabase'
+import type { ProductoVenta, CanalDeVenta, PreciosDeCanal } from '@lily/supabase'
 // Lo que el login guarda de verdad es un EmpleadoSesion (id, nombre, ROL y
 // sucursal), no la fila cruda de `empleados`. Estaba tipado como `Empleado`
 // —que trae `rol_id`, no `rol`— y por eso quien necesitaba el puesto tenia
 // que castear. Se tipa lo que en realidad hay.
-import type { EmpleadoSesion } from '@shake/supabase'
-import type { Almacen, Caja, CajaCorte } from '@shake/types'
+import type { EmpleadoSesion } from '@lily/supabase'
+import type { Almacen, Caja, CajaCorte } from '@lily/types'
 
 /**
  * Línea del ticket: producto real del catálogo + cantidad.

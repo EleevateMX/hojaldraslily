@@ -6,12 +6,12 @@ import {
   listarAlmacenes, listarCajas, corteAbierto, abrirCaja,
   listarOrdenesConTiempo, faltaPara, horaDeSalida,
   type OrdenConTiempo,
-} from '@shake/supabase'
+} from '@lily/supabase'
 import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
 import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 export function Caja() {
   const navigate = useNavigate()

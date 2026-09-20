@@ -8,9 +8,9 @@ import {
   type OrdenDeProduccion,
   type ItemDeProduccion,
   type EmpleadoSesion,
-} from '@shake/supabase'
-import { CandadoDeEstacion } from '@shake/ui'
-import { mensajeDeError, urlDeFoto } from '@shake/utils'
+} from '@lily/supabase'
+import { CandadoDeEstacion } from '@lily/ui'
+import { mensajeDeError, urlDeFoto } from '@lily/utils'
 import { sb } from './lib/sb'
 
 /**

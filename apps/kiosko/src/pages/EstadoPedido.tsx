@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { obtenerOrdenPorCodigo, suscribirOrden, type OrdenConItems } from '@shake/supabase'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { obtenerOrdenPorCodigo, suscribirOrden, type OrdenConItems } from '@lily/supabase'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { sb } from '@/lib/sb'
 
 /**

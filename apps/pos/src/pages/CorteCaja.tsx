@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { resumenCorte, cerrarCaja } from '@shake/supabase'
-import { mxn, mensajeDeError } from '@shake/utils'
-import type { CorteResumen } from '@shake/types'
+import { resumenCorte, cerrarCaja } from '@lily/supabase'
+import { mxn, mensajeDeError } from '@lily/utils'
+import type { CorteResumen } from '@lily/types'
 
 export function CorteCaja() {
   const navigate = useNavigate()

@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { usePosStore } from '@/store/posStore'
-import { mxn } from '@shake/utils'
+import { mxn } from '@lily/utils'
 import { ModalDescuento } from './ModalDescuento'
 import { SugerenciaVenta } from './SugerenciaVenta'
-import type { ProductoVenta } from '@shake/supabase'
+import type { ProductoVenta } from '@lily/supabase'
 
 interface Props {
   onCobrar: () => void

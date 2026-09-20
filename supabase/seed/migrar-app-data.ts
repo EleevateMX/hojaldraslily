@@ -11,8 +11,8 @@
  *    ./reportes/conciliacion.md y ./reportes/conciliacion.json
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
-import { getSupabaseAdmin } from '@shake/supabase/admin'
-import type { LegacyAppData, LegacyReceta, TipoInsumo } from '@shake/types'
+import { getSupabaseAdmin } from '@lily/supabase/admin'
+import type { LegacyAppData, LegacyReceta, TipoInsumo } from '@lily/types'
 
 const APLICAR = process.argv.includes('--aplicar')
 

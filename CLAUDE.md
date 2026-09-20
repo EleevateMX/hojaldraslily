@@ -320,7 +320,7 @@ números y etiquetas en versalitas van en DM Mono. Yellowtail es exclusiva
 del logotipo: nunca en texto corrido ni en la interfaz.
 
 **El `manifest.webmanifest` y los iconos de las apps instalables NO son una
-cuarta excepción**, y a propósito: los genera `@shake/pwa` leyendo
+cuarta excepción**, y a propósito: los genera `@lily/pwa` leyendo
 `tokens.css`, y los iconos salen de `scripts/generar-iconos-pwa.mjs`. Se hizo
 así porque ya se habían desviado — los dos manifests escritos a mano traían
 el verde oscuro del motor original (`#14241D`, `#1A2E26`). Ver
@@ -608,6 +608,29 @@ Lo que se fue con ellas, por si mañana se extraña:
 migraciones son aditivas (`supabase/migrations/README.md`), y tirar tablas
 con datos no se deshace. Están ahí, sin nadie que las lea.
 
+**Y el ticket impreso llevaba el nombre del otro negocio.** `packages/ui`
+imprimía un bloque `SHAKE AHOLIC REWARDS` con mancuernas y saldo al pie de
+cada ticket. Nunca se vio porque el campo venía vacío, pero el día que
+alguien identificara a un cliente habría salido en papel, en el mostrador.
+
+### Qué sigue diciendo «shake», y por qué no se toca
+
+Los paquetes se llaman `@lily/*` y el tipo del cliente es `ClienteLily`. Lo
+que queda con ese nombre es **forma de datos**, no texto que alguien lea:
+
+- `packages/types/src/dominio.ts` (`shakeIngs`, `shakeRecipes`) y las mismas
+  claves en `apps/costos/index.html`: es el JSON que vive dentro de
+  `app_data.data`. Renombrarlas exige migrar el JSON guardado **y**
+  `fn_sync_app_data` a la vez, o Costeos deja de guardar.
+- El enum `tipo_insumo` de la base tiene el valor `'shake'`, y
+  `fn_extra_bebida_guardar` espera `'shakes' | 'clasico'`. En pantalla se leen
+  como «Todas las hojaldras» y «Solo la clásica».
+- `packages/types/src/database.ts` se **genera** desde la base: cambiarlo a
+  mano se pierde en la siguiente regeneración.
+
+Los comentarios que dicen «esto era el de los shakes» se quedan a propósito:
+explican por qué una pantalla tiene la forma que tiene.
+
 ---
 
 ## 5. Seguridad
@@ -663,7 +686,7 @@ con datos no se deshace. Están ahí, sin nadie que las lea.
 ## 6. Cómo trabajar aquí
 
 ```bash
-pnpm --filter @shake/<app> build   # compila y verifica tipos
+pnpm --filter @lily/<app> build   # compila y verifica tipos
 pnpm -r test                       # pruebas de packages
 cd agente-impresion && npx vitest run
 node scripts/verificar-scripts-ascii.mjs

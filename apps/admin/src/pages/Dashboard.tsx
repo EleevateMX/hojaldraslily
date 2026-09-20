@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { ventasDiarias, productosMasVendidos, stockPorAlmacen } from '@shake/supabase'
-import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@shake/types'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { ventasDiarias, productosMasVendidos, stockPorAlmacen } from '@lily/supabase'
+import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@lily/types'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { Panel, PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 const HOY = new Date().toISOString().slice(0, 10)

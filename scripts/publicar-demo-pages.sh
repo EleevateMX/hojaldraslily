@@ -28,7 +28,7 @@ for app in "${APPS[@]}"; do
   echo "==> $app"
   # cada app necesita su .env; el .env.example ya trae la URL y la llave
   [ -f "apps/$app/.env" ] || cp "apps/$app/.env.example" "apps/$app/.env" 2>/dev/null || true
-  pnpm --filter "@shake/$app" exec vite build --base "$BASE_PUBLICA/$app/"
+  pnpm --filter "@lily/$app" exec vite build --base "$BASE_PUBLICA/$app/"
   cp -r "apps/$app/dist" "$DESTINO/$app"
   # GitHub Pages no reescribe rutas: el 404 sirve de vuelta el index para que
   # una recarga en /pedido/4E68C1 no truene.

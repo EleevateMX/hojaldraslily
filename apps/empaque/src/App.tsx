@@ -12,9 +12,9 @@ import {
   type Encargo,
   type PorEmpacar,
   type EmpleadoSesion,
-} from '@shake/supabase'
-import { CandadoDeEstacion } from '@shake/ui'
-import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
+} from '@lily/supabase'
+import { CandadoDeEstacion } from '@lily/ui'
+import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
 import { sb } from './lib/sb'
 
 /**

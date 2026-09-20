@@ -26,7 +26,7 @@ POS → `/pendientes` la convierte en venta.
 1. Cliente arma su pedido, elige "Terminal".
 2. Kiosko crea la orden normal (`fn_crear_orden`, nace en
    `pending_payment`).
-3. `ClipPaymentProvider.createPayment()` (paquete `@shake/payments`) llama
+3. `ClipPaymentProvider.createPayment()` (paquete `@lily/payments`) llama
    a la Edge Function `clip-crear-cobro`.
 4. **Mientras `CLIP_API_KEY`/`CLIP_WEBHOOK_SECRET` no estén configuradas**
    (hoy): la función responde `{ ok:false, error:{codigo:'not_configured'} }`

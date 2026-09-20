@@ -9,9 +9,9 @@ import {
   agregarComponenteCombo,
   quitarComponenteCombo,
   moverCategoriaProducto,
-} from '@shake/supabase'
-import type { ComboVista, Producto, Categoria } from '@shake/types'
-import { mxn, mensajeDeError } from '@shake/utils'
+} from '@lily/supabase'
+import type { ComboVista, Producto, Categoria } from '@lily/types'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { Panel, PageHeader, Field, Loading, ErrorMsg, OkMsg, Chip, cx } from '../ui'
 
 interface ComponenteCombo {

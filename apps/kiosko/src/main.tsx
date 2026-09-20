@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import App from './App'
-import '@shake/brand/tokens.css'
+import '@lily/brand/tokens.css'
 import './index.css'
 
 // Kiosko de tienda: el menú contextual del navegador (clic derecho o dejar

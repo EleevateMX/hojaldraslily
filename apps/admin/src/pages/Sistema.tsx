@@ -4,11 +4,11 @@ import {
   obtenerSaludSistema, listarConfiguracionesKiosko, actualizarConfiguracionKiosko,
   reconciliarPagos, expirarOrdenesKiosko,
   type SaludSistema, type ResultadoReconciliacion,
-} from '@shake/supabase'
-import type { ConfiguracionKiosko, ModoPagoKiosko } from '@shake/types'
+} from '@lily/supabase'
+import type { ConfiguracionKiosko, ModoPagoKiosko } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, cx, Chip } from '../ui'
 import { BotonActualizarPantallas } from '../BotonActualizarPantallas'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 interface Indicador {
   label: string

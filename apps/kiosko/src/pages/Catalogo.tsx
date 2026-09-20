@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Spinner } from '@shake/ui'
+import { Spinner } from '@lily/ui'
 import { useCarrito } from '@/store/carritoStore'
-import { urlDeFoto } from '@shake/utils'
+import { urlDeFoto } from '@lily/utils'
 import {
   listarProductosParaVenta, listarExtras, listarProductosExtra, listarObservaciones,
   nombreParaOrdenar, partirNombreDeVenta, agruparCategorias,
-} from '@shake/supabase'
-import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
+} from '@lily/supabase'
+import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
 import { sb } from '@/lib/sb'
 import { ModalExtras } from '@/components/ModalExtras'
 import { PanelDeCorte } from '@/components/PanelDeCorte'

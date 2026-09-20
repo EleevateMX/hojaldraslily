@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { mxn } from '@shake/utils'
+import { mxn } from '@lily/utils'
 import type { DescuentoManual } from '@/store/posStore'
 import { ModalAutorizacion } from './ModalAutorizacion'
 

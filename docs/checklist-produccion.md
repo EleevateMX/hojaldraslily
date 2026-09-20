@@ -21,7 +21,7 @@ esa ronda.
 - [ ] Todas las migraciones en `supabase/migrations/` aplicadas al
       proyecto de producción (`fzkdgqqvfkogmxdgqsxj` u otro si se clona
       para una sucursal nueva)
-- [ ] `pnpm --filter @shake/types typecheck` en verde tras cualquier
+- [ ] `pnpm --filter @lily/types typecheck` en verde tras cualquier
       migración nueva (regenerar `packages/types/src/database.ts` con
       `npx supabase gen types typescript --project-id <id> --schema public`)
 

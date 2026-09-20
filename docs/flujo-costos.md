@@ -9,7 +9,7 @@ mismas tablas que usa el POS**.
    generada (`costo_compra / contenido`) — nunca se captura a mano.
 2. **Productos**: alta con categoría, precio e IVA incluido sí/no.
 3. **Receta**: líneas insumo + cantidad (en la unidad del insumo). El
-   editor muestra el costo en vivo (`@shake/utils` espeja la vista).
+   editor muestra el costo en vivo (`@lily/utils` espeja la vista).
 4. **Costeo**: `vw_costeo_producto` (v3, fórmula validada contra el
    `finishCalc` del tablero legacy) calcula por producto:
    - `costo_receta` (insumos sin empaque) y `costo_empaque`

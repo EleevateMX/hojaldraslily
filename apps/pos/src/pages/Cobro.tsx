@@ -2,10 +2,10 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { crearOrden, cobrarOrden } from '@shake/supabase'
-import { imprimirTicket, type TicketData } from '@shake/ui'
-import { mxn, mensajeDeError } from '@shake/utils'
-import type { MetodoPago } from '@shake/types'
+import { crearOrden, cobrarOrden } from '@lily/supabase'
+import { imprimirTicket, type TicketData } from '@lily/ui'
+import { mxn, mensajeDeError } from '@lily/utils'
+import type { MetodoPago } from '@lily/types'
 
 /* Dos formas de cobro y ya: efectivo o terminal. Cuantas menos opciones,
    menos se equivoca quien cobra con gente esperando.

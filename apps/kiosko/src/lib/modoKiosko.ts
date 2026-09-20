@@ -1,6 +1,6 @@
-import { obtenerConfiguracionKiosko } from '@shake/supabase'
-import type { ShakeClient } from '@shake/supabase'
-import type { ModoPagoKiosko } from '@shake/types'
+import { obtenerConfiguracionKiosko } from '@lily/supabase'
+import type { ClienteLily } from '@lily/supabase'
+import type { ModoPagoKiosko } from '@lily/types'
 
 /**
  * Resuelve el modo de pago efectivo del kiosko para esta sucursal.
@@ -16,7 +16,7 @@ import type { ModoPagoKiosko } from '@shake/types'
  * 'pagar_en_caja' — el kiosko real nunca entra a modo demostración,
  * pase lo que pase en la base de datos.
  */
-export async function resolverModoKiosko(sb: ShakeClient, sucursalId: string): Promise<ModoPagoKiosko> {
+export async function resolverModoKiosko(sb: ClienteLily, sucursalId: string): Promise<ModoPagoKiosko> {
   const config = await obtenerConfiguracionKiosko(sb, sucursalId)
   const modoDefault = (import.meta.env.VITE_KIOSKO_MODO_PAGO_DEFAULT as ModoPagoKiosko | undefined) ?? 'pagar_en_caja'
   let modo: ModoPagoKiosko = config?.modo_pago ?? modoDefault

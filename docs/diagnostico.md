@@ -83,8 +83,8 @@ trigger `trg_descontar_inventario` (orden pagada → descuenta stock).
 |---|---|
 | Esquema relacional `core_unificado` | **Reutilizar** — bien normalizado; se extendió aditivamente |
 | Datos del JSON legacy | **Migrar** vía ETL (supabase/seed) con reporte de conciliación |
-| App costos (index.html monolítico) | **Reescribir** como app Vite+React+TS (`apps/costos`) — la lógica de costeo se preservó en `vw_costeo_producto` y `@shake/utils` |
-| Apps del demo POS | **Migrar por partes** (fases 5–6): la UI puede reutilizarse; el acceso a datos se reemplaza por `@shake/supabase` |
+| App costos (index.html monolítico) | **Reescribir** como app Vite+React+TS (`apps/costos`) — la lógica de costeo se preservó en `vw_costeo_producto` y `@lily/utils` |
+| Apps del demo POS | **Migrar por partes** (fases 5–6): la UI puede reutilizarse; el acceso a datos se reemplaza por `@lily/supabase` |
 | Login `app_users` | Mantener temporalmente; reemplazar por Supabase Auth + PIN de empleados en fase 9 |
 
 ## Riesgos técnicos

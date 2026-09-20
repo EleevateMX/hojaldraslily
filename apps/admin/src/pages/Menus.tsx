@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { listarMenusDelDia, cambiarMenuActivo, type MenuDelDia } from '@shake/supabase'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { listarMenusDelDia, cambiarMenuActivo, type MenuDelDia } from '@lily/supabase'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**

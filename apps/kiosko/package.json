@@ -1,5 +1,5 @@
 {
-  "name": "@shake/kiosko",
+  "name": "@lily/kiosko",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -10,13 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@shake/brand": "workspace:*",
-    "@shake/payments": "workspace:*",
-    "@shake/pwa": "workspace:*",
-    "@shake/supabase": "workspace:*",
-    "@shake/types": "workspace:*",
-    "@shake/ui": "workspace:*",
-    "@shake/utils": "workspace:*",
+    "@lily/brand": "workspace:*",
+    "@lily/payments": "workspace:*",
+    "@lily/pwa": "workspace:*",
+    "@lily/supabase": "workspace:*",
+    "@lily/types": "workspace:*",
+    "@lily/ui": "workspace:*",
+    "@lily/utils": "workspace:*",
     "qrcode": "^1.5.3",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

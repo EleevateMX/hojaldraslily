@@ -6,7 +6,7 @@
 que deba ser atómica y a prueba de frontends caídos (descontar inventario,
 generar pedidos de cocina, marcar pagado) vive en la base como trigger
 `security definer`. Los frontends son clientes delgados que consumen
-`@shake/supabase`.
+`@lily/supabase`.
 
 ## Monorepo
 
@@ -90,6 +90,6 @@ el pago es **una sola escritura** y la base hace el resto.
    (fase 6 refinará esto con modificadores).
 5. **Snacks/bebidas → estación bebidas**: `categorias.cocina_id` es NOT
    NULL; la barra despacha reventa. Ajustable con un UPDATE.
-6. **Vista de costeo en la base** y espejo puro en `@shake/utils`: el
+6. **Vista de costeo en la base** y espejo puro en `@lily/utils`: el
    recálculo masivo (cambia un insumo → todos los productos) es gratis en
    la vista; el espejo da preview en vivo al editar recetas.

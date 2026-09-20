@@ -1,14 +1,14 @@
-import type { Caja, CajaCorte, CorteResumen } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { Caja, CajaCorte, CorteResumen } from '@lily/types'
+import type { ClienteLily } from '../client'
 
-export async function listarCajas(sb: ShakeClient): Promise<Caja[]> {
+export async function listarCajas(sb: ClienteLily): Promise<Caja[]> {
   const { data, error } = await sb.from('cajas').select('*').eq('activa', true).order('nombre')
   if (error) throw error
   return data
 }
 
 /** Corte abierto de una caja, o null si está cerrada. */
-export async function corteAbierto(sb: ShakeClient, cajaId: string): Promise<CajaCorte | null> {
+export async function corteAbierto(sb: ClienteLily, cajaId: string): Promise<CajaCorte | null> {
   const { data, error } = await sb
     .from('caja_cortes')
     .select('*')
@@ -21,7 +21,7 @@ export async function corteAbierto(sb: ShakeClient, cajaId: string): Promise<Caj
 
 /** Abre caja. La base garantiza un solo corte abierto por caja. */
 export async function abrirCaja(
-  sb: ShakeClient,
+  sb: ClienteLily,
   cajaId: string,
   fondoInicial: number,
   empleadoId?: string,
@@ -40,7 +40,7 @@ export async function abrirCaja(
 }
 
 export async function cerrarCaja(
-  sb: ShakeClient,
+  sb: ClienteLily,
   corteId: string,
   efectivoContado: number,
   empleadoId?: string,
@@ -60,7 +60,7 @@ export async function cerrarCaja(
 }
 
 /** Totales del corte por método de pago (vw_corte_resumen). */
-export async function resumenCorte(sb: ShakeClient, corteId: string): Promise<CorteResumen> {
+export async function resumenCorte(sb: ClienteLily, corteId: string): Promise<CorteResumen> {
   const { data, error } = await sb
     .from('vw_corte_resumen')
     .select('*')

@@ -1,5 +1,5 @@
-import type { Impresora, TrabajoImpresion, Cocina, TipoConexionImpresora, AnchoPapel } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { Impresora, TrabajoImpresion, Cocina, TipoConexionImpresora, AnchoPapel } from '@lily/types'
+import type { ClienteLily } from '../client'
 
 // El generador de tipos de Supabase no distingue "parámetro nullable" de
 // "parámetro requerido" en los Args de RPC — para fn_crear_impresora/
@@ -7,7 +7,7 @@ import type { ShakeClient } from '../client'
 // nombre_dispositivo/puerto) se llama vía este cast, mismo patrón que
 // empleados.ts/ordenes.ts/pagos.ts.
 type RpcFn = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
-async function rpc<T>(sb: ShakeClient, fn: string, args: Record<string, unknown>): Promise<T> {
+async function rpc<T>(sb: ClienteLily, fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await (sb.rpc as unknown as RpcFn)(fn, args)
   if (error) throw error
   return data as T
@@ -39,12 +39,12 @@ export interface ImpresoraInsertDatos {
 export type ImpresoraUpdateDatos = Omit<ImpresoraInsertDatos, 'sucursal_id'>
 
 /** Impresoras configuradas (todas — Admin decide cuáles mostrar activas/inactivas). Nunca incluye el token. */
-export async function listarImpresoras(sb: ShakeClient): Promise<ImpresoraAdmin[]> {
+export async function listarImpresoras(sb: ClienteLily): Promise<ImpresoraAdmin[]> {
   return (await rpc<ImpresoraAdmin[] | null>(sb, 'fn_admin_impresoras', {})) ?? []
 }
 
 /** Crea la impresora y devuelve su token UNA vez — cópialo a printers.config.json del agente local. */
-export async function crearImpresora(sb: ShakeClient, datos: ImpresoraInsertDatos): Promise<{ id: string; agente_token: string }> {
+export async function crearImpresora(sb: ClienteLily, datos: ImpresoraInsertDatos): Promise<{ id: string; agente_token: string }> {
   const filas = await rpc<{ id: string; agente_token: string }[]>(sb, 'fn_crear_impresora', {
     p_sucursal_id: datos.sucursal_id,
     p_nombre: datos.nombre,
@@ -63,7 +63,7 @@ export async function crearImpresora(sb: ShakeClient, datos: ImpresoraInsertDato
 
 /** Sobrescribe TODOS los campos del formulario (nunca parcial — usa activarImpresora() para el toggle). */
 export async function actualizarImpresora(
-  sb: ShakeClient,
+  sb: ClienteLily,
   id: string,
   cambios: ImpresoraUpdateDatos,
 ): Promise<void> {
@@ -83,24 +83,24 @@ export async function actualizarImpresora(
 }
 
 /** Activa/desactiva una impresora sin tocar el resto de su configuración. */
-export async function activarImpresora(sb: ShakeClient, id: string, activa: boolean): Promise<void> {
+export async function activarImpresora(sb: ClienteLily, id: string, activa: boolean): Promise<void> {
   await rpc(sb, 'fn_activar_impresora', { p_id: id, p_activa: activa })
 }
 
 /** Rota el token de una impresora (sospecha de compromiso, o se perdió printers.config.json). Devuelve el nuevo token UNA vez. */
-export async function rotarTokenImpresora(sb: ShakeClient, id: string): Promise<string> {
+export async function rotarTokenImpresora(sb: ClienteLily, id: string): Promise<string> {
   return rpc<string>(sb, 'fn_rotar_token_impresora', { p_id: id })
 }
 
 /** Estaciones disponibles para asignar impresora (mismo catálogo que Cocina/Barra). */
-export async function listarCocinasParaImpresoras(sb: ShakeClient): Promise<Cocina[]> {
+export async function listarCocinasParaImpresoras(sb: ClienteLily): Promise<Cocina[]> {
   const { data, error } = await sb.from('cocinas').select('*').order('nombre')
   if (error) throw error
   return data
 }
 
 /** Trabajos de impresión de UN pedido de cocina (para el indicador en KDS). */
-export async function trabajosDePedido(sb: ShakeClient, pedidoId: string): Promise<TrabajoImpresion[]> {
+export async function trabajosDePedido(sb: ClienteLily, pedidoId: string): Promise<TrabajoImpresion[]> {
   const { data, error } = await sb
     .from('trabajos_impresion')
     .select('*')
@@ -115,7 +115,7 @@ export async function trabajosDePedido(sb: ShakeClient, pedidoId: string): Promi
  * indicador de estado en toda la grilla del KDS sin hacer N consultas).
  */
 export async function trabajosDeVariosPedidos(
-  sb: ShakeClient,
+  sb: ClienteLily,
   pedidoIds: string[],
 ): Promise<Record<string, TrabajoImpresion>> {
   if (pedidoIds.length === 0) return {}
@@ -142,7 +142,7 @@ export interface FiltroTrabajosImpresion {
 
 /** Cola de impresión completa (Admin), con filtros opcionales. */
 export async function listarTrabajosImpresion(
-  sb: ShakeClient,
+  sb: ClienteLily,
   filtro: FiltroTrabajosImpresion = {},
 ): Promise<TrabajoImpresion[]> {
   let query = sb.from('trabajos_impresion').select('*').order('created_at', { ascending: false })
@@ -156,7 +156,7 @@ export async function listarTrabajosImpresion(
 
 /** Reimprime un trabajo (crea una copia auditada, no reencola el original). */
 export async function reimprimirTrabajo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   trabajoId: string,
   opts: { empleadoId?: string; motivo?: string; printerId?: string } = {},
 ): Promise<TrabajoImpresion> {
@@ -171,11 +171,11 @@ export async function reimprimirTrabajo(
 }
 
 /** Suscripción realtime a la cola de impresión (para Admin/KDS). Devuelve el "desuscribirse". */
-export function suscribirTrabajosImpresion(sb: ShakeClient, onCambio: () => void): () => void {
+export function suscribirTrabajosImpresion(sb: ClienteLily, onCambio: () => void): () => void {
   // Misma resiliencia que suscribirPedidosCocina: si el canal muere en
   // silencio, se vuelve a suscribir solo en vez de dejar el indicador de
   // impresión congelado.
-  let canal: ReturnType<ShakeClient['channel']> | null = null
+  let canal: ReturnType<ClienteLily['channel']> | null = null
   let apagado = false
   let reintento: ReturnType<typeof setTimeout> | null = null
 

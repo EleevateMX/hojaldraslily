@@ -1,5 +1,5 @@
-import type { CambiosCatalogo } from '@shake/supabase'
-import { mxn } from '@shake/utils'
+import type { CambiosCatalogo } from '@lily/supabase'
+import { mxn } from '@lily/utils'
 
 /**
  * Lo que va a ver la tienda si se publica ahora.

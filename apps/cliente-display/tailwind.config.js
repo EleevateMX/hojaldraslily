@@ -1,4 +1,4 @@
-import brandPreset from '@shake/brand/tailwind-preset'
+import brandPreset from '@lily/brand/tailwind-preset'
 
 /** @type {import('tailwindcss').Config} */
 export default {

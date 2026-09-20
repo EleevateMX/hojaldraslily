@@ -1,10 +1,10 @@
 import React, { useState } from 'react'
-// `Empleado` de @shake/supabase (id/nombre/rol), no la fila cruda de la tabla
-// que expone @shake/types: fn_login_cajero devuelve el rol ya resuelto y
+// `Empleado` de @lily/supabase (id/nombre/rol), no la fila cruda de la tabla
+// que expone @lily/types: fn_login_cajero devuelve el rol ya resuelto y
 // jamás el pin_hash.
-import { entrarConPin, type EmpleadoSesion } from '@shake/supabase'
+import { entrarConPin, type EmpleadoSesion } from '@lily/supabase'
 import { sb } from '@/lib/sb'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 interface Props {
   onEntrar: (empleado: EmpleadoSesion) => void

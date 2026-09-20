@@ -1,10 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import '@shake/brand/tokens.css'
+import '@lily/brand/tokens.css'
 import './index.css'
-import { registrarPwa } from '@shake/pwa/registrar'
-import { escucharRecargas } from '@shake/supabase'
+import { registrarPwa } from '@lily/pwa/registrar'
+import { escucharRecargas } from '@lily/supabase'
 import { sb } from './lib/sb'
 
 // El timbre de "actualizar pantallas" del Admin. Aquí se puede recargar sin

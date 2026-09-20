@@ -1,4 +1,4 @@
-import type { ShakeClient } from '../client'
+import type { ClienteLily } from '../client'
 
 /**
  * Sesión del personal: el PIN deja de ser un candado de pantalla.
@@ -38,7 +38,7 @@ interface RespuestaStaffLogin {
  * Devuelve un resultado en vez de tronar: quien llama es una pantalla de
  * login y siempre tiene algo que decirle a la persona que está tecleando.
  */
-export async function entrarConPin(sb: ShakeClient, pin: string): Promise<ResultadoLogin> {
+export async function entrarConPin(sb: ClienteLily, pin: string): Promise<ResultadoLogin> {
   const { data, error } = await sb.functions.invoke('staff-login', { body: { pin } })
 
   if (error) {
@@ -67,7 +67,7 @@ export async function entrarConPin(sb: ShakeClient, pin: string): Promise<Result
 }
 
 /** Cierra la sesión del personal (fin de turno). */
-export async function salirDeSesion(sb: ShakeClient): Promise<void> {
+export async function salirDeSesion(sb: ClienteLily): Promise<void> {
   await sb.auth.signOut()
 }
 
@@ -78,7 +78,7 @@ export async function salirDeSesion(sb: ShakeClient): Promise<void> {
  * administrador desactiva a alguien a media jornada, su sesión deja de valer
  * en la siguiente consulta, sin esperar a que cierre la pestaña.
  */
-export async function empleadoDeLaSesion(sb: ShakeClient): Promise<EmpleadoSesion | null> {
+export async function empleadoDeLaSesion(sb: ClienteLily): Promise<EmpleadoSesion | null> {
   const { data: sesion } = await sb.auth.getSession()
   if (!sesion.session) return null
 

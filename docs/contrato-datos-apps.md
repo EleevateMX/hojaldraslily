@@ -1,12 +1,12 @@
-# Contrato de datos para las apps (`@shake/supabase`)
+# Contrato de datos para las apps (`@lily/supabase`)
 
-Todas las apps consumen **solo** `@shake/supabase` (nunca `.from()` suelto).
+Todas las apps consumen **solo** `@lily/supabase` (nunca `.from()` suelto).
 Patrón por app (ver `apps/pos` como referencia):
 
 - `src/lib/sb.ts`: `export const sb = getSupabase()`
 - Las funciones reciben `sb` como primer argumento.
 - Vite + React 18 + TS, CSS plano (sin Tailwind), `tsconfig` extiende
-  `../../tsconfig.base.json`. Scope de paquete: `@shake/<app>`.
+  `../../tsconfig.base.json`. Scope de paquete: `@lily/<app>`.
 
 ## Funciones disponibles
 
@@ -17,7 +17,7 @@ Patrón por app (ver `apps/pos` como referencia):
 - `listarCategorias(sb)`, `crearCategoria(sb, {nombre, cocina_id})`, `listarCocinas(sb)`
 - `listarInsumos(sb)`, `crearInsumo`, `actualizarInsumo`, `desactivarInsumo`
 - `obtenerReceta(sb, productoId)`, `guardarReceta(sb, productoId, lineas)`
-- tipo `ProductoVenta` (importar de `@shake/supabase`)
+- tipo `ProductoVenta` (importar de `@lily/supabase`)
 
 ### Costeo (`costeo.ts`)
 - `listarCosteo(sb)` → `CosteoProducto[]`, `obtenerParametros(sb)`, `actualizarParametros(sb, cambios)`
@@ -51,5 +51,5 @@ Patrón por app (ver `apps/pos` como referencia):
 ## Reglas
 - NO uses lealtad/wallet/gift cards/promos (fase posterior; tablas no existen).
 - NO corras `pnpm install` (lo hace la integración final).
-- Tipos de dominio en `@shake/types` (Producto, Orden, CorteResumen, etc.).
-- Formato de dinero: `mxn()` de `@shake/utils`.
+- Tipos de dominio en `@lily/types` (Producto, Orden, CorteResumen, etc.).
+- Formato de dinero: `mxn()` de `@lily/utils`.

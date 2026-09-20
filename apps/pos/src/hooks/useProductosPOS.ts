@@ -3,9 +3,9 @@ import { sb } from '../lib/sb'
 import {
   listarProductosParaVenta, listarProductosExtra, listarExtras, listarPreciosDeCanal,
   seVendeEnCanal,
-} from '@shake/supabase'
-import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
-import { mensajeDeError } from '@shake/utils'
+} from '@lily/supabase'
+import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
+import { mensajeDeError } from '@lily/utils'
 import { usePosStore } from '../store/posStore'
 
 /** Categoría derivada del catálogo (con su cocina/estación) para los filtros. */

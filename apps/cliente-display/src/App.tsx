@@ -1,9 +1,9 @@
-import hojaldra from '@shake/brand/hojaldra.png'
+import hojaldra from '@lily/brand/hojaldra.png'
 import { useEffect, useMemo, useState } from 'react'
 import { sb } from './lib/sb'
-import { listarPedidosActivos, suscribirPedidosCocina } from '@shake/supabase'
-import type { PedidoConItems } from '@shake/supabase'
-import { mensajeDeError } from '@shake/utils'
+import { listarPedidosActivos, suscribirPedidosCocina } from '@lily/supabase'
+import type { PedidoConItems } from '@lily/supabase'
+import { mensajeDeError } from '@lily/utils'
 
 interface FolioAgrupado {
   folio: number

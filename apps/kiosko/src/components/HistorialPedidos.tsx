@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { historialPedidos, nombreParaOrdenar, type PedidoHistorial } from '@shake/supabase'
-import { mensajeDeError } from '@shake/utils'
+import { historialPedidos, nombreParaOrdenar, type PedidoHistorial } from '@lily/supabase'
+import { mensajeDeError } from '@lily/utils'
 import { sb } from '@/lib/sb'
 
 interface Props {

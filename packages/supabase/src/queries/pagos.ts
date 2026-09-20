@@ -1,5 +1,5 @@
-import type { Orden, ConfiguracionKiosko, ModoPagoKiosko, OrdenAuditoria } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { Orden, ConfiguracionKiosko, ModoPagoKiosko, OrdenAuditoria } from '@lily/types'
+import type { ClienteLily } from '../client'
 
 export interface OrdenItemConProducto {
   id: string
@@ -63,7 +63,7 @@ function aplicarCriterioCaja<T>(query: T, criterio?: string): T {
 
 /** Órdenes de kiosko esperando cobro en caja, con sus items (para la lista de POS). */
 export async function listarOrdenesPendientesCajaConItems(
-  sb: ShakeClient,
+  sb: ClienteLily,
   criterio?: string,
 ): Promise<OrdenConItems[]> {
   const base = sb
@@ -80,7 +80,7 @@ export async function listarOrdenesPendientesCajaConItems(
 
 // rpc no está en los tipos generados; se castea el nombre (mismo patrón que empleados.ts/ordenes.ts).
 type RpcFn = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
-async function rpc<T>(sb: ShakeClient, fn: string, args: Record<string, unknown>): Promise<T> {
+async function rpc<T>(sb: ClienteLily, fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await (sb.rpc as unknown as RpcFn)(fn, args)
   if (error) throw error
   return data as T
@@ -102,7 +102,7 @@ export interface NuevaOrdenItemCaja {
  * ocurre cuando el cajero la cobra desde POS (`cobrarOrden`).
  */
 export async function crearOrdenKioskoCaja(
-  sb: ShakeClient,
+  sb: ClienteLily,
   datos: {
     sucursalId: string
     almacenId: string
@@ -139,7 +139,7 @@ export async function crearOrdenKioskoCaja(
  * exponiéndolo.
  */
 export async function obtenerOrdenPorCodigo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   codigo: string,
 ): Promise<OrdenConItems | null> {
   const c = codigo.trim().toUpperCase()
@@ -157,7 +157,7 @@ export async function obtenerOrdenPorCodigo(
 
 /** POS: busca órdenes de kiosko esperando cobro en caja (folio o código corto). */
 export async function buscarOrdenesPendientesCaja(
-  sb: ShakeClient,
+  sb: ClienteLily,
   criterio?: string,
 ): Promise<Orden[]> {
   const base = sb
@@ -174,7 +174,7 @@ export async function buscarOrdenesPendientesCaja(
 
 /** Config de modo de pago del kiosko para una sucursal (fuente de verdad en BD). */
 export async function obtenerConfiguracionKiosko(
-  sb: ShakeClient,
+  sb: ClienteLily,
   sucursalId: string,
 ): Promise<ConfiguracionKiosko | null> {
   const { data, error } = await sb
@@ -186,7 +186,7 @@ export async function obtenerConfiguracionKiosko(
   return data
 }
 
-export async function listarConfiguracionesKiosko(sb: ShakeClient): Promise<ConfiguracionKiosko[]> {
+export async function listarConfiguracionesKiosko(sb: ClienteLily): Promise<ConfiguracionKiosko[]> {
   const { data, error } = await sb.from('configuracion_kiosko').select('*')
   if (error) throw error
   return data
@@ -199,7 +199,7 @@ export async function listarConfiguracionesKiosko(sb: ShakeClient): Promise<Conf
  * validación que se pueda saltar desde el cliente.
  */
 export async function actualizarConfiguracionKiosko(
-  sb: ShakeClient,
+  sb: ClienteLily,
   sucursalId: string,
   modoPago: ModoPagoKiosko,
   opts: { expiraMinutos?: number; clipConfigurado?: boolean } = {},
@@ -219,16 +219,16 @@ export interface ResultadoReconciliacion {
 }
 
 /** Ejecuta la reconciliación de pagos ahora mismo (además del cron de cada minuto). */
-export async function reconciliarPagos(sb: ShakeClient): Promise<ResultadoReconciliacion[]> {
+export async function reconciliarPagos(sb: ClienteLily): Promise<ResultadoReconciliacion[]> {
   return rpc<ResultadoReconciliacion[]>(sb, 'fn_reconciliar_pagos', {})
 }
 
 /** Expira ahora mismo las órdenes de kiosko vencidas (además del cron de cada minuto). */
-export async function expirarOrdenesKiosko(sb: ShakeClient): Promise<number> {
+export async function expirarOrdenesKiosko(sb: ClienteLily): Promise<number> {
   return rpc<number>(sb, 'fn_expirar_ordenes_kiosko', {})
 }
 
-export async function listarAuditoriaOrden(sb: ShakeClient, ordenId: string): Promise<OrdenAuditoria[]> {
+export async function listarAuditoriaOrden(sb: ClienteLily, ordenId: string): Promise<OrdenAuditoria[]> {
   const { data, error } = await sb
     .from('ordenes_auditoria')
     .select('*')
@@ -239,7 +239,7 @@ export async function listarAuditoriaOrden(sb: ShakeClient, ordenId: string): Pr
 }
 
 /** Suscripción realtime a una orden específica (kiosko: detecta si el cajero la cobra o expira). */
-export function suscribirOrden(sb: ShakeClient, ordenId: string, onCambio: (orden: Orden) => void): () => void {
+export function suscribirOrden(sb: ClienteLily, ordenId: string, onCambio: (orden: Orden) => void): () => void {
   const canal = sb
     .channel(`orden-${ordenId}`)
     .on(
@@ -254,7 +254,7 @@ export function suscribirOrden(sb: ShakeClient, ordenId: string, onCambio: (orde
 }
 
 /** Suscripción realtime a órdenes esperando cobro en caja (POS). */
-export function suscribirOrdenesPendientesCaja(sb: ShakeClient, onCambio: () => void): () => void {
+export function suscribirOrdenesPendientesCaja(sb: ClienteLily, onCambio: () => void): () => void {
   const canal = sb
     .channel('ordenes-pendientes-caja')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes' }, onCambio)

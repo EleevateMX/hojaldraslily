@@ -36,10 +36,9 @@ export interface TicketData {
   referenciaPago?: string | null // voucher/autorización Clip
   recibido?: number // efectivo entregado (para el cambio)
   // Lealtad
+  /** A nombre de quién va el pedido. No es una ficha de cliente: es lo que
+   *  se grita en el mostrador y lo que lleva la etiqueta. */
   clienteNombre?: string | null
-  mancuernasGanadas?: number
-  mancuernasSaldo?: number
-  codigoRewards?: string | null // p. ej. SHK-xxxx (para reimprimir su QR)
 }
 
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */
@@ -84,18 +83,6 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     })
     .join('')
 
-  const lealtad =
-    data.mancuernasGanadas || data.mancuernasSaldo || data.codigoRewards
-      ? `<div class="sep"></div>
-         <div class="loyal">
-           <div class="loyal-t">SHAKE AHOLIC REWARDS</div>
-           ${data.clienteNombre ? `<div>${esc(data.clienteNombre)}</div>` : ''}
-           ${data.mancuernasGanadas != null ? `<div>Mancuernas ganadas: <b>+${data.mancuernasGanadas}</b></div>` : ''}
-           ${data.mancuernasSaldo != null ? `<div>Saldo: <b>${data.mancuernasSaldo}</b> mancuernas</div>` : ''}
-           ${data.codigoRewards ? `<div class="code">${esc(data.codigoRewards)}</div>` : ''}
-         </div>`
-      : ''
-
   return `<!doctype html><html><head><meta charset="utf-8"><title>Ticket ${esc(data.folio)}</title>
 <style>
   @page { size: 80mm auto; margin: 0; }
@@ -117,8 +104,6 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   .tot td { padding: 1px 0; }
   .tot .lbl { text-align: right; padding-right: 3mm; }
   .tot .big { font-size: 16px; font-weight: 700; }
-  .loyal { text-align: center; font-size: 10px; }
-  .loyal-t { font-weight: 700; letter-spacing: 1px; margin-bottom: 2px; }
   .code { font-weight: 700; font-size: 13px; letter-spacing: 1px; margin-top: 2px; }
   .foot { text-align: center; font-size: 10px; margin-top: 8px; }
 </style></head><body onload="window.print()">
@@ -145,7 +130,6 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     ${cambio != null ? `<tr><td class="lbl">Cambio</td><td class="p">${money(cambio)}</td></tr>` : ''}
     ${data.referenciaPago ? `<tr><td class="lbl">Ref.</td><td class="p">${esc(data.referenciaPago)}</td></tr>` : ''}
   </table>
-  ${lealtad}
   <div class="foot">${esc(negocio.leyenda ?? '')}</div>
 </div>
 </body></html>`

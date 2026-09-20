@@ -1,11 +1,11 @@
 import React, { useState, useMemo } from 'react'
 import { usePosStore } from '@/store/posStore'
-import { mxn } from '@shake/utils'
-import type { ProductoVenta, ExtraDeProducto } from '@shake/supabase'
+import { mxn } from '@lily/utils'
+import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import { ModalPersonalizar } from './ModalPersonalizar'
-import { nombreParaOrdenar, partirNombreDeVenta } from '@shake/supabase'
-import { urlDeFoto } from '@shake/utils'
+import { nombreParaOrdenar, partirNombreDeVenta } from '@lily/supabase'
+import { urlDeFoto } from '@lily/utils'
 
 interface Props {
   productos: ProductoVenta[]

@@ -1,4 +1,4 @@
-import type { ShakeClient } from '../client'
+import type { ClienteLily } from '../client'
 
 /**
  * ¿Está habilitado un proveedor de OAuth en Supabase Auth?
@@ -14,7 +14,7 @@ import type { ShakeClient } from '../client'
  * pantalla de error fea, no ser un guardia estricto.
  */
 export async function proveedorAuthHabilitado(
-  sb: ShakeClient,
+  sb: ClienteLily,
   proveedor: 'google' | 'facebook' | 'apple' = 'google',
 ): Promise<boolean> {
   try {
@@ -40,7 +40,7 @@ export async function proveedorAuthHabilitado(
  * app muestre su propio aviso en vez de mandar al usuario a la pantalla de
  * error de Supabase.
  */
-export async function iniciarSesionGoogle(sb: ShakeClient, redirectTo: string): Promise<void> {
+export async function iniciarSesionGoogle(sb: ClienteLily, redirectTo: string): Promise<void> {
   if (!(await proveedorAuthHabilitado(sb, 'google'))) {
     throw new Error('provider is not enabled')
   }
@@ -51,22 +51,22 @@ export async function iniciarSesionGoogle(sb: ShakeClient, redirectTo: string): 
   if (error) throw error
 }
 
-export async function sesionActual(sb: ShakeClient) {
+export async function sesionActual(sb: ClienteLily) {
   const { data } = await sb.auth.getSession()
   return data.session
 }
 
-export async function usuarioActual(sb: ShakeClient) {
+export async function usuarioActual(sb: ClienteLily) {
   const { data } = await sb.auth.getUser()
   return data.user
 }
 
-export async function cerrarSesion(sb: ShakeClient): Promise<void> {
+export async function cerrarSesion(sb: ClienteLily): Promise<void> {
   await sb.auth.signOut()
 }
 
 /** Suscribe a cambios de sesión; devuelve función para desuscribir. */
-export function onCambioSesion(sb: ShakeClient, cb: () => void): () => void {
+export function onCambioSesion(sb: ClienteLily, cb: () => void): () => void {
   const { data } = sb.auth.onAuthStateChange(() => cb())
   return () => data.subscription.unsubscribe()
 }

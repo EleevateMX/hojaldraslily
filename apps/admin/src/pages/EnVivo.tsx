@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { sb } from '../lib/sb'
-import { panelEnVivo, type PanelEnVivo } from '@shake/supabase'
-import { mxn, mensajeDeError } from '@shake/utils'
+import { panelEnVivo, type PanelEnVivo } from '@lily/supabase'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg } from '../ui'
 import { BotonActualizarPantallas } from '../BotonActualizarPantallas'
 

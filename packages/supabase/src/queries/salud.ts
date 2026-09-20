@@ -1,4 +1,4 @@
-import type { ShakeClient } from '../client'
+import type { ClienteLily } from '../client'
 
 export interface SaludSistema {
   pagosPendientes: number
@@ -19,7 +19,7 @@ export interface SaludSistema {
  * PostgREST porque `inventario_movimientos.referencia_id` no tiene FK
  * formal a `ordenes`, así que se calcula ahí). Ver docs/checklist-produccion.md.
  */
-export async function obtenerSaludSistema(sb: ShakeClient): Promise<SaludSistema> {
+export async function obtenerSaludSistema(sb: ClienteLily): Promise<SaludSistema> {
   const { data, error } = await sb.rpc('fn_salud_sistema')
   if (error) throw error
   const fila = Array.isArray(data) ? data[0] : data
@@ -59,7 +59,7 @@ export interface Diagnostico {
  *
  * Exige gerencia del lado del servidor.
  */
-export async function diagnosticoSistema(sb: ShakeClient): Promise<Diagnostico> {
+export async function diagnosticoSistema(sb: ClienteLily): Promise<Diagnostico> {
   const { data, error } = await (sb.rpc as unknown as
     (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
   )('fn_diagnostico_sistema', {})

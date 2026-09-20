@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { diagnosticoSistema, type Diagnostico as TipoDiagnostico, type HallazgoDiagnostico } from '@shake/supabase'
-import { mensajeDeError } from '@shake/utils'
+import { diagnosticoSistema, type Diagnostico as TipoDiagnostico, type HallazgoDiagnostico } from '@lily/supabase'
+import { mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 const SEVERIDAD: Record<string, { etiqueta: string; caja: string; punto: string }> = {

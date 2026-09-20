@@ -5,10 +5,10 @@ import { sb } from '../lib/sb'
 import {
   listarOrdenesPendientesCajaConItems, cobrarOrden, suscribirOrdenesPendientesCaja,
   type OrdenConItems,
-} from '@shake/supabase'
-import { imprimirTicket, type TicketData } from '@shake/ui'
-import { mxn, mensajeDeError } from '@shake/utils'
-import type { MetodoPago } from '@shake/types'
+} from '@lily/supabase'
+import { imprimirTicket, type TicketData } from '@lily/ui'
+import { mxn, mensajeDeError } from '@lily/utils'
+import type { MetodoPago } from '@lily/types'
 
 const METODOS: { key: MetodoPago; label: string; icon: string }[] = [
   { key: 'efectivo', label: 'Efectivo', icon: '💵' },

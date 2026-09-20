@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
-import { suscribirOrden } from '@shake/supabase'
+import { suscribirOrden } from '@lily/supabase'
 import { sb } from '@/lib/sb'
-import type { Orden } from '@shake/types'
+import type { Orden } from '@lily/types'
 
 interface EstadoPagarEnCaja {
   orden?: Orden

@@ -1,4 +1,4 @@
-import type { EstadoTransaccionPago } from '@shake/types'
+import type { EstadoTransaccionPago } from '@lily/types'
 import type {
   PaymentProvider,
   CrearPagoParams,

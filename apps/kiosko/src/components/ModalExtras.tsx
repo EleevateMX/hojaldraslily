@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
-import { mxn } from '@shake/utils'
-import { partirNombreDeVenta, type ProductoVenta, type ExtraDeProducto } from '@shake/supabase'
-import { urlDeFoto } from '@shake/utils'
+import { mxn } from '@lily/utils'
+import { partirNombreDeVenta, type ProductoVenta, type ExtraDeProducto } from '@lily/supabase'
+import { urlDeFoto } from '@lily/utils'
 
 interface Props {
   producto: ProductoVenta | null

@@ -6,7 +6,7 @@
 | 2. Monorepo limpio | pnpm workspaces, packages compartidos, apps | ✅ hecha |
 | 3. Supabase compartido | Migración `pos_operativo_aditivo` aplicada: pagos, cocina, cajas/cortes, empleados, clientes, vistas, RLS operable, realtime | ✅ hecha |
 | 4. Costos a tablas relacionales | `apps/costos` funcional + ETL `supabase/seed` (correr dry-run → conciliar → aplicar) | ✅ app lista · ⏳ ETL por ejecutar |
-| 5. POS con productos reales | `apps/pos` + `apps/kiosko` conectadas a `@shake/supabase`; catálogo desde `productos`; cobro 2 pasos | ✅ hecha |
+| 5. POS con productos reales | `apps/pos` + `apps/kiosko` conectadas a `@lily/supabase`; catálogo desde `productos`; cobro 2 pasos | ✅ hecha |
 | 6. Orden pagada → cocina → inventario | Triggers en la base + KDS (`apps/cocina-*`) y `apps/cliente-display` sobre `pedidos_cocina` con realtime. Verificado e2e | ✅ hecha |
 | 7. Cortes y reportes | `vw_corte_resumen` en el corte del POS + `apps/admin` (ventas/inventario) con `vw_ventas_diarias`/`vw_productos_mas_vendidos` | ✅ hecha |
 | 8. Preparación Clip | Edge function webhook + botón "cobrar con Clip" (ver integracion-clip.md) | ⏳ |

@@ -20,7 +20,7 @@ docs/                                              diagnóstico, arquitectura, f
 ```
 
 Todas las apps consumen el mismo Supabase (fuente de verdad) vía
-`@shake/supabase`. Empieza por **`docs/diagnostico.md`**,
+`@lily/supabase`. Empieza por **`docs/diagnostico.md`**,
 **`docs/diagnostico-pos.md`** y **`docs/plan-fases.md`**.
 
 ## Correr las apps

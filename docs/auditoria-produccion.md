@@ -74,7 +74,7 @@ si el UPDATE se repite) ◄─────────────────�
 KDS recibe pedidos_cocina por Realtime. NO hay envío a impresora térmica.
         │
         ▼
-Ticket de venta: diálogo de impresión del navegador (@shake/ui ticket.ts). Manual.
+Ticket de venta: diálogo de impresión del navegador (@lily/ui ticket.ts). Manual.
 ```
 
 **Lo que SÍ es atómico y correcto** (verificado): la cadena
@@ -338,7 +338,7 @@ anon key** — no pasa por ningún RPC que valide el monto contra la orden.
 - **B1**: No hay manejo global de errores (`ErrorBoundary`) en ninguna app;
   un error de render deja pantalla en blanco sin explicación en un kiosko
   desatendido. *Mejora recomendada, Fase 4.*
-- **B2**: El ticket de venta (`@shake/ui/ticket.ts`) depende del diálogo de
+- **B2**: El ticket de venta (`@lily/ui/ticket.ts`) depende del diálogo de
   impresión del navegador; en un kiosko en modo quiosco sin barra de
   navegador esto puede no disparar o requerir confirmación manual. No se
   reprodujo (requiere hardware real). *Documentar en checklist de
@@ -400,8 +400,8 @@ revertidas, cero datos reales tocados):
   las nuevas RPCs: stock decrementado exactamente por la receta,
   `pedidos_cocina` creado, mancuernas otorgadas correctamente — la cadena
   de triggers existente sigue intacta.
-- `pnpm --filter @shake/supabase typecheck`, `pnpm --filter @shake/pos
-  build`, `pnpm --filter @shake/kiosko build` — los 3 en verde.
+- `pnpm --filter @lily/supabase typecheck`, `pnpm --filter @lily/pos
+  build`, `pnpm --filter @lily/kiosko build` — los 3 en verde.
 
 ### C3, C1 (capa RLS/grants) — `supabase/migrations/produccion_seguridad_pagos_empleados.sql` + `produccion_seguridad_columnas_fix.sql`
 

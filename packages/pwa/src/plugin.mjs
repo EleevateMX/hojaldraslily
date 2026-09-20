@@ -80,7 +80,7 @@ import { createRequire } from 'node:module'
 function colorDelToken(token, porOmision) {
   const require = createRequire(import.meta.url)
   try {
-    const ruta = require.resolve('@shake/brand/tokens.css')
+    const ruta = require.resolve('@lily/brand/tokens.css')
     const css = readFileSync(ruta, 'utf8')
     const m = new RegExp(`--${token}\\s*:\\s*([^;]+);`).exec(css)
     return m ? m[1].trim() : porOmision
@@ -261,7 +261,7 @@ export function pwaDeLily(opciones) {
  */
 /** @param {string} base @param {string[]} casco @returns {string} */
 function serviceWorker(base, casco) {
-  return `// Generado por @shake/pwa. No editar a mano: se reescribe en cada build.
+  return `// Generado por @lily/pwa. No editar a mano: se reescribe en cada build.
 const CASCO = ${JSON.stringify(casco)}
 const CACHE = 'lily-casco-' + ${JSON.stringify(hashDe(casco))}
 

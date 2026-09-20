@@ -3,9 +3,9 @@ import { sb } from '../lib/sb'
 import {
   listarEmpleadosAdmin, listarRoles, crearEmpleado, actualizarEmpleado,
   type EmpleadoAdmin, type Rol,
-} from '@shake/supabase'
+} from '@lily/supabase'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx } from '../ui'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 const ROL_COLOR: Record<string, string> = {
   Administrador: 'bg-sa-blueberry/15 text-sa-blueberry',

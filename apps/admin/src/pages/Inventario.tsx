@@ -13,9 +13,9 @@ import {
   type InsumoEnAlmacen,
   type ListaDeCompra,
   type ResultadoDeConteo,
-} from '@shake/supabase'
+} from '@lily/supabase'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, cx } from '../ui'
-import { mensajeDeError } from '@shake/utils'
+import { mensajeDeError } from '@lily/utils'
 
 /**
  * Inventario.

@@ -1,9 +1,9 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import '@shake/brand/tokens.css'
+import '@lily/brand/tokens.css'
 import './index.css'
-import { registrarPwa } from '@shake/pwa/registrar'
+import { registrarPwa } from '@lily/pwa/registrar'
 
 // Deja la app instalable (icono propio, a pantalla completa) y guarda su
 // casco para que abra aunque el internet esté intermitente.

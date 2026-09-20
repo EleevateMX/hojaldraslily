@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { urlDeFoto } from '@shake/utils'
+import { urlDeFoto } from '@lily/utils'
 import { useCarrito } from '@/store/carritoStore'
 
 export function Carrito() {

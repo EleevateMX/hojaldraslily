@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { pwaDeLily } from '@shake/pwa'
+import { pwaDeLily } from '@lily/pwa'
 
 export default defineConfig({
   plugins: [

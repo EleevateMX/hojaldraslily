@@ -1,9 +1,9 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@shake/types'
+import type { Database } from '@lily/types'
 
-export type ShakeClient = SupabaseClient<Database>
+export type ClienteLily = SupabaseClient<Database>
 
-let cliente: ShakeClient | null = null
+let cliente: ClienteLily | null = null
 
 /**
  * El proyecto sirve el MISMO backend en su dominio propio
@@ -39,7 +39,7 @@ function conDominioPropio(url: string): string {
  * Cliente Supabase para frontend (anon key). Singleton por app.
  * Requiere VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en el .env de la app.
  */
-export function getSupabase(): ShakeClient {
+export function getSupabase(): ClienteLily {
   if (cliente) return cliente
   const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
   const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined

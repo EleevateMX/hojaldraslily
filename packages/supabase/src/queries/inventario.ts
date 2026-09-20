@@ -1,14 +1,14 @@
-import type { StockAlmacen, Almacen, TipoMovimiento } from '@shake/types'
-import type { ShakeClient } from '../client'
+import type { StockAlmacen, Almacen, TipoMovimiento } from '@lily/types'
+import type { ClienteLily } from '../client'
 
-export async function listarAlmacenes(sb: ShakeClient): Promise<Almacen[]> {
+export async function listarAlmacenes(sb: ClienteLily): Promise<Almacen[]> {
   const { data, error } = await sb.from('almacenes').select('*').eq('activo', true).order('nombre')
   if (error) throw error
   return data
 }
 
 export async function stockPorAlmacen(
-  sb: ShakeClient,
+  sb: ClienteLily,
   almacenId?: string,
 ): Promise<StockAlmacen[]> {
   let q = sb.from('vw_stock_almacen').select('*').order('insumo')
@@ -23,7 +23,7 @@ export async function stockPorAlmacen(
  * cantidad: positiva = entrada, negativa = salida.
  */
 export async function registrarMovimiento(
-  sb: ShakeClient,
+  sb: ClienteLily,
   params: {
     insumoId: string
     almacenId: string
@@ -72,7 +72,7 @@ export async function registrarMovimiento(
 
 /** Transferencia Bodega → Kiosko: salida en origen, entrada en destino. */
 export async function transferir(
-  sb: ShakeClient,
+  sb: ClienteLily,
   params: {
     origenId: string
     destinoId: string
@@ -162,7 +162,7 @@ export interface ResumenDeInventario {
 }
 
 export async function resumenDeInventario(
-  sb: ShakeClient,
+  sb: ClienteLily,
   almacenId?: string,
 ): Promise<ResumenDeInventario> {
   const { data, error } = await sb.rpc('fn_inventario_resumen', {
@@ -194,7 +194,7 @@ export interface ResultadoDeConteo {
  * alguien que teclee «−2» es pedirle que haga la cuenta dos veces.
  */
 export async function contarInventario(
-  sb: ShakeClient,
+  sb: ClienteLily,
   lineas: { insumoId: string; contado: number }[],
   almacenId?: string,
 ): Promise<ResultadoDeConteo> {
@@ -208,7 +208,7 @@ export async function contarInventario(
 
 /** Llegó mercancía (`compra`) o se trajo de la bodega (`bodega`). */
 export async function recibirMercancia(
-  sb: ShakeClient,
+  sb: ClienteLily,
   lineas: { insumoId: string; piezas: number }[],
   origen: 'compra' | 'bodega' = 'compra',
   almacenDestinoId?: string,
@@ -230,7 +230,7 @@ export async function recibirMercancia(
  * deje de confiar en el inventario.
  */
 export async function registrarMerma(
-  sb: ShakeClient,
+  sb: ClienteLily,
   params: { insumoId: string; cantidad: number; motivo?: string; almacenId?: string },
 ): Promise<void> {
   const { error } = await sb.rpc('fn_inventario_merma', {
@@ -244,7 +244,7 @@ export async function registrarMerma(
 
 /** De cuánto para abajo hay que volver a comprar. */
 export async function fijarMinimo(
-  sb: ShakeClient,
+  sb: ClienteLily,
   params: { insumoId: string; minimo: number; almacenId?: string },
 ): Promise<void> {
   const { error } = await sb.rpc('fn_inventario_minimo', {
@@ -275,7 +275,7 @@ export interface ListaDeCompra {
 }
 
 export async function listaDeCompra(
-  sb: ShakeClient,
+  sb: ClienteLily,
   almacenId?: string,
 ): Promise<ListaDeCompra> {
   const { data, error } = await sb.rpc('fn_inventario_lista_de_compra', {

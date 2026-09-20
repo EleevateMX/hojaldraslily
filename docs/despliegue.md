@@ -61,7 +61,7 @@ ser monorepo pnpm, la config confiable es:
 | Framework Preset | Vite |
 | Root Directory | `.` (raíz del repo) |
 | Install Command | `pnpm install` |
-| Build Command | `pnpm --filter @shake/pos build` |
+| Build Command | `pnpm --filter @lily/pos build` |
 | Output Directory | `apps/pos/dist` |
 | Environment Variables | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
 
@@ -81,7 +81,7 @@ Luego, en cada proyecto → **Domains** → agrega su subdominio.
    - **Framework Preset:** Vite
    - **Root Directory:** `.` (raíz — no lo cambies)
    - Expande **Build and Output Settings** y activa *Override*:
-     - **Build Command:** `pnpm --filter @shake/kiosko build`
+     - **Build Command:** `pnpm --filter @lily/kiosko build`
      - **Output Directory:** `apps/kiosko/dist`
      - **Install Command:** `pnpm install`
    - **Environment Variables** (agrega las dos):
@@ -90,7 +90,7 @@ Luego, en cada proyecto → **Domains** → agrega su subdominio.
        Dashboard → Settings → API → anon public)*
    - **Deploy**.
 4. Repite **Add New Project** con el MISMO repo por cada app, cambiando solo
-   el `--filter @shake/<app>` del Build Command y el `apps/<app>/dist` del
+   el `--filter @lily/<app>` del Build Command y el `apps/<app>/dist` del
    Output (pos, admin, cocina-alimentos, cocina-bebidas, cliente-display,
    cliente-pwa, costos).
 5. Cada proyecto → **Settings → Domains** → agrega su subdominio
@@ -114,7 +114,7 @@ Un proyecto de Pages por app (Connect to Git → repo):
 
 | Ajuste | Valor (ejemplo kiosko) |
 |---|---|
-| Build command | `pnpm install && pnpm --filter @shake/kiosko build` |
+| Build command | `pnpm install && pnpm --filter @lily/kiosko build` |
 | Build output directory | `apps/kiosko/dist` |
 | Variables de entorno | `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` |
 | Node version | 20 (variable `NODE_VERSION=20`) |

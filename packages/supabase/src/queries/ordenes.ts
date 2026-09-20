@@ -4,8 +4,8 @@ import type {
   Pago,
   PagoInsert,
   MetodoPago,
-} from '@shake/types'
-import type { ShakeClient } from '../client'
+} from '@lily/types'
+import type { ClienteLily } from '../client'
 
 export interface NuevaOrdenItem {
   producto_id: string
@@ -26,15 +26,15 @@ export interface NuevaOrdenItem {
   linea?: string
   /**
    * Si esta línea es un extra, la `linea` del producto al que acompaña.
-   * Sin esto, la base no sabe de cuál shake son las galletas — y con dos
-   * shakes en el pedido, la comanda se las pega al equivocado.
+   * Sin esto, la base no sabe de cuál pan son los extras — y con dos panes
+   * en el pedido, la comanda se los pega al equivocado.
    */
   padre_linea?: string | null
 }
 
 // rpc no está en los tipos generados; se castea el nombre (mismo patrón que empleados.ts).
 type RpcFn = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
-async function rpc<T>(sb: ShakeClient, fn: string, args: Record<string, unknown>): Promise<T> {
+async function rpc<T>(sb: ClienteLily, fn: string, args: Record<string, unknown>): Promise<T> {
   const { data, error } = await (sb.rpc as unknown as RpcFn)(fn, args)
   if (error) throw error
   return data as T
@@ -48,7 +48,7 @@ async function rpc<T>(sb: ShakeClient, fn: string, args: Record<string, unknown>
  * manipulado (ver docs/auditoria-produccion.md, hallazgos C1/C2/A1).
  */
 export async function crearOrden(
-  sb: ShakeClient,
+  sb: ClienteLily,
   // `nombre_cliente` va aparte del tipo generado: es "a nombre de quién va
   // el pedido" (para gritar/etiquetar), independiente de la ficha de lealtad.
   orden: OrdenInsert & { nombre_cliente?: string | null },
@@ -80,7 +80,7 @@ export async function crearOrden(
  * (RPC `fn_cobrar_orden`, que valida el monto contra el total real de la
  * orden); la base rechaza cualquier INSERT directo con estado='aprobado'.
  */
-export async function registrarPago(sb: ShakeClient, pago: PagoInsert): Promise<Pago> {
+export async function registrarPago(sb: ClienteLily, pago: PagoInsert): Promise<Pago> {
   const { data, error } = await sb.from('pagos').insert({ ...pago, estado: 'pendiente' }).select().single()
   if (error) throw error
   return data
@@ -97,7 +97,7 @@ export async function registrarPago(sb: ShakeClient, pago: PagoInsert): Promise<
  * tap), se devuelve el pago ya creado en vez de duplicarlo.
  */
 export async function cobrarOrden(
-  sb: ShakeClient,
+  sb: ClienteLily,
   ordenId: string,
   metodo: MetodoPago,
   monto: number,
@@ -113,7 +113,7 @@ export async function cobrarOrden(
   })
 }
 
-export async function cancelarOrden(sb: ShakeClient, ordenId: string): Promise<void> {
+export async function cancelarOrden(sb: ClienteLily, ordenId: string): Promise<void> {
   const { error } = await sb.from('ordenes').update({ estado: 'cancelada' }).eq('id', ordenId)
   if (error) throw error
 }
@@ -125,7 +125,7 @@ export async function cancelarOrden(sb: ShakeClient, ordenId: string): Promise<v
  * así que cada venta con nombre hace más lista la siguiente. Vienen los más
  * frecuentes primero y sin demos ni textos que no parecen nombre.
  */
-export async function nombresPedidoFrecuentes(sb: ShakeClient, limite = 30): Promise<string[]> {
+export async function nombresPedidoFrecuentes(sb: ClienteLily, limite = 30): Promise<string[]> {
   const filas = await rpc<Array<{ nombre: string; veces: number }>>(
     sb, 'fn_nombres_pedido_frecuentes', { p_limite: limite },
   )
@@ -162,7 +162,7 @@ export interface PedidoHistorial {
  * kiosko puede estar como anon y las tablas de órdenes no se abren para
  * eso — la función devuelve solo lo que esta pantalla enseña, tope 10.
  */
-export async function historialPedidos(sb: ShakeClient, limite = 5): Promise<PedidoHistorial[]> {
+export async function historialPedidos(sb: ClienteLily, limite = 5): Promise<PedidoHistorial[]> {
   return rpc<PedidoHistorial[]>(sb, 'fn_historial_pedidos', { p_limite: limite })
 }
 
@@ -191,6 +191,6 @@ export interface PanelEnVivo {
  * `fn_panel_en_vivo`). Un solo viaje con todo; el servidor exige
  * fn_es_jefe() — a cualquier otro le truena, no le regresa datos vacíos.
  */
-export async function panelEnVivo(sb: ShakeClient, todosLosPedidos = false): Promise<PanelEnVivo> {
+export async function panelEnVivo(sb: ClienteLily, todosLosPedidos = false): Promise<PanelEnVivo> {
   return rpc<PanelEnVivo>(sb, 'fn_panel_en_vivo', { p_todos_los_pedidos: todosLosPedidos })
 }

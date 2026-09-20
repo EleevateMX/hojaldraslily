@@ -1,4 +1,4 @@
-export { getSupabase, type ShakeClient } from './client'
+export { getSupabase, type ClienteLily } from './client'
 export * from './queries/catalogo'
 export * from './queries/produccion'
 export * from './queries/costeo'

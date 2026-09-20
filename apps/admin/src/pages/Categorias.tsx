@@ -7,9 +7,9 @@ import {
   crearCategoria,
   actualizarCategoria,
   moverCategoriaProducto,
-} from '@shake/supabase'
-import type { Producto, Categoria, Cocina } from '@shake/types'
-import { mxn, mensajeDeError } from '@shake/utils'
+} from '@lily/supabase'
+import type { Producto, Categoria, Cocina } from '@lily/types'
+import { mxn, mensajeDeError } from '@lily/utils'
 import { Panel, PageHeader, Loading, ErrorMsg, OkMsg, Chip, cx } from '../ui'
 
 /**

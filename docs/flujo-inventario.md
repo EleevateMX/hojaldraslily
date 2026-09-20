@@ -46,7 +46,7 @@ Todas son `security definer` y revisan por dentro quién las llama
 credencial.
 
 En TypeScript: `resumenDeInventario`, `contarInventario`, `recibirMercancia`,
-`registrarMerma`, `fijarMinimo`, `listaDeCompra` (`@shake/supabase`).
+`registrarMerma`, `fijarMinimo`, `listaDeCompra` (`@lily/supabase`).
 
 ## El conteo se manda como «lo que hay», no como la diferencia
 
