@@ -13,7 +13,7 @@ import {
   type EmpleadoSesion,
 } from '@shake/supabase'
 import { CandadoDeEstacion } from '@shake/ui'
-import { mensajeDeError, urlDeFoto } from '@shake/utils'
+import { mensajeDeError, urlDeFoto, enMoldes } from '@shake/utils'
 import { sb } from './lib/sb'
 
 /**
@@ -51,7 +51,7 @@ function Adentro({
   onSacar: () => void
 }) {
   const reloj = relojDelHorno(item.listo_en, ahora)
-  const foto = urlDeFoto(null, import.meta.env.BASE_URL)
+  const foto = urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)
 
   return (
     <div
@@ -62,15 +62,19 @@ function Adentro({
           : 'border-sa-banana bg-sa-banana/10',
       ].join(' ')}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="font-display text-2xl text-sa-green-ink leading-tight">{item.sabor}</p>
+      <div className="flex items-start gap-3">
+        {/* La foto primero: frente al horno se reconoce el pan de un vistazo,
+            su nombre completo a dos metros no. */}
+        {foto && <img src={foto} alt="" className="w-16 h-16 object-contain shrink-0" />}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-2xl text-sa-green-ink leading-tight">{item.sabor}</p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
+            {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
+            {enMoldes(item.cuadros, item.molde).texto}
+          </p>
+        </div>
         <span className="font-mono text-xs text-sa-green-ink/45 shrink-0">#{item.folio}</span>
       </div>
-
-      <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-        {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
-        {item.cuadros} cuadros
-      </p>
 
       {/* El reloj es lo más grande de la tarjeta: es lo que se mira de lejos. */}
       <p
@@ -95,7 +99,6 @@ function Adentro({
       <p className="text-center font-body text-[11px] text-sa-green-ink/45 mt-1.5">
         Al sacarlo entra al inventario
       </p>
-      {foto && <span className="hidden">{foto}</span>}
     </div>
   )
 }
@@ -110,15 +113,20 @@ function Esperando({
   ocupado: boolean
   onMeter: (moldes: number) => void
 }) {
+  const foto = urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)
   return (
     <div className="rounded-sa-lg border border-sa-green-ink/10 bg-white p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="font-display text-xl text-sa-green-ink leading-tight">{item.sabor}</p>
+      <div className="flex items-start gap-3">
+        {foto && <img src={foto} alt="" className="w-12 h-12 object-contain shrink-0" />}
+        <div className="min-w-0 flex-1">
+          <p className="font-display text-xl text-sa-green-ink leading-tight">{item.sabor}</p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
+            {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
+            {item.minutos} min
+          </p>
+        </div>
         <span className="font-mono text-xs text-sa-green-ink/45 shrink-0">#{item.folio}</span>
       </div>
-      <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-        {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} · {item.minutos} min
-      </p>
 
       <div className="flex gap-2 mt-3">
         <button
@@ -348,15 +356,24 @@ export default function App() {
               key={i.item_id}
               className="rounded-sa-lg border border-dashed border-sa-green-ink/15 bg-sa-cream-soft/60 p-4"
             >
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="font-display text-lg text-sa-green-ink/70 leading-tight">
-                  {i.sabor}
-                </p>
+              <div className="flex items-start gap-3">
+                {urlDeFoto(i.imagen_url, import.meta.env.BASE_URL) && (
+                  <img
+                    src={urlDeFoto(i.imagen_url, import.meta.env.BASE_URL) as string}
+                    alt=""
+                    className="w-10 h-10 object-contain shrink-0 opacity-60"
+                  />
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="font-display text-lg text-sa-green-ink/70 leading-tight">
+                    {i.sabor}
+                  </p>
+                  <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/40 mt-1">
+                    {i.moldes} de {i.molde} · aún sin armar
+                  </p>
+                </div>
                 <span className="font-mono text-xs text-sa-green-ink/35 shrink-0">#{i.folio}</span>
               </div>
-              <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/40 mt-1">
-                {i.moldes} de {i.molde} · aún sin armar
-              </p>
             </div>
           ))}
         </Columna>

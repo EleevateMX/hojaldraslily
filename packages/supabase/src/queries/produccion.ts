@@ -638,6 +638,9 @@ export interface EnElHorno {
   item_id: string
   folio: number
   sabor: string
+  /** La foto del sabor, la misma que ve el kiosko. Frente al horno se
+   *  reconoce el pan de un vistazo; su nombre completo, a dos metros, no. */
+  imagen_url: string | null
   /** Moldes que hay dentro ahorita. */
   moldes: number
   /** De cuántos cuadros es cada molde: 48 o 24. */
@@ -653,6 +656,7 @@ export interface EsperandoHorno {
   item_id: string
   folio: number
   sabor: string
+  imagen_url: string | null
   moldes: number
   molde: Molde
   cuadros: number
@@ -663,6 +667,7 @@ export interface SinArmar {
   item_id: string
   folio: number
   sabor: string
+  imagen_url: string | null
   moldes: number
   molde: Molde
 }

@@ -6,19 +6,15 @@ import {
   cobrarEncargo,
   cancelarEncargo,
   listarPaquetesDelDia,
-  listarExistenciasPorSabor,
-  mandarAProducir,
   listarOrdenesConTiempo,
   faltaPara,
   horaDeSalida,
   partirNombreDeVenta,
   type Encargo,
   type PaqueteDelDia,
-  type ExistenciaPorSabor,
   type OrdenConTiempo,
 } from '@shake/supabase'
 import { mxn, mensajeDeError, urlDeFoto } from '@shake/utils'
-import { usePosStore } from '@/store/posStore'
 import { sb } from '@/lib/sb'
 
 /**
@@ -61,7 +57,6 @@ export function Encargos() {
   const navigate = useNavigate()
   const [encargos, setEncargos] = useState<Encargo[]>([])
   const [existencias, setExistencias] = useState<PaqueteDelDia[]>([])
-  const [sabores, setSabores] = useState<ExistenciaPorSabor[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -78,16 +73,10 @@ export function Encargos() {
   const [busca, setBusca] = useState('')
   const [guardando, setGuardando] = useState(false)
 
-  // Mandar a producir, desde la caja.
-  //
-  // La duena atiende la caja: cuando ve que se estan acabando las bolitas de
-  // queso no tiene por que irse a Admin a pedirlas. Solo gerencia: un cajero
-  // no decide que se hornea.
-  const empleado = usePosStore((s) => s.empleado)
-  const esGerencia = ['administrador', 'gerente'].includes(empleado?.rol ?? '')
-  const [modoProducir, setModoProducir] = useState(false)
-  const [aProducir, setAProducir] = useState<Record<string, number>>({})
-  const [mandando, setMandando] = useState(false)
+  // Mandar a producir ya NO vive aqui: vive en el panel de Produccion de la
+  // caja, junto a lo que hay en el horno y a lo que queda. Tenerlo en dos
+  // lugares era pedirle a quien atiende que recordara en cual de los dos
+  // estaba -- y esta pantalla es de ENCARGOS.
   const [horno, setHorno] = useState<OrdenConTiempo[]>([])
 
   const base = import.meta.env.BASE_URL
@@ -95,12 +84,12 @@ export function Encargos() {
   const cargar = useCallback(async (conSpinner = true) => {
     if (conSpinner) setCargando(true)
     try {
-      const [e, x, s] = await Promise.all([
-        listarEncargos(sb), listarPaquetesDelDia(sb), listarExistenciasPorSabor(sb),
-      ])
+      // Las existencias por sabor se dejaron de pedir aqui: eran para
+      // "mandar a producir", que ahora vive en el panel de Produccion de la
+      // caja. Una consulta menos en una pantalla que se relee sola.
+      const [e, x] = await Promise.all([listarEncargos(sb), listarPaquetesDelDia(sb)])
       setEncargos(e)
       setExistencias(x)
-      setSabores(s)
       setError(null)
     } catch (err) {
       setError(mensajeDeError(err))
@@ -113,29 +102,6 @@ export function Encargos() {
     void cargar()
     void listarOrdenesConTiempo(sb).then(setHorno).catch(() => {})
   }, [cargar])
-
-  async function mandarAlHorno() {
-    // Se pide por SABOR y en moldes: asi se hornea. Un molde de 48 cuadros
-    // se corta despues en los paquetes que pidan.
-    const items = Object.entries(aProducir)
-      .filter(([, n]) => n > 0)
-      .map(([sabor, moldes]) => ({ sabor, moldes }))
-    if (items.length === 0) return
-    setMandando(true)
-    try {
-      await mandarAProducir(sb, items)
-      const moldes = items.reduce((s, i) => s + i.moldes, 0)
-      setAviso(`Mandados a hacer ${moldes} molde${moldes === 1 ? '' : 's'}. Ya salió en la pantalla del horno.`)
-      setAProducir({})
-      setModoProducir(false)
-      setError(null)
-      setHorno(await listarOrdenesConTiempo(sb))
-    } catch (e) {
-      setError(mensajeDeError(e))
-    } finally {
-      setMandando(false)
-    }
-  }
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -208,7 +174,6 @@ export function Encargos() {
     }
   }
 
-  const aHornear = Object.values(aProducir).reduce((s, n) => s + n, 0)
   const piezasApartadas = encargos.reduce((s, e) => s + e.piezas, 0)
   const dinero = encargos.reduce((s, e) => s + e.total, 0)
 
@@ -223,20 +188,11 @@ export function Encargos() {
         </div>
         <div className="flex items-center gap-3 shrink-0">
           <button
-            onClick={() => { setNuevo((v) => !v); setModoProducir(false) }}
+            onClick={() => setNuevo((v) => !v)}
             className={`${btn} bg-sa-cream text-sa-green-deep`}
           >
             {nuevo ? 'Cerrar' : 'Apartar uno nuevo'}
           </button>
-          {/* Solo gerencia: un cajero no decide que se hornea. */}
-          {esGerencia && (
-            <button
-              onClick={() => { setModoProducir((v) => !v); setNuevo(false) }}
-              className={`${btn} bg-sa-banana/25 text-sa-cream border border-sa-banana/50`}
-            >
-              {modoProducir ? 'Cerrar' : 'Mandar a producir'}
-            </button>
-          )}
           <button
             onClick={() => navigate('/')}
             className={`${btn} bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 border border-sa-cream/20`}
@@ -286,78 +242,6 @@ export function Encargos() {
               )
             })}
           </div>
-        )}
-
-        {modoProducir && (
-          <section className="bg-white rounded-sa shadow-sa-sm p-5 space-y-4">
-            <div>
-              <p className="font-display text-xl text-sa-green-ink">Mandar a producir</p>
-              <p className="font-body text-sm text-sa-green-ink/60 mt-0.5">
-                Sale en la pantalla del horno. Cuando lo marquen hecho, entra
-                solo al inventario.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 max-h-72 overflow-y-auto">
-              {sabores.map((f) => {
-                const sabor = f.sabor
-                const n = aProducir[sabor] ?? 0
-                const foto = urlDeFoto(f.imagen_url, base)
-                return (
-                  <div
-                    key={sabor}
-                    className={[
-                      'flex items-center gap-2 rounded-sa border p-2',
-                      n > 0 ? 'border-sa-banana bg-sa-banana/10' : 'border-sa-green-ink/10',
-                    ].join(' ')}
-                  >
-                    {foto && <img src={foto} alt="" className="w-10 h-10 object-contain shrink-0" />}
-                    <div className="min-w-0 flex-1">
-                      <p className="font-body text-sm text-sa-green-ink leading-tight truncate">
-                        {sabor}
-                      </p>
-                      <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                        quedan {Math.max(0, f.cuadros_libres)} cuadros
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => setAProducir((p) => ({ ...p, [sabor]: Math.max(0, n - 1) }))}
-                        disabled={n === 0}
-                        className="w-8 h-8 rounded-full border border-sa-green-ink/15 text-sa-green-ink/60 disabled:opacity-25"
-                      >
-                        −
-                      </button>
-                      <span className="font-mono text-sm w-10 text-center tabular-nums">
-                        {n > 0 ? `${n} m` : '—'}
-                      </span>
-                      <button
-                        onClick={() => setAProducir((p) => ({ ...p, [sabor]: n + 1 }))}
-                        className="w-8 h-8 rounded-full bg-sa-green text-sa-cream"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-
-            <div className="flex items-center justify-between gap-4">
-              <p className="font-body text-sm text-sa-green-ink/70">
-                {aHornear > 0
-                  ? `${aHornear} molde${aHornear === 1 ? '' : 's'} en la orden`
-                  : 'Todavía no ha puesto nada'}
-              </p>
-              <button
-                onClick={() => void mandarAlHorno()}
-                disabled={aHornear === 0 || mandando}
-                className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-6 py-2.5 rounded-sa font-medium text-sm disabled:opacity-40 transition-colors"
-              >
-                {mandando ? 'Mandando…' : 'Mandar al horno'}
-              </button>
-            </div>
-          </section>
         )}
 
         {nuevo && (

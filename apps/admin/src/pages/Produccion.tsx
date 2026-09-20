@@ -13,7 +13,7 @@ import {
   type PaqueteDelDia,
   type HornoEnVivo,
 } from '@shake/supabase'
-import { mensajeDeError, urlDeFoto } from '@shake/utils'
+import { mensajeDeError, urlDeFoto, enMoldes } from '@shake/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**
@@ -48,6 +48,10 @@ function Fila({
   const foto = urlDeFoto(e.imagen_url, base)
   const agotado = e.cuadros_libres <= 0 && e.cuadros_horneados > 0
   const sinHornear = e.cuadros_horneados === 0
+  // Contra el molde con el que se horneó este sabor. Si se contara todo
+  // contra 48, un sabor hecho en moldes de 24 saldría a la mitad de moldes de
+  // los que de verdad se metieron al horno.
+  const libres = enMoldes(Math.max(0, e.cuadros_libres), e.cuadros_por_molde)
 
   return (
     <div
@@ -63,14 +67,16 @@ function Fila({
         <p className="font-body text-xs text-sa-green-ink/55 mt-1">
           {sinHornear
             ? 'Todavía no se hornea nada hoy'
-            : `Se hornearon ${e.moldes_horneados} molde${e.moldes_horneados === 1 ? '' : 's'}` +
-              ` (${e.cuadros_horneados} cuadros)` +
-              (e.cuadros_mermados > 0 ? ` · se perdieron ${e.cuadros_mermados}` : '') +
-              ` · se vendieron ${e.cuadros_vendidos}`}
+            : `Se hornearon ${e.moldes_horneados} molde${e.moldes_horneados === 1 ? '' : 's'} de ${e.cuadros_por_molde}` +
+              (e.cuadros_mermados > 0
+                ? ` · se perdieron ${enMoldes(e.cuadros_mermados, e.cuadros_por_molde).texto}`
+                : '') +
+              ` · se vendieron ${enMoldes(e.cuadros_vendidos, e.cuadros_por_molde).texto}`}
         </p>
         {e.cuadros_apartados > 0 && (
           <p className="font-body text-xs text-sa-banana mt-1">
-            {e.cuadros_apartados} cuadros apartados para encargos
+            {enMoldes(e.cuadros_apartados, e.cuadros_por_molde).texto} apartado
+            {e.cuadros_apartados === 1 ? '' : 's'} para encargos
           </p>
         )}
         {/* De cuántas formas se puede cortar lo que queda. Es el MISMO pan
@@ -85,17 +91,22 @@ function Fila({
         )}
       </div>
 
-      <div className="shrink-0 w-28 text-center">
+      {/* En MOLDES Y CUARTOS, que es como cuenta la casa. «1,423 cuadros» no
+          le dice nada a nadie; «29 moldes y ½» sí. El cuadro exacto se queda
+          abajo, en chico, para quien necesite el número fino. */}
+      <div className="shrink-0 w-32 text-center">
         <p
           className={[
             'font-display leading-none',
-            agotado ? 'text-3xl text-sa-strawberry' : 'text-4xl text-sa-green-ink',
+            agotado ? 'text-2xl text-sa-strawberry' : 'text-3xl text-sa-green-ink',
           ].join(' ')}
         >
-          {Math.max(0, e.cuadros_libres)}
+          {agotado ? 'se acabó' : libres.texto}
         </p>
         <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-          {agotado ? 'se acabó' : 'cuadros libres'}
+          {agotado
+            ? 'no queda nada'
+            : `libres · ${Math.max(0, e.cuadros_libres)} cuadro${e.cuadros_libres === 1 ? '' : 's'}`}
         </p>
       </div>
 
@@ -320,7 +331,7 @@ export default function Produccion() {
     <div className="space-y-6">
       <PageHeader
         title="Producción de hoy"
-        subtitle="Se hornea por moldes de 48 o de 24 cuadros y se vende por paquete. Lo que se cobre en caja va bajando los cuadros solo."
+        subtitle="Se hornea por moldes de 48 o de 24 y se vende por paquete. Cada sabor se cuenta con SU molde; los tres totales de abajo, en moldes de 48, que es el de la casa."
       />
 
       <ElHorno />
@@ -369,7 +380,7 @@ export default function Produccion() {
                   <div className="min-w-0 flex-1">
                     <p className="font-body text-sm text-sa-green-ink leading-tight">{f.sabor}</p>
                     <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                      quedan {Math.max(0, f.cuadros_libres)} cuadros
+                      quedan {enMoldes(Math.max(0, f.cuadros_libres), f.cuadros_por_molde).texto}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -441,21 +452,35 @@ export default function Produccion() {
             en el mismo dia ese numero no es de nada: 96 cuadros son dos moldes
             de 48 o cuatro de 24. El cuadro si es la misma unidad siempre. */}
         <div className={cx.panelChico}>
-          <p className={cx.label}>Cuadros horneados</p>
+          <p className={cx.label}>Horneado</p>
           <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">
-            {cuadrosHorneados}
+            {enMoldes(cuadrosHorneados, 48).texto}
+          </p>
+          <p className="font-body text-[11px] text-sa-green-ink/45 mt-0.5">
+            {cuadrosHorneados} cuadros
           </p>
         </div>
         <div className={cx.panelChico}>
-          <p className={cx.label}>Cuadros vendidos</p>
-          <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">{cuadrosVendidos}</p>
+          <p className={cx.label}>Vendido</p>
+          <p className="font-display text-2xl sm:text-3xl text-sa-green-ink mt-1">
+            {enMoldes(cuadrosVendidos, 48).texto}
+          </p>
+          <p className="font-body text-[11px] text-sa-green-ink/45 mt-0.5">
+            {cuadrosVendidos} cuadros
+          </p>
         </div>
         <div className={cx.panelChico}>
-          <p className={cx.label}>Cuadros libres</p>
-          <p className="font-display text-2xl sm:text-3xl text-sa-green mt-1">{cuadrosLibres}</p>
+          <p className={cx.label}>Libre</p>
+          <p className="font-display text-2xl sm:text-3xl text-sa-green mt-1">
+            {enMoldes(cuadrosLibres, 48).texto}
+          </p>
+          <p className="font-body text-[11px] text-sa-green-ink/45 mt-0.5">
+            {cuadrosLibres} cuadros
+          </p>
           {cuadrosApartados > 0 && (
             <p className="font-body text-xs text-sa-banana mt-1">
-              {cuadrosApartados} apartados
+              {enMoldes(cuadrosApartados, 48).texto} apartado
+              {cuadrosApartados === 1 ? '' : 's'}
             </p>
           )}
         </div>
