@@ -191,12 +191,32 @@ propósito: **la regla se cumple venga de donde venga el UPDATE**, y el viejo
 `fn_produccion_avanzar` —que saltaba el horno— ahora choca contra él en vez
 de colar pan que nunca se horneó.
 
-**La información del horno sube a la caja** (`fn_horno_en_vivo`): el chip de
-la cabecera del POS y la franja de "En el horno" contestan *"¿a qué hora
-salen?"* sin que nadie deje de cobrar para ir a preguntar. Contesta **tres**
-listas, no una — `adentro`, `esperando` y `sin_armar` — porque "no hay nada
-en el horno" significa cosas muy distintas si es porque ya salió todo o
-porque producción no ha armado nada.
+**La caja es el puesto de mando.** `PanelDeProduccion` es UN botón en la
+cabecera del POS y UN cajón que se abre encima, con las tres cosas que están
+pasando atrás y lo que se decide con ellas:
+
+| | Contesta |
+|---|---|
+| **En el horno** | «¿a qué hora salen?» — con su reloj y su foto |
+| **Producción** | qué está armado esperando turno y qué siguen armando |
+| **Encargos de hoy** | quién pasa, a qué hora, y **si su caja ya está lista** |
+| **Lo que queda** | en moldes y cuartos, por sabor |
+| **Mandar a hacer** | solo gerencia |
+
+El botón dice **una sola cosa**, la más urgente, en el orden en que duele: el
+pan que se pasó de su hora, luego un encargo de hoy sin empacar, luego lo que
+está en el horno. Si dijera las tres cifras siempre, nadie leería ninguna.
+
+Va encima de la caja y no es una ruta aparte a propósito: navegar a otra
+página con un ticket a medias es la forma más fácil de perder una venta.
+
+**Una sola fuente por pregunta.** `fn_horno_en_vivo` contesta **tres** listas
+—`adentro`, `esperando` y `sin_armar`— porque «no hay nada en el horno»
+significa cosas muy distintas si es porque ya salió todo o porque producción
+no ha armado nada. Y hubo una franja de «En el horno» en la caja que leía
+`listarOrdenesConTiempo`: **otra consulta para la misma pregunta**. Una
+contaba piezas y la otra moldes, así que tarde o temprano iban a decir cosas
+distintas del mismo horno. Se quitó.
 
 **Y los encargos son lo primero.** `empaque` (antes `almacen`) ya no es solo
 una lista de lo apartado: arriba de todo va **qué hay que empacar sumado por
@@ -383,7 +403,7 @@ empaquetador y se desvían solas:
 | Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
 | Apuntar los moldes que ya se armaron | Pantalla de **Producción**: +1, +2 o **Ya está**. Esto **todavía no** entra al inventario |
 | Meter y sacar del horno | Pantalla del **Horno**. Lo que se **saca** es lo que sube al inventario |
-| Saber qué se está horneando, desde la caja | Sale solo en la cabecera de la **Caja** y en la franja de "En el horno" |
+| Saber qué pasa atrás, desde la caja | El botón **Producción** de la cabecera: horno con su reloj, qué arman los panaderos, encargos de hoy y lo que queda |
 | Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |

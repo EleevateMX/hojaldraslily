@@ -2,11 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import {
-  listarAlmacenes, listarCajas, corteAbierto, abrirCaja,
-  listarOrdenesConTiempo, faltaPara, horaDeSalida,
-  type OrdenConTiempo,
-} from '@lily/supabase'
+import { listarAlmacenes, listarCajas, corteAbierto, abrirCaja } from '@lily/supabase'
 import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
 import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
@@ -20,26 +16,12 @@ export function Caja() {
     canal, setCanal,
   } = usePosStore()
 
-  /**
-   * El reloj del horno.
-   *
-   * Cuando gerencia manda a hacer 30 bolitas, la pregunta que sigue en la
-   * caja es «¿a qué hora salen?». Aquí se ve sin ir a preguntar al horno, y
-   * es lo que la cajera le contesta a un cliente que espera.
-   */
-  const [enElHorno, setEnElHorno] = useState<OrdenConTiempo[]>([])
-  // Un tick por minuto para que la cuenta baje sola. No por segundo: nadie
-  // hornea con esa precisión y un contador corriendo solo distrae.
-  const [, setTick] = useState(0)
-
-  useEffect(() => {
-    if (!corte) return
-    const traer = () => void listarOrdenesConTiempo(sb).then(setEnElHorno).catch(() => {})
-    traer()
-    const t = setInterval(traer, 60000)
-    const reloj = setInterval(() => setTick((n) => n + 1), 60000)
-    return () => { clearInterval(t); clearInterval(reloj) }
-  }, [corte])
+  // El horno ya no se consulta aquí: lo hace el PanelDeProducción, que es
+  // quien lo enseña. Antes esta pantalla leía `listarOrdenesConTiempo` para
+  // pintar una franja, y el panel leía `fn_horno_en_vivo` para lo mismo —
+  // DOS consultas contestando la misma pregunta desde dos lados. En cuanto
+  // una cuenta piezas y la otra moldes, terminan diciendo cosas distintas
+  // del mismo horno y ya no se sabe a cuál creerle.
   const { productos, productosExtra, extras, categorias, loading } = useProductosPOS()
 
   const [horaActual, setHoraActual] = useState(new Date())
@@ -224,33 +206,6 @@ export function Caja() {
           </button>
         </div>
       </header>
-
-      {/* Lo que esta en el horno, con su hora estimada. Va debajo de la
-          cabecera y no en una pantalla aparte porque la pregunta ("¿a que
-          hora salen?") llega mientras se esta cobrando. */}
-      {enElHorno.length > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-sa-cream-warm/60 border-b border-sa-cream-warm overflow-x-auto flex-shrink-0">
-          <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/60 shrink-0">
-            En el horno
-          </span>
-          {enElHorno.map((o) => {
-            const f = faltaPara(o.listo_estimado)
-            return (
-              <span
-                key={o.id}
-                className={[
-                  'shrink-0 rounded-full px-3 py-1 font-body text-sm',
-                  f.tarde ? 'bg-sa-strawberry/20 text-sa-green-ink' : 'bg-white text-sa-green-ink',
-                ].join(' ')}
-                title={`Orden #${o.folio} · ${o.piezas_hechas} de ${o.piezas_pedidas} hechas`}
-              >
-                <b>{o.piezas_pedidas - o.piezas_hechas}</b> piezas · {f.texto}
-                <span className="text-sa-green-ink/45"> ({horaDeSalida(o.listo_estimado)})</span>
-              </span>
-            )
-          })}
-        </div>
-      )}
 
       <div className="flex-1 flex overflow-hidden gap-3 p-3">
         <div className="flex-1 flex flex-col overflow-hidden bg-sa-cream-soft rounded-sa shadow-sa-sm">

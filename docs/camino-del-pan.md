@@ -92,13 +92,25 @@ la mesa de empaque es cobrar por error.
 
 ### C — Caja
 
-En la cabecera, un chip con lo que está pasando en el horno; debajo, la franja
-de **En el horno** con la hora estimada de cada tanda. La pregunta *«¿a qué
-hora salen?»* llega mientras se está cobrando, así que la respuesta tiene que
-estar ahí, no en otra pantalla.
+Es el puesto de mando. En la cabecera hay **un botón, Producción**, y detrás
+un cajón que se abre encima de la venta con todo lo que está pasando atrás:
 
-En la caja también se **aparta** un encargo y se **cobra** al entregarlo, y
-gerencia puede mandar a hacer sin ir a Admin.
+1. **En el horno** — qué se hornea y a qué hora sale, con su foto
+2. **Producción** — qué está armado esperando turno y qué siguen armando
+3. **Encargos de hoy** — quién pasa, a qué hora y **si su caja ya está lista**
+4. **Lo que queda** — en moldes y cuartos, por sabor
+5. **Mandar a hacer** — solo gerencia
+
+El botón dice **una sola cosa**, la más urgente: *«3 se pasó de su hora»*,
+*«2 encargos por empacar»* o *«5 en el horno»*. Si dijera las tres cifras
+siempre, nadie leería ninguna.
+
+Se abre **encima** de la caja, no en otra página: con un ticket a medias,
+navegar a otro lado es la forma más fácil de perder una venta.
+
+En la caja también se **aparta** un encargo y se **cobra** al entregarlo, se
+vende por Rappi con el interruptor, y se cobra **una parte en efectivo y otra
+con tarjeta** con «Una parte y otra parte».
 
 ## Moldes de 48 y de 24
 
