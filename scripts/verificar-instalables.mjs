@@ -107,7 +107,6 @@ const APPS = [
   'horno',
   'empaque',
   'cliente-display',
-  'cliente-pwa',
   'web',
 ]
 

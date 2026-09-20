@@ -1,12 +1,7 @@
 import React, { useState } from 'react'
 import { usePosStore } from '@/store/posStore'
-import { sb } from '../../lib/sb'
-import { buscarCupon } from '@shake/supabase'
 import { mxn } from '@shake/utils'
-import type { Cupon } from '@shake/types'
 import { ModalDescuento } from './ModalDescuento'
-import { ModalCliente } from './ModalCliente'
-import { ModalAutorizacion } from './ModalAutorizacion'
 import { SugerenciaVenta } from './SugerenciaVenta'
 import type { ProductoVenta } from '@shake/supabase'
 
@@ -19,48 +14,13 @@ interface Props {
 export function OrdenPanel({ onCobrar, productos }: Props) {
   const {
     items, incrementar, decrementar, quitarItem, limpiarOrden,
-    cliente, cupon, promo, promosDisp,
-    setCupon, setPromo, setCliente, setPromosDisp,
     descuentoManual, setDescuentoManual,
-    itemsElegiblesCupon,
-    subtotal, descuentoCupon, descuentoPromoMonto, descuentoManualMonto, neto, totalItems,
+    subtotal, descuentoManualMonto, neto, totalItems,
     precioDe,
   } = usePosStore()
 
   const [modalDescuento, setModalDescuento] = useState(false)
-  const [modalCliente, setModalCliente] = useState(false)
-  const [codigoCupon, setCodigoCupon] = useState('')
-  const [cuponMsg, setCuponMsg] = useState<string | null>(null)
-  // Cupón escaneado a mano: válido, pero esperando el PIN de gerente/admin.
-  const [cuponPendiente, setCuponPendiente] = useState<Cupon | null>(null)
 
-  function aplicarCupon(cup: Cupon) {
-    setCuponMsg(null)
-    if (itemsElegiblesCupon(cup).length === 0) {
-      setCuponMsg(
-        cup.tipo === 'cumpleanos'
-          ? 'Agrega algo al ticket para usar el cupón de cumpleaños.'
-          : 'Agrega un producto para aplicar el cupón.',
-      )
-      return
-    }
-    setCupon(cup)
-  }
-
-  async function escanearCupon() {
-    setCuponMsg(null)
-    const c = await buscarCupon(sb, codigoCupon).catch(() => null)
-    if (!c) return setCuponMsg('Cupón no encontrado.')
-    if (c.estado !== 'activo') return setCuponMsg('El cupón no está activo.')
-    if (new Date(c.vence_en).getTime() < Date.now()) return setCuponMsg('El cupón está vencido.')
-    // Un cupón tecleado/escaneado a mano requiere autorización de gerente
-    // (los cupones del cliente identificado se aplican directo porque ya
-    // están ligados a su cuenta).
-    setCuponPendiente(c)
-  }
-
-  const dCupon = descuentoCupon()
-  const dPromo = descuentoPromoMonto()
   const dManual = descuentoManualMonto()
 
   return (
@@ -77,7 +37,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
         </div>
         {items.length > 0 && (
           <button
-            onClick={() => { limpiarOrden(); setCuponMsg(null) }}
+            onClick={() => limpiarOrden()}
             className="font-mono text-xs uppercase tracking-wide text-sa-strawberry hover:brightness-110"
           >
             Cancelar
@@ -144,22 +104,13 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
         )}
       </div>
 
-      {/* Pie: cliente + cupón/promo + descuento + totales + cobrar */}
+      {/* Pie: cupón + descuento + totales + cobrar */}
       {items.length > 0 && (
         <div className="border-t border-sa-green-ink/10 flex-shrink-0 bg-sa-cream-paper/30">
-          {/* Cliente + descuento manual */}
+          {/* Descuento manual. El boton de "Cliente" que iba aqui al lado
+              era para identificar a un cliente de lealtad; la panaderia no
+              opera lealtad, asi que el descuento se queda con todo el ancho. */}
           <div className="flex gap-2 px-4 py-3">
-            <button
-              onClick={() => setModalCliente(true)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full font-mono text-xs uppercase tracking-wide transition-colors ${
-                cliente
-                  ? 'bg-sa-mint/30 text-sa-green-ink border border-sa-mint'
-                  : 'bg-white text-sa-green-ink/70 border border-sa-green-ink/15 hover:bg-sa-cream-soft'
-              }`}
-            >
-              <span>👤</span>
-              {cliente ? cliente.nombre.split(' ')[0] : 'Cliente'}
-            </button>
             <button
               onClick={() => setModalDescuento(true)}
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full font-mono text-xs uppercase tracking-wide transition-colors ${
@@ -177,85 +128,6 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
             </button>
           </div>
 
-          {/* Cupones y promos del cliente */}
-          {cliente && (
-            <div className="px-4 pb-1 space-y-1">
-              {cliente.cupones.length > 0 && !cupon && cliente.cupones.map((c) => (
-                <div key={c.id} className="flex items-center justify-between bg-white border border-sa-green-ink/10 rounded-full px-3 py-1.5">
-                  <span className="font-mono text-xs text-sa-green-ink truncate flex-1 mr-2">
-                    {c.tipo === 'cumpleanos' ? '🎂' : '🎁'} {c.beneficio}
-                  </span>
-                  <button
-                    onClick={() => aplicarCupon(c)}
-                    className="text-sa-green text-xs font-mono uppercase tracking-wide hover:brightness-110 flex-shrink-0"
-                  >
-                    Aplicar
-                  </button>
-                </div>
-              ))}
-              {promosDisp.length > 0 && !promo && promosDisp.map((pr) => (
-                <div key={pr.id} className="flex items-center justify-between bg-white border border-sa-green-ink/10 rounded-full px-3 py-1.5">
-                  <span className="font-mono text-xs text-sa-green-ink truncate flex-1 mr-2">🎯 {pr.nombre}</span>
-                  <button
-                    onClick={() => setPromo(pr)}
-                    className="text-sa-green text-xs font-mono uppercase tracking-wide hover:brightness-110 flex-shrink-0"
-                  >
-                    Aplicar
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Escáner de cupón por código (CUP-…) o cupón aplicado */}
-          <div className="px-4 pb-2">
-            {cupon ? (
-              <div className="flex items-center gap-2 bg-sa-green/10 border border-sa-green/30 rounded-full px-3 py-1.5">
-                <span className="font-mono text-xs text-sa-green-ink flex-1">🎟️ Cupón −{mxn(dCupon)}</span>
-                <button
-                  onClick={() => { setCupon(null); setCuponMsg(null) }}
-                  className="text-sa-strawberry/70 hover:text-sa-strawberry text-xs"
-                >
-                  ✕
-                </button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={codigoCupon}
-                  onChange={(e) => setCodigoCupon(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') void escanearCupon() }}
-                  placeholder="Escanear cupón (CUP-…)"
-                  className="flex-1 px-3 py-1.5 bg-white border border-sa-green-ink/10 rounded-full font-mono text-xs text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
-                />
-                <button
-                  onClick={() => void escanearCupon()}
-                  className="px-3 py-1.5 bg-sa-green text-sa-cream rounded-full font-mono text-xs uppercase tracking-wide hover:bg-sa-green-deep"
-                >
-                  Canjear
-                </button>
-              </div>
-            )}
-            {cuponMsg && <p className="font-mono text-xs text-sa-strawberry mt-1.5">{cuponMsg}</p>}
-          </div>
-
-          {/* Promo aplicada */}
-          {promo && (
-            <div className="px-4 pb-2">
-              <div className="flex items-center justify-between bg-sa-green/10 border border-sa-green/20 rounded-sa px-3 py-1.5">
-                <span className="font-mono text-xs text-sa-green-ink truncate flex-1 mr-2">🎯 {promo.nombre}</span>
-                <span className="font-mono text-xs text-sa-green flex-shrink-0">−{mxn(dPromo)}</span>
-                <button
-                  onClick={() => setPromo(null)}
-                  className="text-sa-strawberry/70 hover:text-sa-strawberry text-xs ml-2"
-                >
-                  ✕
-                </button>
-              </div>
-            </div>
-          )}
-
           <SugerenciaVenta productos={productos} />
 
           {/* Totales */}
@@ -268,24 +140,6 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
               <div className="flex justify-between text-sm">
                 <span className="text-sa-strawberry">Descuento</span>
                 <span className="font-mono text-sa-strawberry">−{mxn(dManual)}</span>
-              </div>
-            )}
-            {dCupon > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-sa-green">Cupón</span>
-                <span className="font-mono text-sa-green">−{mxn(dCupon)}</span>
-              </div>
-            )}
-            {dPromo > 0 && (
-              <div className="flex justify-between text-sm">
-                <span className="text-sa-green">Promo</span>
-                <span className="font-mono text-sa-green">−{mxn(dPromo)}</span>
-              </div>
-            )}
-            {cliente && (
-              <div className="flex justify-between text-xs">
-                <span className="text-sa-blueberry">🏋️ Mancuernas</span>
-                <span className="font-mono text-sa-blueberry">{cliente.mancuernas}</span>
               </div>
             )}
             <div className="flex justify-between items-baseline pt-2 border-t border-sa-green-ink/10">
@@ -314,24 +168,6 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
         onAplicar={(d) => { setDescuentoManual(d); setModalDescuento(false) }}
         onQuitar={() => { setDescuentoManual(null); setModalDescuento(false) }}
         subtotal={subtotal()}
-      />
-      <ModalCliente
-        open={modalCliente}
-        onClose={() => setModalCliente(false)}
-        onCliente={(c, promos) => { setCliente(c); setPromosDisp(promos); setCupon(null); setPromo(null) }}
-        onQuitar={() => { setCliente(null); setPromosDisp([]); setCupon(null); setPromo(null) }}
-      />
-      <ModalAutorizacion
-        open={cuponPendiente !== null}
-        accion="canjear este cupón"
-        onClose={() => setCuponPendiente(null)}
-        onAutorizado={() => {
-          if (cuponPendiente) {
-            setCodigoCupon('')
-            aplicarCupon(cuponPendiente)
-          }
-          setCuponPendiente(null)
-        }}
       />
     </div>
   )

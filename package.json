@@ -17,7 +17,6 @@
     "dev:horno": "pnpm --filter @shake/horno dev",
     "dev:empaque": "pnpm --filter @shake/empaque dev",
     "dev:display": "pnpm --filter @shake/cliente-display dev",
-    "dev:pwa": "pnpm --filter @shake/cliente-pwa dev",
     "dev:web": "pnpm --filter @shake/web dev",
     "build": "pnpm -r --if-present build",
     "build:costos": "pnpm --filter @shake/costos build",

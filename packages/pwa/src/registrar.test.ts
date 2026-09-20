@@ -91,7 +91,7 @@ afterEach(() => {
 
 describe('registrarPwa: cuándo se deja pasar la versión nueva', () => {
   it('no activa nada mientras no sea seguro, aunque la versión ya esté lista', async () => {
-    let seguro = false
+    const seguro = false
     registrarPwa({ activarCuando: () => seguro, base: '/' })
     await vi.advanceTimersByTimeAsync(0)
 

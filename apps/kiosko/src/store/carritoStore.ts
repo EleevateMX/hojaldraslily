@@ -28,21 +28,6 @@ export interface ItemCarrito {
   porUnidad?: number
 }
 
-export interface UsuarioKiosko {
-  /**
-   * Solo existe cuando el cliente entró con Google desde el propio kiosko.
-   * Cuando lo identifica el cajero (por QR o teléfono) no hay sesión de Auth
-   * de por medio, y aun así la compra le suma mancuernas: lo que necesita la
-   * orden es `clienteId`, no la sesión.
-   */
-  authId?: string | null
-  nombre: string
-  email?: string | null
-  clienteId: string | null
-  /** Saldo en el momento de identificarlo, para mostrarlo sin volver a leer. */
-  mancuernas?: number
-}
-
 /** Empleado con el turno abierto en esta pantalla (solo en modo cajero). */
 export interface CajeroTurno {
   id: string
@@ -52,7 +37,6 @@ export interface CajeroTurno {
 
 interface CarritoStore {
   items: ItemCarrito[]
-  usuario: UsuarioKiosko | null
   /** A nombre de quién va el pedido — lo que grita barra y lo que imprime la etiqueta. */
   nombrePedido: string
   setNombrePedido: (n: string) => void
@@ -80,7 +64,6 @@ interface CarritoStore {
   /** Los extras de una línea, para pintarlos debajo de ella. */
   extrasDe: (linea: string) => ItemCarrito[]
   limpiar: () => void
-  setUsuario: (u: UsuarioKiosko | null) => void
   setCajero: (c: CajeroTurno | null) => void
   total: () => number
   totalItems: () => number
@@ -120,7 +103,6 @@ function ajustar(items: ItemCarrito[], linea: string, delta: number): { items: I
 
 export const useCarrito = create<CarritoStore>((set, get) => ({
   items: [],
-  usuario: null,
   nombrePedido: '',
   setNombrePedido: (nombrePedido) => set({ nombrePedido }),
   cajero: null,
@@ -215,11 +197,10 @@ export const useCarrito = create<CarritoStore>((set, get) => ({
   extrasDe: (linea) => get().items.filter((i) => i.padreLinea === linea),
 
   limpiar: () => {
-    set({ items: [], usuario: null, nombrePedido: '' })
+    set({ items: [], nombrePedido: '' })
     displayCartCleared()
   },
 
-  setUsuario: (usuario) => set({ usuario }),
 
   setCajero: (cajero) => set({ cajero }),
 

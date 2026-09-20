@@ -90,25 +90,10 @@ raíz libre para la página del negocio.
 
 ---
 
-## Fase 4 — Login con Google (lealtad)
+## Fase 4 — Login con Google (retirada)
 
-**No hay nada que comprar.** Los proveedores sociales están incluidos en
-Supabase hasta en el plan gratuito, y esta organización ya está en **Pro**.
-Lo único que falta son las credenciales de Google Cloud, que también son
-gratis. Guía completa: `docs/configurar-google-auth.md`.
-
-| # | Qué | Quién |
-|---|---|---|
-| 4.1 | Google Cloud → pantalla de consentimiento OAuth → **publicar la app** | Tú |
-| 4.2 | Crear credencial de **Aplicación web**; origen autorizado `https://rewards.hojaldraslily.com`; URI de redirección `https://fzkdgqqvfkogmxdgqsxj.supabase.co/auth/v1/callback` | Tú |
-| 4.3 | Pegar Client ID y Secret en Supabase → Authentication → Providers → Google | Tú |
-| 4.4 | Agregar `https://rewards.hojaldraslily.com` en Authentication → URL Configuration → Redirect URLs | Tú |
-| 4.5 | Probar el login con una cuenta cualquiera | Tú |
-| 4.6 | Verificar contra la base que quedó ligado a su ficha y que acumula | Yo |
-
-> La app de Rewards **solo** tiene entrada por Google. Hasta que esto esté
-> encendido, no anuncies el sitio: el cliente puede abrirlo pero no entrar.
-> En caja la lealtad funciona igual (teléfono o QR).
+*Se quitó con Rewards: la panadería no opera lealtad y ninguna pantalla pide
+entrar con Google.*
 
 ---
 

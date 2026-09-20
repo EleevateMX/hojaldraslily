@@ -2,7 +2,7 @@
 //
 // Se generan y no se dibujan a mano por la razón de siempre: un PNG suelto en
 // `public/` es un lugar más donde la identidad se desvía sola (CLAUDE.md
-// §2.5). Los iconos que ya existían en `cliente-pwa` son la prueba -- traen la
+// §2.5). Los iconos que traía el motor original son la prueba -- venían con la
 // crema vieja (#F8EDD5) y el coral viejo (#C4463C), de antes de que la marca
 // fuera carmín.
 //
@@ -57,7 +57,6 @@ function color(token) {
 // quemado.
 const APPS = [
   ['kiosko', 'sa-green'], // Autoservicio -- carmín, es la cara al cliente
-  ['cliente-pwa', 'sa-green'], // Rewards -- también del cliente
   ['pos', 'sa-green-ink'], // Caja -- morado hojaldra
   ['produccion', 'sa-banana'], // Panaderos -- dorado horneado
   ['horno', 'sa-mango', 'relleno'], // Horno -- terracota, y RELLENO

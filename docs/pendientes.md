@@ -61,7 +61,7 @@
       credenciales de Clip; hoy corre en ruta manual con el Stand 2)
 - [x] Lealtad "Hojaldras Lily Rewards" núcleo: mancuernas (1 x $10, tope 100),
       cupones a 100 (vigencia 1 año, máx 5), cupón cumpleaños, identificación
-      teléfono+QR, canje. Conectado al POS. Ver `docs/flujo-lealtad.md`
+      teléfono+QR, canje. **Retirado**: la panadería no opera lealtad
 - [x] Lealtad: crons con pg_cron (cumpleaños/vencimientos/reactivación),
       PWA del cliente (login Google + QR/saldo/cupones), canje de cupón en el
       cobro (POS y kiosko)

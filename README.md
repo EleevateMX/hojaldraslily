@@ -14,7 +14,6 @@ apps/empaque           ✅ E: qué empacar, y entregar y cobrar los encargos    
 apps/cliente-display   ✅ pantalla pública de folios (preparando/listo)        :5184
 apps/admin             ✅ menú CRUD + ventas + inventario                      :5185
 apps/kiosko            ✅ autoservicio + Clip + lealtad (canal kiosko)         :5186
-apps/cliente-pwa       ✅ PWA cliente: login Google, mancuernas, QR, cupones   :5187
 packages/{types,supabase,utils,ui}                 código compartido
 supabase/{migrations,seed,functions}               SQL versionado, ETL, edge functions
 docs/                                              diagnóstico, arquitectura, flujos, plan
@@ -38,7 +37,6 @@ pnpm dev:produccion         # :5188
 pnpm dev:horno              # :5190
 pnpm dev:empaque            # :5189
 pnpm dev:display   # cliente-display → :5184
-pnpm dev:pwa       # PWA cliente (Rewards) → :5187
 pnpm dev:costos    # costeo      → :5180
 ```
 

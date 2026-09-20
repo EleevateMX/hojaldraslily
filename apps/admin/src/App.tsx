@@ -4,24 +4,19 @@ import { useState, type ReactElement } from 'react'
 import Dashboard from './pages/Dashboard'
 import EnVivo from './pages/EnVivo'
 import Diagnostico from './pages/Diagnostico'
-import Metas from './pages/Metas'
-import Rewards from './pages/Rewards'
 import Menu from './pages/Menu'
 import Menus from './pages/Menus'
 import Produccion from './pages/Produccion'
 import Almacen from './pages/Almacen'
 import Categorias from './pages/Categorias'
 import Combos from './pages/Combos'
-import Extras from './pages/Extras'
 import Ventas from './pages/Ventas'
 import Inventario from './pages/Inventario'
-import Promos from './pages/Promos'
-import Clientes from './pages/Clientes'
 import Empleados from './pages/Empleados'
 import Impresoras from './pages/Impresoras'
 import Sistema from './pages/Sistema'
 
-type Tab = 'dashboard' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'extras' | 'inventario' | 'promos' | 'ventas' | 'clientes' | 'metas' | 'rewards' | 'empleados' | 'impresoras' | 'sistema'
+type Tab = 'dashboard' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'empleados' | 'impresoras' | 'sistema'
 
 const w = 18
 
@@ -73,29 +68,14 @@ const IconCombos = () => (
     <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" /><rect x="14" y="14" width="7" height="7" rx="1" />
   </svg>
 )
-const IconExtras = () => (
-  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-  </svg>
-)
 const IconInventario = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><line x1="12" y1="22" x2="12" y2="12" />
   </svg>
 )
-const IconPromos = () => (
-  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z" /><circle cx="7" cy="7" r="1" fill="currentColor" stroke="none" />
-  </svg>
-)
 const IconVentas = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" /><polyline points="16 7 22 7 22 13" />
-  </svg>
-)
-const IconClientes = () => (
-  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" /><circle cx="8.5" cy="10.5" r="2" /><path d="M5.5 16c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5" /><path d="M14.5 9.5H19M14.5 13h4.5M14.5 16.5H17" />
   </svg>
 )
 const IconEmpleados = () => (
@@ -114,26 +94,18 @@ const IconSistema = () => (
   </svg>
 )
 
-const IconRewards = () => (
-  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12" />
-  </svg>
-)
 
-const IconMetas = () => (
-  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1.5" />
-  </svg>
-)
 
 /**
  * Lo que se ve en la barra lateral.
  *
- * Clientes, Rewards y Extras estan FUERA de esta lista a proposito: la
- * panaderia todavia no opera lealtad ni extras, y tres pantallas vacias en el
- * menu hacen que nadie encuentre las que si se usan. El codigo y sus rutas
- * siguen ahi: el dia que se quieran, se vuelven a poner en esta lista y ya
- * funcionan.
+ * Aqui ya no hay lealtad. Clientes, Rewards, Metas y Extras venian del motor
+ * original —una heladeria con mancuernas, sellos y toppings— y esto es una
+ * panaderia: se vende pan, no se acumulan puntos. Estaban escondidas del menu
+ * "por si acaso", y una pantalla que nadie va a usar es codigo que hay que
+ * mantener, migrar y revisar cada vez que se toca la base.
+ *
+ * El historial de git las guarda si algun dia hacen falta.
  */
 const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
@@ -146,9 +118,7 @@ const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'categorias', label: 'Categorías', Icon: IconCategorias },
   { id: 'combos', label: 'Combos', Icon: IconCombos },
   { id: 'inventario', label: 'Inventario', Icon: IconInventario },
-  { id: 'promos', label: 'Promos', Icon: IconPromos },
   { id: 'ventas', label: 'Ventas', Icon: IconVentas },
-  { id: 'metas', label: 'Metas', Icon: IconMetas },
   { id: 'empleados', label: 'Empleados', Icon: IconEmpleados },
   { id: 'impresoras', label: 'Impresoras', Icon: IconImpresoras },
   { id: 'sistema', label: 'Sistema', Icon: IconSistema },
@@ -192,19 +162,14 @@ export default function App() {
         {tab === 'dashboard' && <Dashboard />}
         {tab === 'envivo' && <EnVivo />}
         {tab === 'diagnostico' && <Diagnostico />}
-        {tab === 'metas' && <Metas />}
-        {tab === 'rewards' && <Rewards />}
         {tab === 'produccion' && <Produccion />}
         {tab === 'almacen' && <Almacen />}
         {tab === 'menus' && <Menus />}
         {tab === 'menu' && <Menu />}
         {tab === 'categorias' && <Categorias />}
         {tab === 'combos' && <Combos />}
-        {tab === 'extras' && <Extras />}
         {tab === 'ventas' && <Ventas />}
         {tab === 'inventario' && <Inventario />}
-        {tab === 'promos' && <Promos />}
-        {tab === 'clientes' && <Clientes />}
         {tab === 'empleados' && <Empleados />}
         {tab === 'impresoras' && <Impresoras />}
         {tab === 'sistema' && <Sistema />}

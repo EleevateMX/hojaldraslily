@@ -1,16 +1,15 @@
 import { create } from 'zustand'
 import {
-  descuentoPromo as calcDescuentoPromo,
   precioEnCanal,
   seVendeEnCanal,
 } from '@shake/supabase'
-import type { ProductoVenta, ClienteConLealtad, CanalDeVenta, PreciosDeCanal } from '@shake/supabase'
+import type { ProductoVenta, CanalDeVenta, PreciosDeCanal } from '@shake/supabase'
 // Lo que el login guarda de verdad es un EmpleadoSesion (id, nombre, ROL y
 // sucursal), no la fila cruda de `empleados`. Estaba tipado como `Empleado`
 // —que trae `rol_id`, no `rol`— y por eso quien necesitaba el puesto tenia
 // que castear. Se tipa lo que en realidad hay.
 import type { EmpleadoSesion } from '@shake/supabase'
-import type { Almacen, Caja, CajaCorte, Cupon, Promocion } from '@shake/types'
+import type { Almacen, Caja, CajaCorte } from '@shake/types'
 
 /**
  * Línea del ticket: producto real del catálogo + cantidad.
@@ -67,28 +66,17 @@ interface PosStore {
 
   // --- Orden activa ---
   items: LineaCarrito[]
-  cliente: ClienteConLealtad | null
-  cupon: Cupon | null
-  promo: Promocion | null
-  promosDisp: Promocion[]
   descuentoManual: DescuentoManual | null
 
   agregarItem: (p: ProductoVenta, personalizacion?: string | null) => void
   incrementar: (lineaId: string) => void
   decrementar: (lineaId: string) => void
   quitarItem: (lineaId: string) => void
-  setCliente: (cliente: ClienteConLealtad | null) => void
-  setCupon: (cupon: Cupon | null) => void
-  setPromo: (promo: Promocion | null) => void
-  setPromosDisp: (promos: Promocion[]) => void
   setDescuentoManual: (d: DescuentoManual | null) => void
   limpiarOrden: () => void
 
   // --- Cálculos (reglas de negocio reales) ---
   subtotal: () => number
-  itemsElegiblesCupon: (cup: Cupon) => LineaCarrito[]
-  descuentoCupon: () => number
-  descuentoPromoMonto: () => number
   descuentoManualMonto: () => number
   descuentoTotal: () => number
   neto: () => number
@@ -107,10 +95,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
       caja: null,
       corte: null,
       items: [],
-      cliente: null,
-      cupon: null,
-      promo: null,
-      promosDisp: [],
       descuentoManual: null,
     }),
 
@@ -122,10 +106,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
   setCorte: (corte) => set({ corte }),
 
   items: [],
-  cliente: null,
-  cupon: null,
-  promo: null,
-  promosDisp: [],
   descuentoManual: null,
 
   agregarItem: (p, personalizacion = null) =>
@@ -166,10 +146,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
   quitarItem: (lineaId) =>
     set((state) => ({ items: state.items.filter((l) => l.lineaId !== lineaId) })),
 
-  setCliente: (cliente) => set({ cliente }),
-  setCupon: (cupon) => set({ cupon }),
-  setPromo: (promo) => set({ promo }),
-  setPromosDisp: (promosDisp) => set({ promosDisp }),
   setDescuentoManual: (descuentoManual) => set({ descuentoManual }),
 
   limpiarOrden: () =>
@@ -179,10 +155,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
     set({
       canal: 'pos',
       items: [],
-      cliente: null,
-      cupon: null,
-      promo: null,
-      promosDisp: [],
       descuentoManual: null,
     }),
 
@@ -214,36 +186,6 @@ export const usePosStore = create<PosStore>((set, get) => ({
   // cupón de cumpleaños regalaba $0: se podía canjear y no descontaba nada,
   // sin ningún aviso. Se compara por ESTACIÓN, que no cambia aunque a los
   // menús les cambien el nombre.
-  itemsElegiblesCupon: (cup) => {
-    const items = get().items
-    if (cup.tipo === 'cumpleanos') {
-      return items.filter((l) => l.producto.categorias?.cocinas?.slug === 'alimentos')
-    }
-    return items
-  },
-
-  // El cupón cubre (gratis) el ítem elegible más caro, 1 unidad.
-  descuentoCupon: () => {
-    const { cupon } = get()
-    if (!cupon) return 0
-    const eleg = get().itemsElegiblesCupon(cupon)
-    if (eleg.length === 0) return 0
-    return Math.max(...eleg.map((l) => get().precioDe(l.producto)))
-  },
-
-  descuentoPromoMonto: () => {
-    const { promo, items } = get()
-    if (!promo) return 0
-    // items expandidos por unidad (precio + categoría) para calcular la promo.
-    const planos = items.flatMap((l) =>
-      Array.from({ length: l.cantidad }, () => ({
-        precio: get().precioDe(l.producto),
-        categoria: l.producto.categorias?.nombre ?? null,
-      })),
-    )
-    return calcDescuentoPromo(promo, planos)
-  },
-
   descuentoManualMonto: () => {
     const { descuentoManual } = get()
     if (!descuentoManual) return 0
@@ -254,9 +196,14 @@ export const usePosStore = create<PosStore>((set, get) => ({
     return Math.min(descuentoManual.valor, sub)
   },
 
-  // Descuento combinado: cupón + promo + descuento manual de caja.
-  descuentoTotal: () =>
-    get().descuentoCupon() + get().descuentoPromoMonto() + get().descuentoManualMonto(),
+  // El unico descuento que queda: el que autoriza gerencia con su PIN.
+  //
+  // Los cupones y las promos se fueron con la lealtad, y no por descuido: los
+  // cupones se EMITEN a un cliente de lealtad (cumpleanos, premio de sellos) y
+  // las promos se segmentaban por cliente (`fn_promos_cliente`). Sin clientes
+  // de lealtad no hay a quien emitirselos ni a quien aplicarselas: lo que
+  // quedaba eran dos campos que nunca se iban a llenar.
+  descuentoTotal: () => get().descuentoManualMonto(),
 
   neto: () => Math.max(0, get().subtotal() - get().descuentoTotal()),
 

@@ -94,11 +94,8 @@ Para que quien escriba `hojaldraslily.net` llegue a tu `.mx`:
 
 Cuando `rewards.hojaldraslily.com` esté en línea:
 
-- **Supabase → Authentication → URL Configuration → Redirect URLs**: agrega
-  `https://rewards.hojaldraslily.com`.
-- **Google Cloud Console** (OAuth client): en *Authorized redirect URIs* debe
-  estar `https://fzkdgqqvfkogmxdgqsxj.supabase.co/auth/v1/callback` (ver
-  `docs/flujo-lealtad.md`).
+*(La configuración de Google OAuth que iba aquí se quitó con Rewards: la
+panadería no opera lealtad y ninguna pantalla pide entrar con Google.)*
 
 ## 8. Seguridad de lo que YA tienes (correo y sitio)
 

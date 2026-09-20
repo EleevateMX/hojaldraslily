@@ -1,48 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { listarAlmacenes } from '@shake/supabase'
-import type { ModoPagoKiosko } from '@shake/types'
 import { urlDeFoto } from '@shake/utils'
 import { useCarrito } from '@/store/carritoStore'
-import { resolverModoKiosko } from '@/lib/modoKiosko'
-import { ModalCliente } from '@/components/ModalCliente'
-import { sb } from '@/lib/sb'
 
 export function Carrito() {
   const navigate = useNavigate()
-  const { items, incrementar, decrementar, extrasDe, total, totalItems, usuario, setUsuario } =
+  const { items, incrementar, decrementar, extrasDe, total, totalItems } =
     useCarrito()
   // Los extras se pintan DEBAJO de su producto, no como líneas sueltas: es la
   // misma agrupación que sale en la comanda, así que lo que ve el cajero es
   // lo que va a ver quien prepara.
   const lineasPrincipales = items.filter((i) => !i.padreLinea)
-  const [modo, setModo] = useState<ModoPagoKiosko | null>(null)
-  const [pidiendoCliente, setPidiendoCliente] = useState(false)
-
-  useEffect(() => {
-    let vivo = true
-    ;(async () => {
-      try {
-        const almacenes = await listarAlmacenes(sb)
-        const kiosko = almacenes.find((a) => a.tipo === 'kiosko') ?? almacenes[0]
-        if (!kiosko || !vivo) return
-        setModo(await resolverModoKiosko(sb, kiosko.sucursal_id))
-      } catch {
-        // Sin modo resuelto se sigue con el flujo normal, que incluye lealtad.
-      }
-    })()
-    return () => { vivo = false }
-  }, [])
-
-  /**
-   * En modo cajero se salta la pantalla de lealtad y se va directo a cobrar.
-   *
-   * Esa pantalla está pensada para el cliente frente al kiosko: le ofrece
-   * entrar con Google, lo cual no puede completar si no es su celular el que
-   * está enfrente. En su lugar, el cajero lo identifica aquí abajo con su QR
-   * o su teléfono — un toque, sin salir del carrito, para no alargar el cobro.
-   */
-  const irAPagar = () => navigate(modo === 'cajero' ? '/pago' : '/lealtad')
 
   if (totalItems() === 0) {
     return (
@@ -162,35 +130,6 @@ export function Carrito() {
       </main>
 
       <footer className="bg-sa-green text-sa-cream px-8 py-6 rounded-t-sa-lg shadow-sa">
-        {/* Lealtad: sin cliente identificado la venta no suma mancuernas, así
-            que la opción vive junto al botón de cobrar y no en otra pantalla. */}
-        {modo === 'cajero' && (
-          usuario ? (
-            <div className="flex items-center gap-4 mb-4 bg-sa-green-deep/50 rounded-sa px-5 py-3">
-              <span className="text-2xl">🏋️</span>
-              <div className="flex-1 min-w-0">
-                <p className="font-display text-xl leading-tight truncate">{usuario.nombre}</p>
-                <p className="font-mono text-[11px] uppercase tracking-wide text-sa-banana">
-                  {usuario.mancuernas ?? 0} mancuernas · suma {Math.min(100, Math.floor(total() / 10))} con esta compra
-                </p>
-              </div>
-              <button
-                onClick={() => setUsuario(null)}
-                className="font-mono text-[11px] uppercase tracking-wide text-sa-cream/60 underline underline-offset-4 shrink-0"
-              >
-                Quitar
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setPidiendoCliente(true)}
-              className="w-full flex items-center justify-center gap-3 mb-4 border-2 border-dashed border-sa-cream/35 rounded-sa py-3 font-display text-xl text-sa-cream/85 active:scale-[0.98] transition-transform"
-            >
-              🏋️ Sumar mancuernas a un cliente
-            </button>
-          )
-        )}
-
         <div className="flex items-end justify-between mb-5">
           <div>
             <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">
@@ -205,27 +144,13 @@ export function Carrito() {
           </span>
         </div>
         <button
-          onClick={irAPagar}
+          onClick={() => navigate('/pago')}
           className="w-full bg-sa-strawberry text-white py-5 rounded-full font-display text-3xl shadow-sa-sm active:scale-[0.98] transition-transform"
         >
           A pagar
         </button>
       </footer>
 
-      {pidiendoCliente && (
-        <ModalCliente
-          onCerrar={() => setPidiendoCliente(false)}
-          onElegir={(c) => {
-            setUsuario({
-              nombre: c.nombre,
-              email: c.email,
-              clienteId: c.id,
-              mancuernas: c.mancuernas,
-            })
-            setPidiendoCliente(false)
-          }}
-        />
-      )}
     </div>
   )
 }

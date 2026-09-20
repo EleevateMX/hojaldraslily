@@ -1,6 +1,6 @@
 # Las apps se instalan
 
-**Nueve de las diez apps son instalables**: el navegador ofrece *Instalar*, y
+**Ocho de las nueve apps son instalables**: el navegador ofrece *Instalar*, y
 quedan con su icono en el escritorio o en la pantalla del teléfono, abriendo a
 pantalla completa sin barra de direcciones. La décima, `costos`, es un HTML
 plano sin empaquetador y se queda fuera a propósito.
@@ -59,7 +59,7 @@ pwaDeLily({
 })
 ```
 
-Es un plugin y no nueve archivos JSON escritos a mano por dos razones:
+Es un plugin y no ocho archivos JSON escritos a mano por dos razones:
 
 1. **El color.** Un manifest a mano es un lugar más donde la identidad se
    desvía sola, que es la trampa de CLAUDE.md §2.5 — y ya había pasado: los
@@ -80,7 +80,7 @@ node scripts/generar-iconos-pwa.mjs
 ```
 
 Sale del arte de `packages/brand/assets/hojaldra.png` y de los colores de
-`tokens.css`. Los que había en `cliente-pwa` son la prueba de para qué sirve
+`tokens.css`. Los que traía el motor original son la prueba de para qué sirve
 esto: traen la crema vieja (`#F8EDD5`) y el coral viejo (`#C4463C`), de antes
 de que la marca fuera carmín.
 
@@ -94,7 +94,7 @@ Así que el service worker nuevo **espera**:
 
 | App | Cuándo pasa a la versión nueva |
 |---|---|
-| Producción, Almacén, Admin, Pantalla, Rewards, Web | De inmediato: no hay nada a medias que perder |
+| Producción, Horno, Empaque, Admin, Pantalla, Web | De inmediato: no hay nada a medias que perder |
 | **Kiosko** | Cuando está en el catálogo y sin carrito — la misma condición que ya usa para la señal de recarga, no una segunda |
 | **Caja** | Cuando el ticket está vacío y no está en el cobro (ahí se está hablando con la terminal) |
 
@@ -114,7 +114,7 @@ No de palabra: contra Chromium de verdad
 (`Page.getInstallabilityErrors`, que es el mismo criterio con el que Chrome
 decide si ofrece instalar).
 
-- Las **nueve** apps: cero errores de instalabilidad. La comprobación quedó
+- Las **ocho** apps: cero errores de instalabilidad. La comprobación quedó
   guardada en `scripts/verificar-instalables.mjs` — antes se hizo a mano y a
   la siguiente app hubo que volver a escribirla.
 - Con el servidor apagado, la app **abre** y el `#root` está ahí.

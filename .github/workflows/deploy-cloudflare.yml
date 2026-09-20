@@ -76,8 +76,6 @@ jobs:
             project: lily-empaque
           - app: cliente-display
             project: lily-cliente-display
-          - app: cliente-pwa
-            project: lily-cliente-pwa
           - app: costos
             project: lily-costeo
           # La pagina publica del negocio. Faltaba en esta lista, y por eso

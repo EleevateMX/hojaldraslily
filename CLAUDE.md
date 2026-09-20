@@ -50,7 +50,7 @@ trajo y por qué, y las tres cosas que sí valdría la pena traer (pago mixto,
 diagnóstico de impresión y cerrar sesión en Costeos).
 
 **La vitrina para enseñar el sistema** vive en
-<https://eleevatemx.github.io/hojaldraslily/>: las 10 apps compiladas contra
+<https://eleevatemx.github.io/hojaldraslily/>: las 9 apps compiladas contra
 la base real, para mostrarlas desde cualquier navegador sin instalar nada.
 La arma sola `.github/workflows/pages-demos.yml` con
 `scripts/publicar-demo-pages.sh` en cada push; los artefactos no se
@@ -72,12 +72,12 @@ reloptions y `search_path`), así que no hubo que regenerarlo.
 ## 1. Qué es esto
 
 Panadería de hojaldras en Mérida (Col. Miguel Alemán). Monorepo pnpm,
-11 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
+9 apps sobre un solo Supabase (`fzkdgqqvfkogmxdgqsxj`), desplegadas a
 Cloudflare Pages por GitHub Actions al hacer push a `main`.
 
 | App | Dominio | Quién la usa |
 |---|---|---|
-| `web` | `hojaldraslily.com` | El público (menú vivo, QR de Rewards) |
+| `web` | `hojaldraslily.com` | El público (menú vivo, encargos) |
 | `kiosko` | `kiosko.hojaldraslily.com` | Cliente y cajero en la barra |
 | `pos` | `caja.hojaldraslily.com` | **C** — la caja: turno, cobros y encargos |
 | `produccion` | `produccion.hojaldraslily.com` | **P** — los panaderos (arman los moldes) |
@@ -85,7 +85,6 @@ Cloudflare Pages por GitHub Actions al hacer push a `main`.
 | `empaque` | `empaque.hojaldraslily.com` | **E** — quien empaca y entrega los encargos |
 | `cliente-display` | `pantalla.hojaldraslily.com` | TV de folios |
 | `admin` | `admin.hojaldraslily.com` | Gerencia |
-| `cliente-pwa` | `rewards.hojaldraslily.com` | Celular del cliente (y la app de TestFlight) |
 | `costos` | `costos.hojaldraslily.com` | Costeo e inventario (HTML plano) |
 
 Los dominios de la tabla son el plan para Lily; los proyectos de
@@ -582,24 +581,32 @@ empaquetador y se desvían solas:
 
 ---
 
-### 2.7 La app del cliente se compila en la nube
+### 2.7 Aquí no hay lealtad, y es a propósito
 
-`.github/workflows/testflight-ios.yml` la sube a TestFlight desde un
-runner de macOS: **no hace falta una Mac**. Cuatro secrets (llave de App
-Store Connect + Team ID) y ningún certificado — `xcodebuild
--allowProvisioningUpdates` los crea solo. Por eso puede correr en la nube:
-no hay un `.p12` que alguien tenga que exportar de su llavero.
+Se quitaron Rewards (`apps/cliente-pwa` y su workflow de TestFlight), las
+pantallas de Clientes, Metas, Promos y Extras de Admin, y del kiosko la
+entrada con Google, el QR de lealtad y los canjes.
 
-El proyecto nativo **no se versiona**: se regenera en cada corrida desde
-`capacitor.config.ts` + `scripts/app-nativa-preparar.sh`. Ese script pone
-los tres ajustes que Capacitor no pone solo, y el primero es el que más
-duele si falta: sin el **URL Type** `com.hojaldraslily.rewards`, el login de
-Google termina bien y el teléfono no sabe a qué app devolver el resultado
-— sin ningún mensaje de error.
+Venían del motor original —una heladería con mancuernas, sellos y toppings—
+y **esto es una panadería**: se vende pan, no se acumulan puntos. Estaban
+escondidas del menú «por si acaso», y una pantalla que nadie va a usar es
+código que hay que mantener, migrar y revisar cada vez que se toca la base.
 
-Para retomar solo Rewards en otra sesión, el mapa está en
-`docs/rewards-donde-vamos.md`; el detalle, en `docs/rewards-app-nativa.md`,
-`docs/monedero-y-sellos.md` y `docs/metas-y-perfil.md`.
+Lo que se fue con ellas, por si mañana se extraña:
+
+- **Cupones**: se EMITEN a un cliente de lealtad (cumpleaños, premio de
+  sellos). Sin clientes de lealtad no hay a quién emitírselos.
+- **Promos del ticket**: se segmentaban por cliente (`fn_promos_cliente`).
+  Mismo problema.
+- Lo que **sí** quedó en la caja es el **descuento manual con PIN de
+  gerencia**, que es una herramienta de caja de toda la vida.
+- Y quedó el **recibo digital** que abre el QR de confirmación, que no era
+  de lealtad aunque viviera en su archivo: ahora está en
+  `packages/supabase/src/queries/recibo.ts`.
+
+**Las tablas de la base NO se borraron.** La regla del repo es que las
+migraciones son aditivas (`supabase/migrations/README.md`), y tirar tablas
+con datos no se deshace. Están ahí, sin nadie que las lea.
 
 ---
 

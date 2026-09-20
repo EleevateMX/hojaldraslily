@@ -11,8 +11,6 @@ import { useCarrito, type ItemCarrito } from '@/store/carritoStore'
 import { TecladoNombre } from '@/components/TecladoNombre'
 import { sb } from '@/lib/sb'
 import { resolverModoKiosko } from '@/lib/modoKiosko'
-import { canjearMancuernas, canjearSellos } from '@shake/supabase'
-import { PanelRewards, SIN_REWARDS, type DecisionRewards } from '@/components/PanelRewards'
 import { mensajeDeError } from '@shake/utils'
 
 type EstadoPago = 'cargando' | 'eligiendo' | 'procesando' | 'no_disponible'
@@ -75,8 +73,7 @@ function ProcesandoOverlay({ monto }: { monto: number }) {
 
 export function Pago() {
   const navigate = useNavigate()
-  const { items, total, usuario, cajero, nombrePedido, setNombrePedido, limpiar } = useCarrito()
-  const [rewards, setRewards] = useState<DecisionRewards>(SIN_REWARDS)
+  const { items, total, cajero, nombrePedido, setNombrePedido, limpiar } = useCarrito()
   const [estado, setEstado] = useState<EstadoPago>('cargando')
   const [modo, setModo] = useState<ModoPagoKiosko | null>(null)
   const [almacen, setAlmacen] = useState<Almacen | null>(null)
@@ -153,8 +150,8 @@ export function Pago() {
         {
           sucursalId: almacen.sucursal_id,
           almacenId: almacen.id,
-          clienteId: usuario?.clienteId ?? null,
-          nombreCliente: nombrePedido.trim() || usuario?.nombre?.split(' ')[0] || null,
+          clienteId: null,
+          nombreCliente: nombrePedido.trim() || null,
         },
         items.map(lineaParaOrden),
       )
@@ -236,7 +233,6 @@ export function Pago() {
     setTerminal(null)
     if (final === 'authorized') {
       const itemsSnapshot = [...items]
-      const usuarioSnapshot = usuario ? { ...usuario } : null
       limpiar()
       navigate('/confirmacion', {
         state: {
@@ -245,7 +241,6 @@ export function Pago() {
           total: orden.total,
           metodo: 'terminal',
           items: itemsSnapshot,
-          usuario: usuarioSnapshot,
           demo: false,
         },
       })
@@ -278,8 +273,8 @@ export function Pago() {
           canal: 'pos',
           empleado_id: cajero.id,
           corte_id: corte?.id ?? null,
-          cliente_id: usuario?.clienteId ?? null,
-          nombre_cliente: nombrePedido.trim() || usuario?.nombre?.split(' ')[0] || null,
+          cliente_id: null,
+          nombre_cliente: nombrePedido.trim() || null,
         },
         items.map(lineaParaOrden),
       )
@@ -290,19 +285,9 @@ export function Pago() {
         return
       }
 
-      // Rewards, entre crear y cobrar. El orden importa: primero el
-      // premio de sellos y después las mancuernas, porque el servidor
-      // recorta las mancuernas a lo que cuesta la orden — si fuera al
-      // revés se gastarían de más sobre un total que aún iba a bajar.
-      let totalAPagar = orden.total
-      if (rewards.sello) {
-        const r = await canjearSellos(sb, orden.id, rewards.sello.tipo, rewards.sello.productoId)
-        totalAPagar = r.total_a_pagar
-      }
-      if (rewards.mancuernas > 0) {
-        const r = await canjearMancuernas(sb, orden.id, rewards.mancuernas)
-        totalAPagar = r.total_a_pagar
-      }
+      // Ya no hay canjes entre crear y cobrar: la panadería no opera
+      // lealtad. El total es el que recalculó el servidor, y punto.
+      const totalAPagar = orden.total
 
       // El monto sale de la orden que devolvió el servidor, no del carrito:
       // el total autoritativo es el que recalculó la base.
@@ -312,7 +297,6 @@ export function Pago() {
       })
 
       const itemsSnapshot = [...items]
-      const usuarioSnapshot = usuario ? { ...usuario } : null
       limpiar()
       navigate('/confirmacion', {
         state: {
@@ -321,7 +305,6 @@ export function Pago() {
           total: totalAPagar,
           metodo: metodo === 'efectivo' ? 'efectivo' : 'terminal',
           items: itemsSnapshot,
-          usuario: usuarioSnapshot,
           demo: false,
         },
       })
@@ -349,9 +332,9 @@ export function Pago() {
           sucursal_id: almacen.sucursal_id,
           almacen_id: almacen.id,
           canal: 'kiosko',
-          cliente_id: usuario?.clienteId ?? null,
+          cliente_id: null,
           descuento: 0,
-          nombre_cliente: nombrePedido.trim() || usuario?.nombre?.split(' ')[0] || null,
+          nombre_cliente: nombrePedido.trim() || null,
         },
         items.map(lineaParaOrden),
       )
@@ -385,10 +368,10 @@ export function Pago() {
           sucursal_id: almacen.sucursal_id,
           almacen_id: almacen.id,
           canal: 'kiosko',
-          cliente_id: usuario?.clienteId ?? null,
+          cliente_id: null,
           descuento: 0,
           es_demo: true,
-          nombre_cliente: nombrePedido.trim() || usuario?.nombre?.split(' ')[0] || null,
+          nombre_cliente: nombrePedido.trim() || null,
         },
         items.map(lineaParaOrden),
       )
@@ -413,7 +396,6 @@ export function Pago() {
           total: orden.total,
           metodo: 'terminal',
           items: itemsSnapshot,
-          usuario: usuario ? { ...usuario } : null,
           demo: true,
         },
       })
@@ -513,7 +495,7 @@ export function Pago() {
           </label>
           <input
             className="w-full rounded-sa-lg border-2 border-sa-green-ink/15 bg-white px-5 py-4 font-display text-2xl text-sa-green-ink focus:border-sa-green outline-none"
-            placeholder={usuario?.nombre ? usuario.nombre.split(' ')[0] : 'Nombre para el pedido'}
+            placeholder="Nombre para el pedido"
             value={nombrePedido}
             onChange={(e) => setNombrePedido(e.target.value)}
             maxLength={20}
@@ -590,17 +572,6 @@ export function Pago() {
 
           {modo === 'cajero' && (
             <>
-              {/* El canje va ANTES de los botones de cobro: es una decisión
-                  que cambia el monto, no algo que se agrega después. */}
-              {usuario?.clienteId && (
-                <PanelRewards
-                  clienteId={usuario.clienteId}
-                  items={items}
-                  total={total()}
-                  decision={rewards}
-                  onCambiar={setRewards}
-                />
-              )}
               {!corte && (
                 <p className="font-mono text-sm text-sa-strawberry text-center">
                   No hay caja abierta. Ábrela en el POS antes de cobrar, o la

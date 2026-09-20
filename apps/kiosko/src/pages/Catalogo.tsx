@@ -232,18 +232,7 @@ export function Catalogo() {
               <p className="font-body text-lg mt-3 max-w-md text-sa-cream/90">
                 ¿Con jamón y queso o de guayaba? Hojaldre dorado, relleno a la vista y pan recién horneado.
               </p>
-              {/* Acceso a la invitación de lealtad: el cajero la muestra
-                  cuando quiere ofrecerle el programa al cliente. */}
               <div className="mt-4 flex items-center gap-3 flex-wrap">
-                <button
-                  onClick={() => navigate('/rewards')}
-                  className="inline-flex items-center gap-2 bg-sa-banana/20 hover:bg-sa-banana/30 border border-sa-banana/40 text-sa-banana px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                  Únete a Rewards
-                </button>
                 {/* Historial a la mano: la barra pregunta "¿de quién era el
                     último?" sin esperar a la pantalla de confirmación. */}
                 <button

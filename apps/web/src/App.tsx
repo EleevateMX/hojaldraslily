@@ -1,14 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import QRCode from 'qrcode'
 import { listarProductosParaVenta, type ProductoVenta } from '@shake/supabase'
 import { mxn } from '@shake/utils'
 import { sb } from './lib/sb'
-
-/** A dónde manda el QR y el botón de lealtad. */
-const URL_REWARDS =
-  ((import.meta.env.VITE_URL_REWARDS as string | undefined) ?? 'https://rewards.hojaldraslily.com')
-    // Si la variable en Cloudflare aún trae la URL vieja, se traduce sola.
-    .replace('lily-cliente-pwa.pages.dev', 'rewards.hojaldraslily.com')
 
 const WHATSAPP = 'https://wa.me/529999267151'
 
@@ -36,7 +29,6 @@ interface CategoriaCarta {
 
 export default function App() {
   const [productos, setProductos] = useState<ProductoVenta[]>([])
-  const [qr, setQr] = useState('')
 
   useEffect(() => {
     // La carta se lee de la misma base que usa la caja: lo que el negocio
@@ -44,9 +36,6 @@ export default function App() {
     // consulta falla, la página sigue viéndose — la carta es un plus, no el
     // motivo por el que alguien entra.
     listarProductosParaVenta(sb).then(setProductos).catch(() => setProductos([]))
-    QRCode.toDataURL(URL_REWARDS, {
-      width: 320, margin: 2, color: { dark: '#14241D', light: '#FFFFFF' },
-    }).then(setQr).catch(() => setQr(''))
   }, [])
 
   const carta = useMemo<CategoriaCarta[]>(() => {
@@ -87,7 +76,7 @@ export default function App() {
         </a>
         <nav className="links">
           <a href="#menu">Menú</a>
-          <a href="#rewards">Rewards</a>
+          <a href="#b2b">Encargos</a>
           <a href="#nosotros">Nosotros</a>
           <a href="#b2b">Negocios</a>
           <a href="#contacto">Contacto</a>
@@ -189,43 +178,20 @@ export default function App() {
         )}
       </section>
 
-      {/* ============ REWARDS ============ */}
-      <section className="rewards" id="rewards">
-        <div>
-          <p className="eyebrow">Programa de lealtad</p>
-          <h2 className="title">Acumula mancuernas.</h2>
-          <p className="lede">
-            Escanea el código con la cámara de tu celular, entra con tu cuenta de
-            Google y listo. Tu tarjeta vive en el navegador — no hay que instalar
-            nada ni cargar un plástico más.
-          </p>
-          <div className="stats">
-            <div className="stat"><b>$10</b><span>1 mancuerna</span></div>
-            <div className="stat"><b>100</b><span>Un cupón</span></div>
-            <div className="stat"><b>1 año</b><span>Vigencia</span></div>
-          </div>
-          <p className="fino">¿Sin celular a la mano? En caja te damos de alta con tu teléfono</p>
-        </div>
-        <div className="qr-card">
-          {qr && <img src={qr} alt="Código QR para entrar a Hojaldras Lily Rewards" />}
-          <a className="btn" href={URL_REWARDS}>Únete a Rewards</a>
-        </div>
-      </section>
-
       {/* ============ NOSOTROS ============ */}
       <section className="about" id="nosotros">
         <div>
           <p className="eyebrow" style={{ opacity: 0.65 }}>Acerca de Hojaldras Lily</p>
-          <h2 className="title">Rico, rápido y saludable.</h2>
+          <h2 className="title">Pan del día, recién horneado.</h2>
           <p className="lede">
-            Somos una marca orgullosamente mexicana en crecimiento, enfocada en
-            bebidas funcionales, nutrición deportiva y bienestar. Te ayudamos a
-            comer rico, rápido y saludable con productos de alta calidad.
+            Somos una panadería de barrio en la Miguel Alemán, en Mérida.
+            Hacemos hojaldras todos los días: hojaldre dorado, relleno a la
+            vista y el pan saliendo del horno durante toda la mañana.
           </p>
           <div className="vals">
-            <div className="val"><span className="starmark" /><span>Sistemas innovadores para la preparación de bebidas proteicas.</span></div>
-            <div className="val"><span className="starmark" /><span>Tecnología especializada y proveedores nacionales e internacionales.</span></div>
-            <div className="val"><span className="starmark" /><span>Productos innovadores y de alta calidad para el mercado en México.</span></div>
+            <div className="val"><span className="starmark" /><span>Horneado del día: lo que se vende hoy salió del horno hoy.</span></div>
+            <div className="val"><span className="starmark" /><span>Paquetes de 6, 12, 24 y 48, cortados al momento.</span></div>
+            <div className="val"><span className="starmark" /><span>Encargos para tu fiesta, con la hora que tú nos digas.</span></div>
           </div>
         </div>
         <div className="about-img">
@@ -370,7 +336,6 @@ export default function App() {
           <a href="https://www.facebook.com/hojaldraslily">Facebook</a>
           <a href="https://www.instagram.com/hojaldraslily">Instagram</a>
           <a href="https://www.tiktok.com/@hojaldraslily">TikTok</a>
-          <a href={URL_REWARDS}>Rewards</a>
         </div>
         <span className="legal">© 2026 Hojaldras Lily · Mérida, Yucatán</span>
       </footer>

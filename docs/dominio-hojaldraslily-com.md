@@ -244,9 +244,6 @@ por *CNAME flattening*, que es justo lo que GoDaddy no permitía.
 ## 6. Orden recomendado
 
 1. Decidir A o B (§1). Si es B, mover nameservers **hoy** y esperar.
-2. Conectar primero **`rewards`** — es el único que el cliente ve y el que
-   necesita Google.
-3. Configurar Google y Supabase con el dominio ya vivo
-   (`docs/rewards-paso-a-paso.md`).
-4. Conectar los otros siete cuando quieras: son internos y no urgen.
+2. Conectar primero la **raíz** y **`kiosko`** — son los que ve el cliente.
+3. Conectar los demás cuando quieras: son internos y no urgen.
 5. Actualizar el lanzador de la NUC y el icono del iPad.

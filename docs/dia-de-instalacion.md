@@ -219,20 +219,11 @@ costosshake y que hacen que el producto no aparezca.
 
 - **Los 17 shakes no tienen precio de venta** → no aparecen en el menú.
   Es lo más importante a capturar antes de vender.
-- **Precio de scoop** (pestaña Proteínas): vacío en las 122 proteínas.
-- **Precio de bote** (`precioBote`): vacío — sin él no se venden los
-  suplementos de reventa.
-- **Extras**: en Admin → Extras hay que ponerle precio de venta a cada
-  ingrediente que se quiera ofrecer (el sistema ya muestra su costo real).
+- **Costo de cada insumo**: vacío en los 99 renglones de la hoja. Sin eso,
+  Costeos no puede costear.
+- **Recetas**: qué lleva cada pan, para que el inventario se descuente solo
+  al vender en vez de contarlo a mano.
+- **Mínimos**: la lista de compra sale de comparar contra el mínimo, y todo
+  arranca en cero.
 - **Cambiar los PIN temporales** en Admin → Empleados.
 
-## 7. Google / lealtad
-
-El botón de Google en la app de Rewards está **deshabilitado del lado de
-Supabase**, no es un error del código: falta crear las credenciales en
-Google Cloud. Hoy la app avisa amablemente en vez de mandar al cliente a
-una pantalla de error. Pasos en `docs/configurar-google-auth.md`.
-
-Mientras tanto, la lealtad **sí funciona sin Google**: en caja se
-identifica al cliente por teléfono o QR, y desde ahí se dan de alta
-clientes nuevos, se acumulan mancuernas y se canjean cupones.

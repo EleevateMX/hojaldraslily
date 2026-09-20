@@ -3,9 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import QRCode from 'qrcode'
 import { cerrarSesion } from '@shake/supabase'
 import { sb } from '@/lib/sb'
-import { QrRewards } from '@/components/QrRewards'
 import { HistorialPedidos } from '@/components/HistorialPedidos'
-import type { ItemCarrito, UsuarioKiosko } from '@/store/carritoStore'
+import type { ItemCarrito } from '@/store/carritoStore'
 
 interface EstadoConfirmacion {
   folio?: string | null
@@ -14,7 +13,6 @@ interface EstadoConfirmacion {
   total?: number
   metodo?: 'terminal' | 'efectivo'
   items?: ItemCarrito[]
-  usuario?: UsuarioKiosko | null
   demo?: boolean
 }
 
@@ -33,7 +31,6 @@ export function Confirmacion() {
   const folioReal  = state.folio  ?? null
   const ordenId    = state.ordenId ?? null
   const totalOrden = state.total  ?? 0
-  const usuario    = state.usuario ?? null
 
   const [segundos, setSegundos] = useState(SEGUNDOS_EN_PANTALLA)
   const [qrUrl, setQrUrl] = useState<string>('')
@@ -44,15 +41,11 @@ export function Confirmacion() {
     [],
   )
   const numeroOrden   = folioReal ?? fallbackNumero
-  // Mismo cálculo que hace el servidor al cobrar (fn_acumular_mancuernas):
-  // 1 mancuerna por cada $10, con tope de 100 por orden. Si aquí no se pone el
-  // tope, el ticket promete más mancuernas de las que realmente se abonan.
-  const puntosGanados = usuario?.clienteId ? Math.min(100, Math.floor(totalOrden / 10)) : 0
   const esDemo        = state.demo ?? false
 
-  // El QR es una URL de verdad: el teléfono la abre y ve su recibo, con
-  // botones para mandarlo por WhatsApp o entrar a Rewards. (El viejo QR
-  // codificaba un JSON que la cámara mostraba como texto crudo.)
+  // El QR es una URL de verdad: el teléfono la abre y ve su recibo, con el
+  // botón para mandarlo por WhatsApp. (El viejo QR codificaba un JSON que la
+  // cámara mostraba como texto crudo.)
   useEffect(() => {
     if (!ordenId) return
     const url = `${window.location.origin}/recibo/${ordenId}`
@@ -97,36 +90,6 @@ export function Confirmacion() {
       <p className="font-body text-base mt-3 text-center text-sa-cream/80 max-w-sm">
         Su pedido ya está en el horno de la casa. Recién hecho, como debe ser.
       </p>
-
-      {/* Loyalty earned */}
-      {puntosGanados > 0 && (
-        <div className="mt-3 bg-sa-banana/20 border border-sa-banana/40 rounded-sa px-5 py-2 flex items-center gap-3">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#C9A227" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-          <p className="font-display text-lg text-sa-banana">
-            +{puntosGanados} puntos para {usuario?.nombre?.split(' ')[0]}
-          </p>
-        </div>
-      )}
-
-      {/* Invitación a Rewards: solo si el cliente NO está identificado.
-          Es el mejor momento para engancharlo — acaba de comprar, está
-          esperando, y le acaba de quedar claro que se perdió las mancuernas
-          de esta compra. A quien ya es cliente no se le estorba con esto. */}
-      {!usuario?.clienteId && (
-        <div className="mt-4 flex items-center gap-4 bg-sa-green-ink/70 rounded-sa-lg pl-5 pr-3 py-3">
-          <div className="text-left">
-            <p className="font-display text-xl leading-tight text-sa-cream">
-              La próxima, que te cuente
-            </p>
-            <p className="font-body text-sm text-sa-cream/60 mt-1 max-w-[15rem]">
-              Escanea y acumula mancuernas con cada compra.
-            </p>
-          </div>
-          <QrRewards tamano={104} />
-        </div>
-      )}
 
       {/* Info row */}
       <div className="mt-4 flex items-center gap-4">

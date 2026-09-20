@@ -9,14 +9,11 @@ import { useCarrito } from './store/carritoStore'
 import { sb } from './lib/sb'
 import { Catalogo } from './pages/Catalogo'
 import { Carrito } from './pages/Carrito'
-import { LoginLealtad } from './pages/LoginLealtad'
-import { AuthCallback } from './pages/AuthCallback'
 import { Pago } from './pages/Pago'
 import { PagarEnCaja } from './pages/PagarEnCaja'
 import { Recibo } from './pages/Recibo'
 import { Confirmacion } from './pages/Confirmacion'
 import { EstadoPedido } from './pages/EstadoPedido'
-import { Rewards } from './pages/Rewards'
 
 export default function App() {
   // El kiosko es una pantalla fija: no debe hacer scroll nunca. Pero
@@ -98,16 +95,12 @@ export default function App() {
         <Route path="/" element={<Navigate to="/catalogo" replace />} />
         <Route path="/catalogo" element={<Catalogo />} />
         <Route path="/carrito" element={<Carrito />} />
-        <Route path="/lealtad" element={<LoginLealtad />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/pago" element={<Pago />} />
         <Route path="/pagar-en-caja" element={<PagarEnCaja />} />
         <Route path="/confirmacion" element={<Confirmacion />} />
         {/* Vista pública para el celular del cliente (destino del QR). */}
         <Route path="/pedido/:codigo" element={<EstadoPedido />} />
         <Route path="/recibo/:ordenId" element={<Recibo />} />
-        {/* Invitación a lealtad: QR grande para escanear con el celular. */}
-        <Route path="/rewards" element={<Rewards />} />
       </Routes>
     </div>
   )

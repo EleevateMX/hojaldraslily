@@ -8,14 +8,8 @@ import { sb } from '@/lib/sb'
  * El recibo digital que abre el QR de la pantalla de confirmación.
  *
  * Vive en el kiosko pero se ve en el TELÉFONO del cliente: diseño angosto,
- * letra legible y dos salidas — mandarlo por WhatsApp o entrar a Rewards
- * (donde, si se identifica, este mismo ticket ya está en su historial).
+ * letra legible y una salida: mandarlo por WhatsApp.
  */
-
-const URL_REWARDS =
-  ((import.meta.env.VITE_URL_REWARDS as string | undefined) ?? 'https://rewards.hojaldraslily.com')
-    // Si la variable en Cloudflare aún trae la URL vieja, se traduce sola.
-    .replace('lily-cliente-pwa.pages.dev', 'rewards.hojaldraslily.com')
 
 function fechaLarga(iso: string): string {
   return new Date(iso).toLocaleString('es-MX', {
@@ -132,11 +126,6 @@ export function Recibo() {
               <span className="font-display text-3xl">${Number(recibo.total).toFixed(2)}</span>
             </div>
 
-            {recibo.mancuernas_ganadas > 0 && (
-              <p className="mt-3 rounded-sa bg-sa-green/10 text-sa-green text-center text-sm font-semibold px-3 py-2">
-                Esta compra sumó {recibo.mancuernas_ganadas} mancuernas
-              </p>
-            )}
           </div>
         </div>
 
@@ -148,15 +137,6 @@ export function Recibo() {
           >
             Enviar por WhatsApp
           </button>
-          <a
-            href={URL_REWARDS}
-            className="w-full rounded-sa-lg border-2 border-sa-cream/25 text-sa-cream text-center font-display text-xl py-3 hover:border-sa-cream/50 transition-colors"
-          >
-            Ver en la app Rewards
-          </a>
-          <p className="text-center text-sa-cream/50 text-sm mt-1">
-            Con Rewards, cada compra identificada queda guardada en tu historial y suma mancuernas.
-          </p>
         </div>
       </div>
     </div>

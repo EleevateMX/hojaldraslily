@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { crearOrden, cobrarOrden, canjearCupon, registrarAplicacionPromo } from '@shake/supabase'
+import { crearOrden, cobrarOrden } from '@shake/supabase'
 import { imprimirTicket, type TicketData } from '@shake/ui'
 import { mxn, mensajeDeError } from '@shake/utils'
 import type { MetodoPago } from '@shake/types'
@@ -44,7 +44,7 @@ export function Cobro() {
   const navigate = useNavigate()
   const {
     empleado, almacen, corte,
-    items, cliente, cupon, promo,
+    items,
     subtotal, descuentoTotal, neto, limpiarOrden,
     canal, precioDe,
   } = usePosStore()
@@ -80,7 +80,7 @@ export function Cobro() {
           almacen_id: almacen!.id,
           canal,
           corte_id: corte!.id,
-          cliente_id: cliente?.id ?? null,
+          cliente_id: null,
           empleado_id: empleado?.id ?? null,
           descuento: descuentoTotal(),
         },
@@ -92,9 +92,7 @@ export function Cobro() {
         })),
       )
       // Cupón: canjear (marca usado + liga a la orden) antes de cobrar.
-      if (cupon) await canjearCupon(sb, cupon.id, orden.id)
       // Promo: registrar su aplicación (throttle + reporte).
-      if (promo && cliente) await registrarAplicacionPromo(sb, promo.id, cliente.id, orden.id)
       // Cobro inmediato aprobado → el trigger descuenta inventario y manda a cocina.
       // idempotencyKey: si esta llamada se reintenta (timeout de red, doble
       // tap) la base devuelve el mismo pago en vez de crear uno duplicado.
@@ -103,7 +101,6 @@ export function Cobro() {
         idempotencyKey: crypto.randomUUID(),
       })
 
-      const gana = cliente ? Math.min(100, Math.floor(totalNeto / 10)) : 0
       const ticket: TicketData = {
         folio: orden.folio,
         fecha: new Date(),
@@ -118,10 +115,6 @@ export function Cobro() {
         metodoPago: metodoSel.label,
         referenciaPago: referencia.trim() || null,
         recibido: metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
-        clienteNombre: cliente?.nombre ?? null,
-        mancuernasGanadas: cliente ? gana : undefined,
-        mancuernasSaldo: cliente ? cliente.mancuernas + gana : undefined,
-        codigoRewards: cliente?.codigo ?? null,
       }
       imprimirTicket(ticket)
 
@@ -151,12 +144,6 @@ export function Cobro() {
               {items.length} {items.length === 1 ? 'producto' : 'productos'}
             </p>
           </div>
-          {cliente && (
-            <div className="ml-auto flex items-center gap-2 bg-sa-blueberry/20 px-4 py-2 rounded-full border border-sa-blueberry/30">
-              <span>👤</span>
-              <span className="font-mono text-sm text-sa-cream">{cliente.nombre}</span>
-            </div>
-          )}
         </div>
         <div className="px-6 py-6 text-center">
           <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50 mb-2">Total a cobrar</p>
@@ -243,15 +230,6 @@ export function Cobro() {
               <p className="font-mono text-xs text-sa-green-ink/50 mt-2 leading-relaxed">
                 Cobre el monto en la terminal y, si quiere, anote aquí el folio del
                 voucher. Puede dejarlo vacío.
-              </p>
-            </div>
-          )}
-
-          {/* Puntos a ganar */}
-          {cliente && (
-            <div className="bg-sa-green/10 border border-sa-green/30 rounded-sa px-4 py-2.5 mb-4">
-              <p className="font-mono text-xs text-sa-green-ink leading-tight">
-                {cliente.nombre} ganará ~{Math.min(100, Math.floor(totalNeto / 10))} mancuernas con esta compra
               </p>
             </div>
           )}

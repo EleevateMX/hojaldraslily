@@ -8,12 +8,12 @@ consultar la base real (`fzkdgqqvfkogmxdgqsxj`), no de suponer.
 ## En una línea
 
 **El sistema está completo y funcionando; lo que falta para abrir no es
-código.** Diez apps compilan, 173 migraciones aplicadas, el indicador de
+código.** Nueve apps compilan, 175 migraciones aplicadas, el indicador de
 salud en ceros, y una venta ya corrió de punta a punta contra esta base.
 
 ---
 
-## Las diez apps
+## Las nueve apps
 
 Cuatro de ellas son el camino del pan, **C → P → H → E**: la caja manda a
 hacer, producción arma los moldes, el horno los mete y los saca, y empaque
@@ -28,11 +28,10 @@ los deja listos en su caja.
 | `empaque` | **E** — qué hay que empacar, y cobro al entregar | Listo. Instalable |
 | `admin` | Ventas, producción, inventario, la tienda a distancia | Listo. Instalable |
 | `cliente-display` | TV de folios | Listo. Instalable |
-| `cliente-pwa` | Rewards del cliente | Listo, **oculto** a propósito |
 | `web` | La página pública | Listo |
 | `costos` | Costeo e inventario (HTML plano) | Listo, **falta capturar datos** |
 
-Las diez pasan el criterio de instalación de Chrome sin un solo error, y
+Las nueve pasan el criterio de instalación de Chrome sin un solo error, y
 abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 
 ## Lo que hay dentro, contado
@@ -45,7 +44,7 @@ abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 | Renglones de existencia | **112** — ninguno invisible |
 | Recetas | 55 |
 | Empleados | 2 (gerencia y caja — son los de demostración) |
-| Migraciones aplicadas | **173**, y las 173 tienen su archivo en el repo |
+| Migraciones aplicadas | **175**, y las 175 tienen su archivo en el repo |
 | Edge Functions | 7 desplegadas (6 de Clip + `staff-login`) |
 
 **Salud del sistema, ahora mismo:** pagos pendientes 0 · pagos desconocidos 0 ·
