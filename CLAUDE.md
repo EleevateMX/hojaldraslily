@@ -370,6 +370,13 @@ empaquetador y se desvían solas:
   `pg_get_functiondef`, **verificar que el ancla aparece exactamente N
   veces**, reemplazar y `execute`. Si el ancla no cuadra, abortar — así el
   parche falla ruidosamente en vez de corromper la función.
+- **El estado final no es la migración.** Si falta un archivo de migración, no
+  se deduce mirando cómo quedó la base: eso da el destino, no el camino. Dos
+  de tres reconstruidas así salieron mal —les faltaba el relleno de datos
+  previo a un `set not null`, y un `revoke from public`— y las dos habrían
+  reventado o abierto un hueco al reconstruir. El SQL que corrió de verdad
+  está guardado en `supabase_migrations.schema_migrations.statements`:
+  **sacarlo de ahí**.
 
 **Precios y canales**
 
@@ -520,6 +527,16 @@ Para retomar solo Rewards en otra sesión, el mapa está en
   dispositivo" en Costeos (Realtime aplica RLS igual que una consulta).
   **La lección que se repite**: cerrar la puerta principal no sirve si el
   dato entra por otro lado. Pregunta siempre *quién más escribe esta tabla*.
+- **Un `grant` no quita nada: suma.** Postgres le da EXECUTE a `PUBLIC` por
+  omisión en cada función nueva, así que `grant execute ... to authenticated`
+  deja la puerta de PUBLIC abierta igual. Se ve en `pg_proc.proacl` como una
+  entrada con el beneficiario **vacío** (`=X/postgres`); ojo al buscarla,
+  porque un `like '%=X%'` también empata con `authenticated=X`. Hay que
+  `revoke all ... from public` **y** `from anon`, y luego otorgar. Pasó con
+  las siete funciones de inventario: protegidas solo por el `fn_es_staff()`
+  de adentro. No lo explotó nadie, pero una sola capa no es una capa — es un
+  punto de falla, y el día que alguien edite la función y se le olvide el
+  `if`, el GRANT es lo único que queda. Arreglado en `20260920100000`.
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.

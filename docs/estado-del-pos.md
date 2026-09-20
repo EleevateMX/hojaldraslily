@@ -8,7 +8,7 @@ consultar la base real (`fzkdgqqvfkogmxdgqsxj`), no de suponer.
 ## En una línea
 
 **El sistema está completo y funcionando; lo que falta para abrir no es
-código.** Nueve apps compilan, 165 migraciones aplicadas, el indicador de
+código.** Nueve apps compilan, 166 migraciones aplicadas, el indicador de
 salud en ceros, y una venta ya corrió de punta a punta contra esta base.
 
 ---
@@ -40,7 +40,7 @@ abren aunque se caiga el internet. Ver `docs/apps-instalables.md`.
 | Renglones de existencia | **112** — ninguno invisible |
 | Recetas | 55 |
 | Empleados | 2 (gerencia y caja — son los de demostración) |
-| Migraciones aplicadas | **165**, y las 165 tienen su archivo en el repo |
+| Migraciones aplicadas | **166**, y las 166 tienen su archivo en el repo |
 | Edge Functions | 7 desplegadas (6 de Clip + `staff-login`) |
 
 **Salud del sistema, ahora mismo:** pagos pendientes 0 · pagos desconocidos 0 ·
@@ -138,13 +138,27 @@ Tres cosas, ninguna urgente, en orden de lo que más se va a extrañar:
   se quitaron las pantallas de comanda por estación. No afectan a nada — no
   entran al build ni al despliegue — pero si alguien clona el repo no las va a
   ver, y si mira esta carpeta sí. Se pueden borrar sin consecuencia.
-- **El registro de migraciones ya está completo.** Había 165 aplicadas en la
-  base y 162 archivos en el repo: faltaban tres
+- **El registro de migraciones ya está completo, y hubo que corregirlo.**
+  Había 165 aplicadas en la base y 162 archivos en el repo: faltaban tres
   (`encargo_cobrar_usa_la_fila_de_la_orden`,
   `produccion_sin_producto_obligatorio`, `insumo_con_la_grafia_de_la_hoja`).
-  Se escribieron a partir del estado vivo de la base, así que reproducen
-  exactamente lo que tiene hoy. Importa porque el repo es lo único con lo que
-  se puede volver a levantar la base desde cero.
+
+  Se escribieron primero **deduciéndolas del estado vivo** de la base, y **dos
+  de las tres salieron mal**. Al poder leer el SQL que corrió de verdad
+  (`supabase_migrations.schema_migrations.statements`) se vio qué faltaba:
+
+  - `produccion_sin_producto_obligatorio` no traía el relleno de `sabor` desde
+    el producto ni el borrado de las filas que no se podían rellenar. Sin esos
+    dos pasos, el `set not null` **falla** en cualquier base que tenga
+    capturas viejas — o sea, justo al reconstruir.
+  - `encargo_cobrar_usa_la_fila_de_la_orden` no traía
+    `revoke all ... from public`. La función es SECURITY DEFINER, así que una
+    base reconstruida habría quedado con esa puerta abierta.
+
+  Ya están los tres idénticos a lo aplicado, comparado SQL contra SQL.
+  **La lección**: deducir una migración del estado final no reproduce el
+  camino. El estado dice cómo quedó, no qué hubo que hacer para llegar —y es
+  el camino lo que hay que volver a recorrer.
 
 ---
 
@@ -158,3 +172,6 @@ Nada de lo de arriba es de memoria:
 - `security_invoker` de las siete vistas, consultado en `pg_class.reloptions`.
 - La salud del sistema, con `fn_salud_sistema()`.
 - Los conteos, con una sola consulta a la base.
+- Los permisos de cada función, leídos de `pg_proc.proacl`, y probados en las
+  dos direcciones: con sesión de gerencia (cuenta y lee) y como `anon`
+  (rechazado).

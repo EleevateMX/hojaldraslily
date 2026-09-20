@@ -5,6 +5,9 @@
 -- tomado de la definición viva de la función, así que reproduce exactamente lo
 -- que la base tiene hoy.
 --
+-- El SQL es **el que corrió de verdad**, recuperado de
+-- `supabase_migrations.schema_migrations.statements`.
+--
 -- El error: `fn_crear_orden` está declarada `returns ordenes`, y al capturarla
 -- en una variable uuid el cobro del encargo reventaba. Se captura en un
 -- `ordenes%rowtype` y de ahí salen el id y el total.
@@ -70,3 +73,13 @@ begin
   return v_total;
 end;
 $function$;
+
+-- Los permisos van con la función, no aparte.
+--
+-- Es SECURITY DEFINER: corre con los privilegios de quien la creó. Si se deja
+-- el GRANT por omisión, `public` puede ejecutarla. Por dentro pide
+-- `fn_rol_staff()`, así que nadie cobraría sin ser personal — pero dejar la
+-- puerta abierta y confiar en el candado de adentro es exactamente lo que
+-- CLAUDE.md §5 dice que no se haga.
+revoke all on function public.fn_encargo_cobrar(uuid, text) from public;
+grant execute on function public.fn_encargo_cobrar(uuid, text) to authenticated;
