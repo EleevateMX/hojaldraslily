@@ -570,6 +570,29 @@ empaquetador y se desvían solas:
   Ojo con cómo se descubrió: en local pasaba y en CI no, porque en local
   había un `dist/` viejo. Reproducir el paso de CI tal cual es lo que lo
   encontró.
+- **La pantalla se revisa MIRÁNDOLA, con datos de una tienda ocupada.** Tres
+  defectos salieron de abrir las apps en un navegador y verlas, y ninguno de
+  los tres se ve leyendo el código:
+  - Producción tenía `imagen_url: null` escrito a mano en la consulta, así
+    que la pantalla traía el código para pintar la foto y **nunca pintó una
+    sola**. (El Horno tenía el mismo defecto, con un
+    `<span className="hidden">` guardando la foto que nadie veía.) Un renglón
+    de producción guarda el **sabor** en texto, no un producto, así que no hay
+    join posible: la foto se busca por sabor.
+  - El Horno decía «3 moldes de 48 · 3 moldes»: `enMoldes()` sobre los cuadros
+    de N moldes devuelve exactamente N moldes. Lo mismo dos veces.
+  - La franja «Hay que empacar» iba en lila al 10 %, que **se ve gris**: lo
+    más importante de la pantalla era lo más despintado.
+  Sin red a Supabase desde el navegador, se le dan de comer datos de una
+  tienda de mediodía —pan en el horno, uno pasado de su hora, encargos a
+  medio empacar—. Una pantalla vacía no enseña nada: lo que se rompe, se
+  rompe con la pantalla llena.
+- **Las tres pantallas de estación se leen de lejos o no se leen.** Producción
+  y Empaque gritaban lo urgente en la cabecera y el Horno decía «Horno» en
+  chico, con el número que importa escondido en una esquina. Ahora las tres
+  tienen la misma forma: cintillo con el nombre de la estación y **un titular
+  grande con lo único urgente** («1 se pasó de su hora», «Faltan 2 por
+  empacar»).
 - **Cuando los matices se acaban, se distingue por FORMA.** Con siete apps
   instaladas en la PC, el dorado de Producción y el terracota del Horno se
   ven **iguales** a 48 px, que es el tamaño al que de verdad se usa un icono.

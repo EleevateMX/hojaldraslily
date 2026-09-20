@@ -97,6 +97,26 @@ export async function listarOrdenesDeProduccion(
   const { data, error } = await q
   if (error) throw error
 
+  // Las fotos, en una consulta aparte.
+  //
+  // Un renglón de producción guarda el SABOR en texto, no un producto: se
+  // hornea guayaba, no «Guayaba 12». Así que no hay a quién colgarle un join
+  // y la foto se busca por sabor, igual que hace `fn_horno_en_vivo`.
+  //
+  // Iba `imagen_url: null` escrito a mano, así que la pantalla tenía el
+  // código para pintar la foto y no pintó una sola nunca. Frente a la mesa,
+  // con las manos llenas de masa, se reconoce el pan de un vistazo; leer
+  // «Pasta de Guayaba y Queso de Bola» a dos metros, no.
+  const fotos = new Map<string, string>()
+  const { data: prods } = await sb
+    .from('productos')
+    .select('sabor, imagen_url')
+    .not('sabor', 'is', null)
+    .not('imagen_url', 'is', null)
+  for (const p of (prods ?? []) as { sabor: string | null; imagen_url: string | null }[]) {
+    if (p.sabor && p.imagen_url && !fotos.has(p.sabor)) fotos.set(p.sabor, p.imagen_url)
+  }
+
   return ((data ?? []) as unknown as FilaOrden[]).map((o) => ({
     id: o.id,
     folio: o.folio,
@@ -108,7 +128,7 @@ export async function listarOrdenesDeProduccion(
     items: (o.orden_produccion_items ?? []).map((i) => ({
       id: i.id,
       sabor: i.sabor ?? '—',
-      imagen_url: null,
+      imagen_url: (i.sabor && fotos.get(i.sabor)) || null,
       moldes: i.moldes ?? 0,
       molde: (i.cuadros_por_molde === 24 ? 24 : 48) as Molde,
       armados: i.moldes_armados,

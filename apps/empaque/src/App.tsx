@@ -107,7 +107,7 @@ function QueHayQueEmpacar({ lista }: { lista: PorEmpacar[] }) {
   const total = lista.reduce((s, p) => s + p.cantidad, 0)
 
   return (
-    <section className="bg-sa-blueberry/10 border-2 border-sa-blueberry/30 rounded-sa-lg p-5">
+    <section className="bg-sa-banana/15 border-2 border-sa-banana rounded-sa-lg p-5">
       <div className="flex items-baseline justify-between gap-4 mb-4">
         <p className="font-display text-2xl text-sa-green-ink">Hay que empacar</p>
         <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50">
@@ -121,7 +121,7 @@ function QueHayQueEmpacar({ lista }: { lista: PorEmpacar[] }) {
           return (
             <div
               key={p.producto_id}
-              className="bg-white rounded-sa p-3 flex items-center gap-3 border border-sa-blueberry/20"
+              className="bg-white rounded-sa p-3 flex items-center gap-3 border border-sa-banana/40"
             >
               {foto && <img src={foto} alt="" className="w-12 h-12 object-contain shrink-0" />}
               <div className="min-w-0 flex-1">

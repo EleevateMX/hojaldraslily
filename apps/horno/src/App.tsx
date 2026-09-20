@@ -13,7 +13,7 @@ import {
   type EmpleadoSesion,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
-import { mensajeDeError, urlDeFoto, enMoldes } from '@lily/utils'
+import { mensajeDeError, urlDeFoto } from '@lily/utils'
 import { sb } from './lib/sb'
 
 /**
@@ -70,7 +70,7 @@ function Adentro({
           <p className="font-display text-2xl text-sa-green-ink leading-tight">{item.sabor}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
             {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
-            {enMoldes(item.cuadros, item.molde).texto}
+            {item.cuadros} cuadros
           </p>
         </div>
         <span className="font-mono text-xs text-sa-green-ink/45 shrink-0">#{item.folio}</span>
@@ -267,40 +267,40 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-sa-cream-paper text-sa-green-ink">
-      {/* Cabecera: lo que hay que saber sin leer nada más. */}
-      <header className="shrink-0 bg-sa-green text-sa-cream px-5 py-3 flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3 min-w-0">
-          <img
-            src={`${import.meta.env.BASE_URL}logo-negativo.png`}
-            alt=""
-            className="h-9 w-auto shrink-0"
-          />
-          <div className="min-w-0">
-            <p className="font-display text-xl leading-none">Horno</p>
-            <p className="font-body text-xs text-sa-cream/70 truncate">{empleado.nombre}</p>
-          </div>
+      {/* La cabecera dice LO URGENTE en grande, como las de Producción y
+          Empaque: las tres se leen desde el otro lado del cuarto y las tres se
+          leen igual. Antes esta decía «Horno» en chico y escondía el número
+          que de verdad importa en una esquina. */}
+      <header className="shrink-0 bg-sa-green text-sa-cream px-6 py-5 flex items-center gap-5">
+        <img
+          src={`${import.meta.env.BASE_URL}logo-negativo.png`}
+          alt="Hojaldras Lily"
+          className="h-16 w-auto shrink-0"
+        />
+        <div className="flex-1 min-w-0">
+          <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">Horno</p>
+          <h1 className="font-display text-4xl leading-none mt-1">
+            {tarde > 0
+              ? `${tarde} se pasó de su hora`
+              : (r?.en_horno ?? 0) > 0
+                ? `${r?.en_horno} molde${r?.en_horno === 1 ? '' : 's'} en el horno`
+                : (r?.esperando ?? 0) > 0
+                  ? `${r?.esperando} esperando turno`
+                  : 'El horno está libre'}
+          </h1>
         </div>
-
-        <div className="flex items-center gap-5 shrink-0">
-          <div className="text-right">
-            <p className="font-display text-2xl leading-none">{r?.en_horno ?? 0}</p>
-            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-cream/60">
-              adentro
-            </p>
+        {tarde > 0 && (
+          <div className="shrink-0 text-right bg-sa-cream text-sa-green rounded-sa px-4 py-2 animate-pulse">
+            <p className="font-display text-3xl leading-none">{tarde}</p>
+            <p className="font-mono text-[10px] uppercase tracking-wide">sácalo ya</p>
           </div>
-          {tarde > 0 && (
-            <div className="text-right bg-sa-cream text-sa-green rounded-sa px-3 py-1 animate-pulse">
-              <p className="font-display text-2xl leading-none">{tarde}</p>
-              <p className="font-mono text-[10px] uppercase tracking-wide">se pasó</p>
-            </div>
-          )}
-          <button
-            onClick={() => void salirDeSesion(sb).then(() => setEmpleado(null))}
-            className="font-mono text-xs uppercase tracking-wide bg-sa-cream/15 rounded-sa px-3 py-2"
-          >
-            Salir
-          </button>
-        </div>
+        )}
+        <button
+          onClick={() => void salirDeSesion(sb).then(() => setEmpleado(null))}
+          className="shrink-0 font-mono text-xs uppercase tracking-wide bg-sa-cream/10 hover:bg-sa-cream/20 rounded-full px-4 py-2 transition-colors"
+        >
+          {empleado.nombre} · Salir
+        </button>
       </header>
 
       {(error || aviso) && (
@@ -314,7 +314,7 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-3 gap-5 p-5">
+      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_0.8fr] gap-5 p-5">
         <Columna
           titulo="En el horno"
           cuenta={datos?.adentro.length ?? 0}
@@ -354,22 +354,22 @@ export default function App() {
           {datos?.sin_armar.map((i) => (
             <div
               key={i.item_id}
-              className="rounded-sa-lg border border-dashed border-sa-green-ink/15 bg-sa-cream-soft/60 p-4"
+              className="rounded-sa-lg border border-dashed border-sa-green-ink/25 bg-sa-cream-soft p-4"
             >
               <div className="flex items-start gap-3">
                 {urlDeFoto(i.imagen_url, import.meta.env.BASE_URL) && (
                   <img
                     src={urlDeFoto(i.imagen_url, import.meta.env.BASE_URL) as string}
                     alt=""
-                    className="w-10 h-10 object-contain shrink-0 opacity-60"
+                    className="w-10 h-10 object-contain shrink-0"
                   />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="font-display text-lg text-sa-green-ink/70 leading-tight">
+                  <p className="font-display text-lg text-sa-green-ink leading-tight">
                     {i.sabor}
                   </p>
-                  <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/40 mt-1">
-                    {i.moldes} de {i.molde} · aún sin armar
+                  <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/55 mt-1">
+                    {i.moldes} {i.moldes === 1 ? 'molde' : 'moldes'} de {i.molde} · aún sin armar
                   </p>
                 </div>
                 <span className="font-mono text-xs text-sa-green-ink/35 shrink-0">#{i.folio}</span>
