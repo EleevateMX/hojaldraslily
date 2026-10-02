@@ -11,8 +11,9 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene las 132 migraciones del historial canónico
-aplicadas en orden, más cinco de adaptación al giro. Ya corrió una venta
+`fzkdgqqvfkogmxdgqsxj` tiene **180 migraciones aplicadas en orden, y 180
+archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
+primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
 el catálogo semilla de hojaldras está sembrado y las Edge Functions
@@ -38,10 +39,11 @@ Lo que falta para abrir, todo fuera del código:
    vender — hay que contarlo a mano.
    Falta también **ponerle mínimo** a las cosas: la lista de compra sale de
    comparar contra el mínimo, y todo arranca en cero.
-   Y el **menú de temporada** (pan de muerto, rosca de reyes) está sembrado en
-   ceros y apagado, tal como venía en la hoja: cuando llegue la temporada se
-   captura el precio y se prende.
-4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
+4. **Los precios del Pan de Muerto.** El **Menú de Temporada** ya tiene sus
+   ocho renglones (chico y grande × tradicional, queso de bola, queso
+   Philadelphia y Nutella), en cero y con la sección apagada. Cuando lleguen
+   los precios se capturan y se prende desde Admin → Menús del día.
+5. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
 
 **Cómo va todo, con números contra la base:** `docs/estado-del-pos.md`. Ahí
@@ -119,20 +121,53 @@ y un inventario que arranca con una mentira no se endereza después.
 `parametros.cuadros_por_molde` sigue existiendo, pero ya solo es **el valor
 por omisión** de quien no dice nada.
 
-**Los tamaños NO son inventarios separados.** De 192 cuadros de guayaba salen
-15 paquetes de 12 *o* 7 de 24 *o* 3 de 48: es el mismo pan contado distinto, y
-vender uno baja los otros. Contarlo por paquete (como estaba al principio)
-obligaba a decidir en el horno algo que se decide en el mostrador.
+**Los TAMAÑOS no son inventarios separados; los MOLDES sí.** De 192 cuadros de
+guayaba salen 15 paquetes de 12 *o* 7 de 24 *o* 3 de 48: es el mismo pan
+contado distinto, y vender uno baja los otros. Contarlo por paquete (como
+estaba al principio) obligaba a decidir en el horno algo que se decide en el
+mostrador.
+
+Pero **un molde de 48 y uno de 24 son dos bolsas distintas**, y el inventario
+no convierte una en la otra. Era el reclamo de la casa: diez moldes de 24 se
+leían como «5 de 48», porque sólo se guardaban cuadros y se dividían entre un
+molde global. Ahora `produccion.cuadros_por_molde` dice de cuál salió cada
+movimiento, y hay dos cuentas por sabor (`libres_48` y `libres_24`) que se
+pintan siempre por separado.
+
+**Qué molde paga cada paquete** — tres reglas, dictadas por la casa, y el
+orden importa:
+
+1. Un paquete de **48** sale SOLO de un molde de 48. No se pega una hojaldra
+   grande con dos de 24. Va primero porque es el único sin alternativa.
+2. Los de **6 y 12** salen de los de 48, que es el molde que se corta; de los
+   de 24 cuando los de 48 se acaban.
+3. Un paquete de **24** sale de un molde de 24 completo si lo hay, y si no, de
+   medio molde de 48. Va al final: al revés, un encargo de diez Chicas se
+   comería los moldes de 48 y dejaría parados los de 24 que se hornearon justo
+   para él.
 
 - Se **hornea** por sabor, en moldes → `fn_produccion_mandar_a_hacer`, que
-  ahora recibe el `molde` de cada renglón.
+  recibe el `molde` de cada renglón; a mano, `fn_horneada_de_molde`, donde el
+  molde es **obligatorio**.
 - Se **vende** por paquete, y cada uno descuenta sus `productos.cuadros`.
-- `fn_existencias_por_sabor` contesta "¿cuánta guayaba queda?" (el horno);
-  `fn_paquetes_del_dia`, "¿cuántas chicas puedo vender?" (la caja).
+- `fn_existencias_por_molde` contesta "¿cuánta guayaba queda, y en qué
+  moldes?" (el horno); `fn_catalogo_del_dia`, "¿qué puedo vender hoy y cuánto
+  alcanza?" (la caja).
 
 La pregunta de media mañana ("¿cuántos paquetes de guayaba chica quedan?")
-**no se contesta con kilos**: por eso existe la segunda. La primera no se
-tocó; se complementan.
+**no se contesta con kilos**: por eso existe la segunda.
+
+**Y en `fn_catalogo_del_dia`, `paquetes_posibles = null` NO es cero.** Es «se
+hornea al pedido»: las roscas, las trenzas, la Hojaldra de Corazón, los panes
+y los bocadillos no llevan existencia de cuadros. Leer ese null como «quedan
+0» escondía del mostrador justo lo que siempre se puede ofrecer — y es lo que
+impedía meterlos en un encargo, que es para lo único que existen.
+
+**Hay productos que se cuentan en PIEZAS, no en cuadros.** `productos.piezas`
+dice de cuántas es el renglón: 5 el paquete de pastelitos, 1 la pieza suelta,
+2 el Pan de Leche. `null` = no se cuenta por piezas. La etiqueta sale de
+`medidaDeVenta()` en `@lily/utils`, una sola vez para las cuatro pantallas que
+la preguntan.
 
 **Y hay TRES números, no uno**, porque apartar no es vender:
 
@@ -399,7 +434,9 @@ empaquetador y se desvían solas:
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
-| Abrir o cerrar un menú completo (hoy no hay "Por encargo") | Admin → **Menús del día** → el interruptor |
+| Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy están apagados **Café** (lo pidió la casa) y **Menú de Temporada** (hasta que lleguen los precios del Pan de Muerto) |
+| Vender piezas sueltas de pastelitos o bolitas | Se toca el bocadillo y abajo salen **+1, +2, +3, +4 piezas**. Hasta 4: con 5 ya se toca el paquete, que cuesta lo mismo |
+| Ver un encargo que ya se recogió | Caja → **Encargos** → pestaña **Historial** |
 | Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
 | Apuntar los moldes que ya se armaron | Pantalla de **Producción**: +1, +2 o **Ya está**. Esto **todavía no** entra al inventario |
 | Meter y sacar del horno | Pantalla del **Horno**. Lo que se **saca** es lo que sube al inventario |
@@ -417,7 +454,7 @@ empaquetador y se desvían solas:
 | Apuntar lo que llegó del proveedor | Admin → **Inventario** → **Llegó mercancía** |
 | Saber qué hay que comprar | Admin → **Inventario** → **Qué hay que comprar** (sale lo que bajó de su mínimo) |
 | Apuntar lo que se tiró | Admin → **Inventario** → el `⋯` del renglón |
-| Ver lo apartado, para quién y si ya está empacado | Admin → **Almacén**, o la caja en **Encargos** |
+| Ver lo apartado, para quién y si ya está empacado | Admin → **Almacén**, o la caja en **Encargos**. Van **partidos por día de entrega**, y lo que se pasó de su día va hasta arriba en carmín |
 | Ver la tienda a distancia | Admin → **En vivo** |
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
@@ -587,6 +624,19 @@ empaquetador y se desvían solas:
   tienda de mediodía —pan en el horno, uno pasado de su hora, encargos a
   medio empacar—. Una pantalla vacía no enseña nada: lo que se rompe, se
   rompe con la pantalla llena.
+- **Un acento de la marca no es una alarma.** El rosa salmón (`--sa-strawberry`,
+  `#F49CAC`) es un acento de las bandas del menú, no un color de aviso: a un
+  metro se ve despintado. El rótulo «Se pasó» de los encargos iba en ese rosa,
+  o sea que lo único urgente de la lista era lo más pálido — el mismo defecto
+  que ya había tenido «Hay que empacar» en lila al 10 %. Lo que alarma va en
+  **carmín profundo** (`--sa-green-deep`), y si hace falta sobre una pastilla
+  del acento. Antes de usar un token, mira cuál es: el que se llama
+  `strawberry` no es el carmín.
+- **La ausencia de un dato no es un cero.** `paquetes_posibles = null` en
+  `fn_catalogo_del_dia` significa «se hornea al pedido», y pintarlo como
+  «0 libres» escondía del mostrador justo lo que siempre se puede ofrecer.
+  Es la misma lección que la «X» de Rappi: *"no lo vendo aquí"* es una
+  decisión, no un dato faltante.
 - **Las tres pantallas de estación se leen de lejos o no se leen.** Producción
   y Empaque gritaban lo urgente en la cabecera y el Horno decía «Horno» en
   chico, con el número que importa escondido en una esquina. Ahora las tres
@@ -624,6 +674,20 @@ empaquetador y se desvían solas:
   Supabase (pg_net / Edge Function).
 - Al subir por la API de GitHub, **verifica el árbol contra el local**
   (`git diff HEAD origin/rama`): una subida parcial pasa desapercibida.
+- **El MCP de Supabase no ejecuta `DROP`**: se queda colgado hasta que la
+  herramienta corta a los 60 s, y *no aplica ni falla*. Comprobado creando una
+  función de prueba vacía y tratando de tirarla con `statement_timeout`
+  puesto; `pg_stat_activity` vacío, así que no es un bloqueo de la base. Todo
+  lo demás (incluido `alter table ... drop constraint`) pasa sin problema.
+  **Consecuencia práctica**: cambiar lo que devuelve una función exige
+  `drop function`, así que no se puede. Se crea una función nueva con el
+  nombre que de verdad corresponda, se marca la vieja `OBSOLETA` en su
+  `comment` y se deja escrito en la migración qué queda por tirar y en qué
+  orden. Hay tres pendientes en
+  `20261002121000_inventario_por_molde_funciones.sql`.
+- Un `execute_sql` con **varias sentencias** también se cuelga si alguna es un
+  `DROP`; de una en una pasa. Si hace falta mandar un bloque muy largo, se
+  arma por partes en una tabla y se corre con un `do $$ ... execute $$`.
 
 ---
 
