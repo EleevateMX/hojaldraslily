@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   listarEncargos,
+  encargosPorDia,
+  diasHasta,
+  tituloDelDia,
   cobrarEncargo,
   cancelarEncargo,
   crearEncargo,
@@ -38,24 +41,6 @@ import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
  * `Math.round` lo subía a 1: un encargo de HOY salía rotulado «Mañana», que
  * es exactamente el error que hace que nadie lo prepare a tiempo.
  */
-function diasHasta(fecha: string): number {
-  const entrega = new Date(fecha + 'T12:00:00')
-  const hoy = new Date()
-  hoy.setHours(12, 0, 0, 0)
-  return Math.round((entrega.getTime() - hoy.getTime()) / 86400000)
-}
-
-function diaLegible(fecha: string | null): string {
-  if (!fecha) return 'Sin fecha'
-  const dias = diasHasta(fecha)
-  if (dias === 0) return 'Hoy'
-  if (dias === 1) return 'Mañana'
-  if (dias < 0) return `Se pasó ${-dias} día${dias === -1 ? '' : 's'}`
-  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', {
-    weekday: 'long', day: 'numeric', month: 'long',
-  })
-}
-
 function TarjetaEncargo({
   e,
   base,
@@ -101,7 +86,7 @@ function TarjetaEncargo({
               vencido ? 'text-sa-strawberry' : 'text-sa-green-ink',
             ].join(' ')}
           >
-            {diaLegible(e.fecha_entrega)}
+            {tituloDelDia(e.fecha_entrega)}
           </p>
           {e.hora_entrega && (
             <p className="font-mono text-[11px] text-sa-green-ink/50 mt-1">{e.hora_entrega}</p>
@@ -501,16 +486,40 @@ export default function Almacen() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {encargos.map((e) => (
-            <TarjetaEncargo
-              key={e.id}
-              e={e}
-              base={base}
-              ocupado={ocupado === e.id}
-              onCobrar={() => void cobrar(e)}
-              onCancelar={() => void cancelar(e)}
-            />
+        /* Partidos por día de entrega, igual que en la caja: una lista
+           corrida de treinta tarjetas no deja ver cuáles son de hoy. */
+        <div className="space-y-5">
+          {encargosPorDia(encargos).map((d) => (
+            <div key={d.fecha ?? 'sin-fecha'} className="space-y-3">
+              <div className="flex items-baseline gap-3">
+                <p
+                  className={[
+                    'font-display text-xl leading-none',
+                    d.vencido
+                      ? 'text-sa-green-deep bg-sa-strawberry/25 rounded-full px-3 py-1'
+                      : 'text-sa-green-ink',
+                  ].join(' ')}
+                >
+                  {d.titulo}
+                </p>
+                <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45">
+                  {d.encargos.length} encargo{d.encargos.length === 1 ? '' : 's'}
+                </span>
+                <span className="flex-1 border-b border-sa-green-ink/10" />
+              </div>
+              <div className="space-y-3">
+                {d.encargos.map((e) => (
+                  <TarjetaEncargo
+                    key={e.id}
+                    e={e}
+                    base={base}
+                    ocupado={ocupado === e.id}
+                    onCobrar={() => void cobrar(e)}
+                    onCancelar={() => void cancelar(e)}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

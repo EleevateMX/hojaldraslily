@@ -269,7 +269,18 @@ export async function listarEncargos(
   const { data, error } = await q
   if (error) throw error
 
-  return ((data ?? []) as unknown as FilaEncargo[]).map((e) => {
+  return armarEncargos(data)
+}
+
+/**
+ * Las filas crudas, armadas en encargos.
+ *
+ * Vive aparte porque la cola de pendientes y el historial piden lo mismo con
+ * filtros distintos. Escrito dos veces, el total de uno y el del otro se
+ * separan el día que alguien toque una de las dos.
+ */
+function armarEncargos(data: unknown): Encargo[] {
+  return ((data ?? []) as FilaEncargo[]).map((e) => {
     const items = (e.encargo_items ?? []).map((i) => ({
       id: i.id,
       producto_id: i.producto_id,
@@ -782,4 +793,123 @@ export async function sacarDelHorno(
  */
 export function relojDelHorno(listoEn: string, ahora = new Date()) {
   return faltaPara(listoEn, ahora)
+}
+
+/**
+ * Los encargos que ya se cerraron: cobrados, entregados o cancelados.
+ *
+ * Existe porque hasta hoy un encargo recogido **desaparecía**: la lista solo
+ * traía los apartados, así que cuando alguien volvía con un reclamo —«¿qué
+ * pedí?», «¿cuánto pagué?», «me faltó una caja»— no había dónde mirarlo. El
+ * dato siempre estuvo en la tabla; lo que faltaba era la pregunta.
+ *
+ * Va del más reciente al más viejo, al revés que la cola de pendientes: ahí
+ * importa lo que viene, aquí lo que acaba de pasar.
+ */
+export async function historialDeEncargos(
+  sb: ClienteLily,
+  limite = 100,
+): Promise<Encargo[]> {
+  const { data, error } = await sb
+    .from('encargos')
+    .select(
+      'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo,' +
+        ' nota, creado_por, created_at, empacado_at, empacado_por,' +
+        ' encargo_items(id, producto_id, cantidad, precio_unitario,' +
+        ' productos(nombre, imagen_url))',
+    )
+    .neq('estado', 'apartado')
+    .order('created_at', { ascending: false })
+    .limit(limite)
+  if (error) throw error
+  return armarEncargos(data)
+}
+
+// ------------------------- los encargos, por día -------------------------
+
+/** Un día de la cola de encargos, con su rótulo ya escrito. */
+export interface DiaDeEncargos {
+  /** `YYYY-MM-DD`, o `null` para los que no traen fecha. */
+  fecha: string | null
+  /** Lo que se lee en el separador: «Hoy · lunes 20», «miércoles 22». */
+  titulo: string
+  /** ¿Ya se pasó su día? Lo que lleva días esperando es lo primero que duele. */
+  vencido: boolean
+  encargos: Encargo[]
+}
+
+/**
+ * Cuántos días faltan para una fecha, contra hoy.
+ *
+ * Las dos al **mediodía** a propósito: comparando contra la medianoche queda
+ * medio día de diferencia y `Math.round` rotula «Mañana» un encargo de HOY.
+ */
+export function diasHasta(fecha: string, hoy = new Date()): number {
+  const entrega = new Date(fecha + 'T12:00:00')
+  const d = new Date(hoy)
+  d.setHours(12, 0, 0, 0)
+  return Math.round((entrega.getTime() - d.getTime()) / 86400000)
+}
+
+/**
+ * El rótulo del separador de un día.
+ *
+ * «Hoy» y «Mañana» van primero porque es lo que de verdad se pregunta en el
+ * mostrador, pero **el día y el número van siempre detrás**: la casa pidió
+ * verlos («Lunes 20», «Martes 21»), y a media mañana del día siguiente un
+ * «Hoy» a secas ya no dice de qué día hablaba la lista.
+ */
+export function tituloDelDia(fecha: string | null, hoy = new Date()): string {
+  if (!fecha) return 'Sin fecha'
+  const dia = new Date(fecha + 'T12:00:00')
+  const largo = dia.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' })
+  const conMayuscula = largo.charAt(0).toUpperCase() + largo.slice(1)
+  const d = diasHasta(fecha, hoy)
+  if (d === 0) return `Hoy · ${largo}`
+  if (d === 1) return `Mañana · ${largo}`
+  if (d < 0) return `Se pasó · ${largo}`
+  return conMayuscula
+}
+
+/**
+ * Los encargos partidos por día de entrega, en el orden en que se atienden.
+ *
+ * La casa lo pidió así —«Lunes 20: encargo 1, 2, 3; Martes 21: …»— porque una
+ * lista corrida de treinta tarjetas no deja ver de cuáles hay que preocuparse
+ * HOY. Dentro de cada día van por hora, leída con tolerancia: `hora_entrega`
+ * es texto libre capturado a mano («10:00», «6 pm», «6», «por la tarde»), así
+ * que lo ilegible se va al final de SU día en vez de inventarle una hora.
+ *
+ * Los que no traen fecha van al final de todo: son los de «paso más tarde»,
+ * no los del sábado.
+ */
+export function encargosPorDia(encargos: Encargo[], hoy = new Date()): DiaDeEncargos[] {
+  const dias = new Map<string, Encargo[]>()
+  for (const e of encargos) {
+    const clave = e.fecha_entrega ?? ''
+    const l = dias.get(clave) ?? []
+    l.push(e)
+    dias.set(clave, l)
+  }
+
+  return [...dias.entries()]
+    .sort(([a], [b]) => {
+      if (a === b) return 0
+      if (a === '') return 1
+      if (b === '') return -1
+      return a < b ? -1 : 1
+    })
+    .map(([clave, lista]) => ({
+      fecha: clave || null,
+      titulo: tituloDelDia(clave || null, hoy),
+      vencido: clave !== '' && diasHasta(clave, hoy) < 0,
+      encargos: [...lista].sort((x, y) => {
+        const hx = minutosDeHora(x.hora_entrega)
+        const hy = minutosDeHora(y.hora_entrega)
+        if (hx === hy) return x.folio - y.folio
+        if (hx === null) return 1
+        if (hy === null) return -1
+        return hx - hy
+      }),
+    }))
 }

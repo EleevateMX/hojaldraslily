@@ -2,6 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   listarEncargos,
+  historialDeEncargos,
+  encargosPorDia,
+  diasHasta,
   crearEncargo,
   cobrarEncargo,
   cancelarEncargo,
@@ -30,32 +33,130 @@ import { sb } from '@/lib/sb'
  * el corte del turno.
  */
 
-function diasHasta(fecha: string): number {
-  // Las dos fechas al mediodía: comparar contra la medianoche daba medio día
-  // de diferencia y `Math.round` rotulaba «Mañana» un encargo de HOY.
-  const entrega = new Date(fecha + 'T12:00:00')
-  const hoy = new Date()
-  hoy.setHours(12, 0, 0, 0)
-  return Math.round((entrega.getTime() - hoy.getTime()) / 86400000)
-}
-
-function diaLegible(fecha: string | null): string {
-  if (!fecha) return 'Sin fecha'
-  const d = diasHasta(fecha)
-  if (d === 0) return 'Hoy'
-  if (d === 1) return 'Mañana'
-  if (d < 0) return `Se pasó ${-d} día${d === -1 ? '' : 's'}`
-  return new Date(fecha + 'T12:00:00').toLocaleDateString('es-MX', {
-    weekday: 'short', day: 'numeric', month: 'short',
-  })
-}
-
 const btn =
   'font-mono text-xs uppercase tracking-wide px-4 py-2 rounded-full transition-colors'
+
+/**
+ * Un encargo, igual en la cola de pendientes y en el historial.
+ *
+ * Los botones llegan por `acciones` en vez de estar aquí dentro: lo que se
+ * puede hacer con un encargo cambia según dónde se mire —cobrarlo si está
+ * apartado, nada más leerlo si ya se entregó— pero lo que DICE es lo mismo, y
+ * escrito dos veces se separa en cuanto alguien toque una de las dos.
+ */
+function Tarjeta({
+  e,
+  acciones,
+  conFecha = false,
+}: {
+  e: Encargo
+  acciones: React.ReactNode
+  /**
+   * ¿Escribir la fecha completa en la tarjeta?
+   *
+   * En la cola de pendientes **no**: ya la dice el separador del día, y
+   * repetirla en cada tarjeta es ruido. En el historial **sí**, porque ahí no
+   * hay separador y la fecha es justo lo que se viene a buscar.
+   */
+  conFecha?: boolean
+}) {
+  const vencido = e.fecha_entrega != null && diasHasta(e.fecha_entrega) < 0
+  return (
+    <div
+      key={e.id}
+      className={[
+        'rounded-sa border p-4 bg-white',
+        vencido ? 'border-sa-green-deep/40' : 'border-sa-green-ink/10',
+      ].join(' ')}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="font-display text-lg text-sa-green-ink leading-tight">
+            {e.cliente}
+          </p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-0.5">
+            #{e.folio}
+            {e.telefono ? ` · ${e.telefono}` : ''}
+          </p>
+          {/* Lo que Empaque le contesta a la caja: si ya esta en
+              su caja o todavia no. Sin esto, la cajera tiene que
+              ir a preguntar cada vez que alguien llega. */}
+          {e.empacado_at && (
+            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink bg-sa-mint/25 rounded-full px-2 py-0.5 inline-block mt-1">
+              Empacado{e.empacado_por ? ` · ${e.empacado_por}` : ''}
+            </p>
+          )}
+        </div>
+        <p
+          className={[
+            'font-display text-base shrink-0',
+            vencido ? 'text-sa-strawberry' : 'text-sa-green-ink/70',
+          ].join(' ')}
+        >
+          {conFecha
+            ? e.fecha_entrega
+              ? new Date(e.fecha_entrega + 'T12:00:00').toLocaleDateString('es-MX', {
+                  weekday: 'short',
+                  day: 'numeric',
+                  month: 'short',
+                })
+              : 'Sin fecha'
+            : null}
+          {conFecha && e.hora_entrega ? ' · ' : ''}
+          {e.hora_entrega || (conFecha ? '' : 'sin hora')}
+        </p>
+      </div>
+
+      <div className="mt-3 space-y-1">
+        {e.items.map((i) => {
+          const { sabor, medida } = partirNombreDeVenta(i.producto)
+          return (
+            <p key={i.id} className="font-body text-sm text-sa-green-ink">
+              <span className="font-display text-base">{i.cantidad}</span>{' '}
+              {sabor}
+              {medida && <span className="text-sa-green-ink/50"> · {medida}</span>}
+            </p>
+          )
+        })}
+      </div>
+
+      {e.nota && (
+        <p className="font-body text-xs text-sa-green-ink/60 mt-2 bg-sa-cream-soft rounded-sa px-2 py-1.5">
+          {e.nota}
+        </p>
+      )}
+
+      <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-sa-green-ink/8">
+        <div>
+          <p className="font-display text-xl text-sa-green leading-none">
+            {mxn(e.total)}
+          </p>
+          {e.anticipo > 0 && (
+            <p className="font-body text-[11px] text-sa-green-ink/60 mt-0.5">
+              anticipo {mxn(e.anticipo)}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">{acciones}</div>
+      </div>
+    </div>
+  )
+}
 
 export function Encargos() {
   const navigate = useNavigate()
   const [encargos, setEncargos] = useState<Encargo[]>([])
+  /**
+   * Pendientes o historial.
+   *
+   * Hasta hoy un encargo recogido desaparecía de la pantalla, y cuando el
+   * cliente volvía con un reclamo no había dónde mirarlo. El historial se pide
+   * aparte y solo al abrirlo: son cien tarjetas que nadie necesita mientras
+   * atiende el mostrador.
+   */
+  const [vista, setVista] = useState<'pendientes' | 'historial'>('pendientes')
+  const [historial, setHistorial] = useState<Encargo[] | null>(null)
+  const [cargandoHistorial, setCargandoHistorial] = useState(false)
   const [existencias, setExistencias] = useState<ProductoDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -102,6 +203,19 @@ export function Encargos() {
     void cargar()
     void listarOrdenesConTiempo(sb).then(setHorno).catch(() => {})
   }, [cargar])
+
+  useEffect(() => {
+    if (vista !== 'historial' || historial !== null) return
+    setCargandoHistorial(true)
+    historialDeEncargos(sb)
+      .then(setHistorial)
+      .catch((e) => setError(mensajeDeError(e)))
+      .finally(() => setCargandoHistorial(false))
+  }, [vista, historial])
+
+  // Partidos por día de entrega, que es como los lee el mostrador: una lista
+  // corrida de treinta tarjetas no deja ver de cuáles hay que preocuparse hoy.
+  const porDia = useMemo(() => encargosPorDia(encargos), [encargos])
 
   const filtradas = useMemo(() => {
     const q = busca.trim().toLowerCase()
@@ -373,7 +487,54 @@ export function Encargos() {
           </section>
         )}
 
-        {cargando ? (
+        {/* Dos listas: la cola de lo que viene, y lo que ya pasó. */}
+        <div className="flex gap-2">
+          {(['pendientes', 'historial'] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setVista(v)}
+              className={[
+                btn,
+                vista === v
+                  ? 'bg-sa-green text-sa-cream'
+                  : 'border border-sa-green-ink/15 text-sa-green-ink/60',
+              ].join(' ')}
+            >
+              {v === 'pendientes'
+                ? `Pendientes${encargos.length ? ` · ${encargos.length}` : ''}`
+                : 'Historial'}
+            </button>
+          ))}
+        </div>
+
+        {vista === 'historial' ? (
+          cargandoHistorial ? (
+            <p className="font-mono text-sm text-sa-green-ink/50 text-center py-12">Cargando…</p>
+          ) : (historial ?? []).length === 0 ? (
+            <div className="bg-white rounded-sa shadow-sa-sm p-8 text-center">
+              <p className="font-display text-2xl text-sa-green-ink">Todavía no hay historial</p>
+              <p className="font-body text-sa-green-ink/60 mt-2">
+                Aquí van quedando los encargos que ya se cobraron, se entregaron
+                o se cancelaron, para cuando alguien vuelva a preguntar.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {(historial ?? []).map((e) => (
+                <Tarjeta
+                  key={e.id}
+                  e={e}
+                  conFecha
+                  acciones={
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/60 bg-sa-cream-soft rounded-full px-3 py-1.5">
+                      {e.estado}
+                    </span>
+                  }
+                />
+              ))}
+            </div>
+          )
+        ) : cargando ? (
           <p className="font-mono text-sm text-sa-green-ink/50 text-center py-12">Cargando…</p>
         ) : encargos.length === 0 ? (
           <div className="bg-white rounded-sa shadow-sa-sm p-8 text-center">
@@ -384,103 +545,66 @@ export function Encargos() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-            {encargos.map((e) => {
-              const vencido = e.fecha_entrega != null && diasHasta(e.fecha_entrega) < 0
-              return (
-                <div
-                  key={e.id}
-                  className={[
-                    'rounded-sa border p-4 bg-white',
-                    vencido ? 'border-sa-strawberry/50' : 'border-sa-green-ink/10',
-                  ].join(' ')}
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="font-display text-lg text-sa-green-ink leading-tight">
-                        {e.cliente}
-                      </p>
-                      <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-0.5">
-                        #{e.folio}
-                        {e.telefono ? ` · ${e.telefono}` : ''}
-                      </p>
-                      {/* Lo que Empaque le contesta a la caja: si ya esta en
-                          su caja o todavia no. Sin esto, la cajera tiene que
-                          ir a preguntar cada vez que alguien llega. */}
-                      {e.empacado_at && (
-                        <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink bg-sa-mint/25 rounded-full px-2 py-0.5 inline-block mt-1">
-                          Empacado{e.empacado_por ? ` · ${e.empacado_por}` : ''}
-                        </p>
-                      )}
-                    </div>
-                    <p
-                      className={[
-                        'font-display text-base shrink-0',
-                        vencido ? 'text-sa-strawberry' : 'text-sa-green-ink/70',
-                      ].join(' ')}
-                    >
-                      {diaLegible(e.fecha_entrega)}
-                      {e.hora_entrega ? ` · ${e.hora_entrega}` : ''}
-                    </p>
-                  </div>
-
-                  <div className="mt-3 space-y-1">
-                    {e.items.map((i) => {
-                      const { sabor, medida } = partirNombreDeVenta(i.producto)
-                      return (
-                        <p key={i.id} className="font-body text-sm text-sa-green-ink">
-                          <span className="font-display text-base">{i.cantidad}</span>{' '}
-                          {sabor}
-                          {medida && <span className="text-sa-green-ink/50"> · {medida}</span>}
-                        </p>
-                      )
-                    })}
-                  </div>
-
-                  {e.nota && (
-                    <p className="font-body text-xs text-sa-green-ink/60 mt-2 bg-sa-cream-soft rounded-sa px-2 py-1.5">
-                      {e.nota}
-                    </p>
-                  )}
-
-                  <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-sa-green-ink/8">
-                    <div>
-                      <p className="font-display text-xl text-sa-green leading-none">
-                        {mxn(e.total)}
-                      </p>
-                      {e.anticipo > 0 && (
-                        <p className="font-body text-[11px] text-sa-green-ink/60 mt-0.5">
-                          anticipo {mxn(e.anticipo)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => void cancelar(e)}
-                        disabled={ocupado === e.id}
-                        className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        onClick={() => void cobrar(e, 'efectivo')}
-                        disabled={ocupado === e.id}
-                        className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                      >
-                        {ocupado === e.id ? '…' : 'Efectivo'}
-                      </button>
-                      <button
-                        onClick={() => void cobrar(e, 'tarjeta')}
-                        disabled={ocupado === e.id}
-                        className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                      >
-                        Terminal
-                      </button>
-                    </div>
-                  </div>
+          /* Partidos por día de entrega, con su separador. Así se lee de un
+             vistazo cuáles son de HOY, que es la única pregunta urgente. */
+          <div className="space-y-5">
+            {porDia.map((d) => (
+              <div key={d.fecha ?? 'sin-fecha'} className="space-y-3">
+                <div className="flex items-baseline gap-3">
+                  <p
+                    className={[
+                      'font-display text-xl leading-none',
+                      // Lo que se pasó de su día va en carmín profundo, no en
+                      // el rosa salmón: ese rosa es un acento de la marca y a
+                      // un metro de distancia se ve despintado -- justo lo
+                      // que no puede pasarle a lo único urgente de la lista.
+                      d.vencido
+                        ? 'text-sa-green-deep bg-sa-strawberry/25 rounded-full px-3 py-1'
+                        : 'text-sa-green-ink',
+                    ].join(' ')}
+                  >
+                    {d.titulo}
+                  </p>
+                  <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45">
+                    {d.encargos.length} encargo{d.encargos.length === 1 ? '' : 's'}
+                  </span>
+                  <span className="flex-1 border-b border-sa-green-ink/10" />
                 </div>
-              )
-            })}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {d.encargos.map((e) => (
+                    <Tarjeta
+                      key={e.id}
+                      e={e}
+                      acciones={
+                        <>
+                          <button
+                            onClick={() => void cancelar(e)}
+                            disabled={ocupado === e.id}
+                            className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                          >
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => void cobrar(e, 'efectivo')}
+                            disabled={ocupado === e.id}
+                            className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                          >
+                            {ocupado === e.id ? '…' : 'Efectivo'}
+                          </button>
+                          <button
+                            onClick={() => void cobrar(e, 'tarjeta')}
+                            disabled={ocupado === e.id}
+                            className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                          >
+                            Terminal
+                          </button>
+                        </>
+                      }
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

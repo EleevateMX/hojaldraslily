@@ -5,6 +5,7 @@ import {
   seVendeEnCanal,
   minutosDeHora,
   loQueHayQueEmpacar,
+  encargosPorDia,
   type Encargo,
 } from './produccion'
 
@@ -164,5 +165,60 @@ describe('loQueHayQueEmpacar', () => {
 
   it('sin encargos no hay nada que empacar', () => {
     expect(loQueHayQueEmpacar([])).toEqual([])
+  })
+})
+
+describe('encargosPorDia', () => {
+  // Un lunes 20 al mediodía, para que «Hoy» y «Mañana» sean estables.
+  const hoy = new Date('2026-10-20T12:00:00')
+  const enc = (folio: number, fecha: string | null, hora: string | null = null) =>
+    ({ id: String(folio), folio, cliente: 'X', fecha_entrega: fecha, hora_entrega: hora } as never)
+
+  it('parte la cola por día de entrega, en orden', () => {
+    const dias = encargosPorDia(
+      [enc(3, '2026-10-22'), enc(1, '2026-10-20'), enc(2, '2026-10-21')],
+      hoy,
+    )
+    expect(dias.map((d) => d.fecha)).toEqual(['2026-10-20', '2026-10-21', '2026-10-22'])
+  })
+
+  it('rotula con el día y el número, que es lo que pidió la casa', () => {
+    const dias = encargosPorDia([enc(1, '2026-10-20'), enc(2, '2026-10-21'), enc(3, '2026-10-22')], hoy)
+    expect(dias[0].titulo).toBe('Hoy · martes 20')
+    expect(dias[1].titulo).toBe('Mañana · miércoles 21')
+    expect(dias[2].titulo).toBe('Jueves 22')
+  })
+
+  it('lo que se pasó de su día queda marcado', () => {
+    const dias = encargosPorDia([enc(1, '2026-10-18'), enc(2, '2026-10-21')], hoy)
+    expect(dias[0]).toMatchObject({ vencido: true })
+    expect(dias[0].titulo).toContain('Se pasó')
+    expect(dias[1].vencido).toBe(false)
+  })
+
+  it('los que no traen fecha van al final de todo, no al principio', () => {
+    const dias = encargosPorDia([enc(1, null), enc(2, '2026-10-21')], hoy)
+    expect(dias.map((d) => d.fecha)).toEqual(['2026-10-21', null])
+    expect(dias[1].titulo).toBe('Sin fecha')
+  })
+
+  it('dentro del día van por hora, y la hora ilegible al final de SU día', () => {
+    const dias = encargosPorDia(
+      [enc(1, '2026-10-20', 'por la tarde'), enc(2, '2026-10-20', '6 pm'), enc(3, '2026-10-20', '10:00')],
+      hoy,
+    )
+    expect(dias[0].encargos.map((e) => e.folio)).toEqual([3, 2, 1])
+  })
+
+  it('a la misma hora, manda el folio: primero el que se apartó primero', () => {
+    const dias = encargosPorDia(
+      [enc(9, '2026-10-20', '10:00'), enc(4, '2026-10-20', '10:00')],
+      hoy,
+    )
+    expect(dias[0].encargos.map((e) => e.folio)).toEqual([4, 9])
+  })
+
+  it('sin encargos no inventa días', () => {
+    expect(encargosPorDia([], hoy)).toEqual([])
   })
 })
