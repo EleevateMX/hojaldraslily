@@ -13,6 +13,8 @@ import type {
   ComboVista,
 } from '@lily/types'
 import type { ClienteLily } from '../client'
+// El tamano de molde ya esta tipado donde se manda a hacer; una sola fuente.
+import type { Molde } from './produccion'
 
 // ------------------------------ insumos ------------------------------
 
@@ -897,7 +899,19 @@ export async function cambiarMenuActivo(
 //   ExistenciaPorSabor  -> "¿cuanta guayaba me queda?"     (el horno)
 //   PaqueteDelDia       -> "¿cuantas chicas puedo vender?" (la caja)
 
-export interface ExistenciaPorSabor {
+/**
+ * Lo que queda de un sabor, con los dos moldes llevados por separado.
+ *
+ * **Los 48 y los 24 nunca se convierten unos en otros.** Diez moldes de 24
+ * son diez de 24, no cinco de 48: antes el inventario guardaba solo cuadros y
+ * los dividía entre un molde global, así que el de 24 desaparecía de la vista
+ * justo cuando hacía falta saber que estaba ahí.
+ *
+ * Los cuatro números de siempre (`cuadros_*`) siguen siendo el total de los
+ * dos moldes juntos: sirven para "¿cuánto pan hay?". Para "¿qué puedo cortar
+ * de esto?" se usan `libres_48` y `libres_24`.
+ */
+export interface ExistenciaPorMolde {
   sabor: string
   imagen_url: string | null
   categoria: string
@@ -905,68 +919,91 @@ export interface ExistenciaPorSabor {
   cuadros_mermados: number
   cuadros_vendidos: number
   cuadros_apartados: number
+  /** Los dos moldes sumados: horneado − merma − vendido − apartado. */
   cuadros_libres: number
-  cuadros_por_molde: number
-  moldes_horneados: number
+  horneados_48: number
+  horneados_24: number
+  /** Cuadros libres que salieron de moldes de 48. Puede ir negativo: eso es que se vendió pan que no se horneó. */
+  libres_48: number
+  /** Idem, de moldes de 24. */
+  libres_24: number
 }
 
-export interface PaqueteDelDia {
+export interface ProductoDelDia {
   producto_id: string
   nombre: string
-  sabor: string
+  sabor: string | null
   categoria: string
-  cuadros: number
+  cuadros: number | null
+  piezas: number | null
   precio: number
   imagen_url: string | null
-  /** Cuadros libres del SABOR: los tamaños los comparten. */
-  cuadros_libres: number
-  /** Cuántos paquetes de este tamaño alcanzan con esos cuadros. */
-  paquetes_posibles: number
+  /** Cuadros libres del SABOR, o `null` si este producto no se lleva en cuadros. */
+  cuadros_libres: number | null
+  /**
+   * Cuántos alcanzan hoy, o `null` cuando **se hornea al pedido** (las roscas,
+   * las trenzas, la Hojaldra de Corazón, los panes, los bocadillos).
+   *
+   * `null` no es cero: cero significa "se acabó" y null "no se lleva
+   * existencia de esto". Confundirlos esconde del mostrador justo lo que
+   * siempre se puede ofrecer.
+   */
+  paquetes_posibles: number | null
   vendidos: number
 }
 
-/** Cuadros por sabor: la unidad real del inventario. */
-export async function listarExistenciasPorSabor(
+/** Cuadros por sabor y por molde: la unidad real del inventario. */
+export async function listarExistenciasPorMolde(
   sb: ClienteLily,
   fecha?: string,
-): Promise<ExistenciaPorSabor[]> {
-  const { data, error } = await sb.rpc('fn_existencias_por_sabor', { p_fecha: fecha ?? undefined })
+): Promise<ExistenciaPorMolde[]> {
+  const { data, error } = await sb.rpc('fn_existencias_por_molde', { p_fecha: fecha ?? undefined })
   if (error) throw error
-  return (data ?? []) as ExistenciaPorSabor[]
+  return (data ?? []) as ExistenciaPorMolde[]
 }
 
 /**
- * Cuántos paquetes de cada tamaño alcanzan hoy.
+ * Todo lo que hoy se puede vender, y cuánto alcanza de cada cosa.
  *
- * OJO al leerlo: los tamaños **no son existencias separadas**. De 192 cuadros
- * de guayaba salen 15 paquetes de 12 **o** 7 de 24 **o** 3 de 48 — es el
- * mismo pan contado de otra forma. Vender uno baja los otros.
+ * Dos cosas que hay que tener claras al leerlo:
+ *
+ * - Los tamaños que se cortan de un mismo molde **no son existencias
+ *   separadas**: de 192 cuadros salen 15 paquetes de 12 **o** 7 de 24, y
+ *   vender uno baja los otros. Lo que sí son separados son los MOLDES: una
+ *   Grande de 48 solo sale de un molde de 48.
+ * - Lo que se hornea al pedido trae `paquetes_posibles` en `null`, no en
+ *   cero.
  */
-export async function listarPaquetesDelDia(
+export async function listarProductosDelDia(
   sb: ClienteLily,
   fecha?: string,
-): Promise<PaqueteDelDia[]> {
-  const { data, error } = await sb.rpc('fn_paquetes_del_dia', { p_fecha: fecha ?? undefined })
+): Promise<ProductoDelDia[]> {
+  const { data, error } = await sb.rpc('fn_catalogo_del_dia', { p_fecha: fecha ?? undefined })
   if (error) throw error
-  return (data ?? []) as PaqueteDelDia[]
+  return (data ?? []) as ProductoDelDia[]
 }
 
 /**
  * Apunta cuadros a mano: lo que salió sin orden, o una merma.
  *
+ * **El molde es obligatorio**, y esa es toda la gracia: sin él los cuadros
+ * vuelven a ser una bolsa sola y diez moldes de 24 se leen como cinco de 48.
+ *
  * La merma siempre resta aunque se capture en positivo; el servidor le pone
- * el signo. Regresa cuántos cuadros quedan libres de ese sabor.
+ * el signo. Regresa cuántos cuadros quedan libres de ESE molde.
  */
 export async function registrarHorneada(
   sb: ClienteLily,
   sabor: string,
   cuadros: number,
+  molde: Molde,
   motivo: 'horneado' | 'merma' | 'ajuste' = 'horneado',
   nota?: string,
 ): Promise<number> {
-  const { data, error } = await sb.rpc('fn_horneada_registrar', {
+  const { data, error } = await sb.rpc('fn_horneada_de_molde', {
     p_sabor: sabor,
     p_cuadros: cuadros,
+    p_molde: molde,
     p_motivo: motivo,
     p_nota: nota ?? undefined,
   })

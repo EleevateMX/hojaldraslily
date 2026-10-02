@@ -1,16 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
-  listarExistenciasPorSabor,
+  listarExistenciasPorMolde,
   MOLDES,
   type Molde,
-  listarPaquetesDelDia,
+  listarProductosDelDia,
   registrarHorneada,
   mandarAProducir,
   hornoEnVivo,
   relojDelHorno,
-  type ExistenciaPorSabor,
-  type PaqueteDelDia,
+  type ExistenciaPorMolde,
+  type ProductoDelDia,
   type HornoEnVivo,
 } from '@lily/supabase'
 import { mensajeDeError, urlDeFoto, enMoldes } from '@lily/utils'
@@ -34,13 +34,16 @@ function Fila({
   e,
   paquetes,
   base,
+  molde,
   ocupado,
   onHornear,
   onMerma,
 }: {
-  e: ExistenciaPorSabor
-  paquetes: PaqueteDelDia[]
+  e: ExistenciaPorMolde
+  paquetes: ProductoDelDia[]
   base: string
+  /** El molde elegido arriba: es con el que apuntan los botones de esta fila. */
+  molde: Molde
   ocupado: boolean
   onHornear: (moldes: number) => void
   onMerma: () => void
@@ -48,10 +51,22 @@ function Fila({
   const foto = urlDeFoto(e.imagen_url, base)
   const agotado = e.cuadros_libres <= 0 && e.cuadros_horneados > 0
   const sinHornear = e.cuadros_horneados === 0
-  // Contra el molde con el que se horneó este sabor. Si se contara todo
-  // contra 48, un sabor hecho en moldes de 24 saldría a la mitad de moldes de
-  // los que de verdad se metieron al horno.
-  const libres = enMoldes(Math.max(0, e.cuadros_libres), e.cuadros_por_molde)
+  /**
+   * Los dos moldes, por separado y sin convertir uno en otro.
+   *
+   * Esto es lo que reportó la casa: diez moldes de 24 salían como «5 de 48»
+   * porque todo se dividía entre un molde global. Son dos cuentas distintas y
+   * se pintan como dos cuentas distintas; el que esté en cero no se pinta,
+   * para que una panadería que ese día solo usó moldes de 48 no lea un «0 de
+   * 24» que no significa nada.
+   */
+  const bolsas = ([48, 24] as const)
+    .map((m) => ({
+      molde: m,
+      cuadros: m === 48 ? e.libres_48 : e.libres_24,
+      horneados: m === 48 ? e.horneados_48 : e.horneados_24,
+    }))
+    .filter((b) => b.cuadros > 0 || b.horneados > 0)
 
   return (
     <div
@@ -67,15 +82,17 @@ function Fila({
         <p className="font-body text-xs text-sa-green-ink/55 mt-1">
           {sinHornear
             ? 'Todavía no se hornea nada hoy'
-            : `Se hornearon ${e.moldes_horneados} molde${e.moldes_horneados === 1 ? '' : 's'} de ${e.cuadros_por_molde}` +
-              (e.cuadros_mermados > 0
-                ? ` · se perdieron ${enMoldes(e.cuadros_mermados, e.cuadros_por_molde).texto}`
-                : '') +
-              ` · se vendieron ${enMoldes(e.cuadros_vendidos, e.cuadros_por_molde).texto}`}
+            : 'Se hornearon ' +
+              bolsas
+                .filter((b) => b.horneados > 0)
+                .map((b) => `${b.horneados / b.molde} de ${b.molde}`)
+                .join(' y ') +
+              ` · se vendieron ${e.cuadros_vendidos} cuadros` +
+              (e.cuadros_mermados > 0 ? ` · se perdieron ${e.cuadros_mermados}` : '')}
         </p>
         {e.cuadros_apartados > 0 && (
           <p className="font-body text-xs text-sa-banana mt-1">
-            {enMoldes(e.cuadros_apartados, e.cuadros_por_molde).texto} apartado
+            {e.cuadros_apartados} cuadro{e.cuadros_apartados === 1 ? '' : 's'} apartado
             {e.cuadros_apartados === 1 ? '' : 's'} para encargos
           </p>
         )}
@@ -91,23 +108,36 @@ function Fila({
         )}
       </div>
 
-      {/* En MOLDES Y CUARTOS, que es como cuenta la casa. «1,423 cuadros» no
-          le dice nada a nadie; «29 moldes y ½» sí. El cuadro exacto se queda
-          abajo, en chico, para quien necesite el número fino. */}
-      <div className="shrink-0 w-32 text-center">
-        <p
-          className={[
-            'font-display leading-none',
-            agotado ? 'text-2xl text-sa-strawberry' : 'text-3xl text-sa-green-ink',
-          ].join(' ')}
-        >
-          {agotado ? 'se acabó' : libres.texto}
-        </p>
-        <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-          {agotado
-            ? 'no queda nada'
-            : `libres · ${Math.max(0, e.cuadros_libres)} cuadro${e.cuadros_libres === 1 ? '' : 's'}`}
-        </p>
+      {/* En MOLDES Y CUARTOS, que es como cuenta la casa: «1,423 cuadros» no
+          le dice nada a nadie, «29 moldes y ½» sí. Y uno por cada tamaño de
+          molde, nunca sumados: ese era el reclamo. */}
+      <div className="shrink-0 w-44 text-right">
+        {agotado || bolsas.length === 0 ? (
+          <>
+            <p className="font-display text-2xl leading-none text-sa-strawberry">se acabó</p>
+            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
+              no queda nada
+            </p>
+          </>
+        ) : (
+          <div className="space-y-1.5">
+            {bolsas.map((b) => (
+              <div key={b.molde}>
+                <p
+                  className={[
+                    'font-display text-2xl leading-none',
+                    b.cuadros > 0 ? 'text-sa-green-ink' : 'text-sa-strawberry',
+                  ].join(' ')}
+                >
+                  {b.cuadros > 0 ? enMoldes(b.cuadros, b.molde).texto : 'se acabó'}
+                </p>
+                <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
+                  de {b.molde} cuadros{b.cuadros > 0 ? ` · ${b.cuadros} libres` : ''}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -117,9 +147,9 @@ function Fila({
             disabled={ocupado}
             onClick={() => onHornear(m)}
             className="h-12 px-4 rounded-full bg-sa-green text-sa-cream font-display text-sm flex items-center justify-center shadow-sa-sm active:scale-95 transition-transform disabled:opacity-50"
-            aria-label={`Agregar ${m} molde de ${e.sabor}`}
+            aria-label={`Agregar ${m} molde de ${molde} de ${e.sabor}`}
           >
-            +{m} molde{m === 1 ? '' : 's'}
+            +{m} de {molde}
           </button>
         ))}
         <button
@@ -212,8 +242,8 @@ function ElHorno() {
 }
 
 export default function Produccion() {
-  const [sabores, setSabores] = useState<ExistenciaPorSabor[]>([])
-  const [paquetes, setPaquetes] = useState<PaqueteDelDia[]>([])
+  const [sabores, setSabores] = useState<ExistenciaPorMolde[]>([])
+  const [paquetes, setPaquetes] = useState<ProductoDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -233,8 +263,8 @@ export default function Produccion() {
     if (conSpinner) setCargando(true)
     try {
       const [s, p] = await Promise.all([
-        listarExistenciasPorSabor(sb),
-        listarPaquetesDelDia(sb),
+        listarExistenciasPorMolde(sb),
+        listarProductosDelDia(sb),
       ])
       setSabores(s)
       setPaquetes(p)
@@ -250,10 +280,12 @@ export default function Produccion() {
     void cargar()
   }, [cargar])
 
-  async function hornear(e: ExistenciaPorSabor, moldes: number) {
+  // Con el molde elegido arriba, no con uno global: es la diferencia entre
+  // apuntar diez moldes de 24 y apuntar lo que el sistema creyó que eran.
+  async function hornear(e: ExistenciaPorMolde, moldes: number) {
     setOcupado(e.sabor)
     try {
-      await registrarHorneada(sb, e.sabor, moldes * e.cuadros_por_molde, 'horneado')
+      await registrarHorneada(sb, e.sabor, moldes * molde, molde, 'horneado')
       await cargar(false)
     } catch (err) {
       setError(mensajeDeError(err))
@@ -262,10 +294,10 @@ export default function Produccion() {
     }
   }
 
-  async function merma(e: ExistenciaPorSabor) {
+  async function merma(e: ExistenciaPorMolde) {
     setOcupado(e.sabor)
     try {
-      await registrarHorneada(sb, e.sabor, 1, 'merma')
+      await registrarHorneada(sb, e.sabor, 1, molde, 'merma')
       await cargar(false)
     } catch (err) {
       setError(mensajeDeError(err))
@@ -298,8 +330,12 @@ export default function Produccion() {
   }
 
   const porSabor = useMemo(() => {
-    const m = new Map<string, PaqueteDelDia[]>()
+    const m = new Map<string, ProductoDelDia[]>()
+    // Solo lo que se corta de un molde. Lo que se hornea al pedido (las
+    // roscas, los panes) viene con `sabor` y `paquetes_posibles` en null: no
+    // tiene existencia que repartir y no va en este renglon.
     paquetes.forEach((p) => {
+      if (!p.sabor || p.paquetes_posibles === null) return
       const l = m.get(p.sabor) ?? []
       l.push(p)
       m.set(p.sabor, l)
@@ -308,7 +344,7 @@ export default function Produccion() {
   }, [paquetes])
 
   const porCategoria = useMemo(() => {
-    const m = new Map<string, ExistenciaPorSabor[]>()
+    const m = new Map<string, ExistenciaPorMolde[]>()
     sabores.forEach((f) => {
       const l = m.get(f.categoria) ?? []
       l.push(f)
@@ -321,7 +357,6 @@ export default function Produccion() {
   const cuadrosLibres = sabores.reduce((s, f) => s + Math.max(0, f.cuadros_libres), 0)
   const cuadrosVendidos = sabores.reduce((s, f) => s + f.cuadros_vendidos, 0)
   const cuadrosApartados = sabores.reduce((s, f) => s + f.cuadros_apartados, 0)
-  const cpm = sabores[0]?.cuadros_por_molde ?? 48
   const agotados = sabores.filter((f) => f.cuadros_horneados > 0 && f.cuadros_libres <= 0)
   const aMandar = Object.values(pedido).reduce((s, n) => s + n, 0)
 
@@ -380,7 +415,12 @@ export default function Produccion() {
                   <div className="min-w-0 flex-1">
                     <p className="font-body text-sm text-sa-green-ink leading-tight">{f.sabor}</p>
                     <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                      quedan {enMoldes(Math.max(0, f.cuadros_libres), f.cuadros_por_molde).texto}
+                      quedan{' '}
+                      {([48, 24] as const)
+                        .map((m) => ({ m, c: m === 48 ? f.libres_48 : f.libres_24 }))
+                        .filter((b) => b.c > 0)
+                        .map((b) => `${enMoldes(b.c, b.m).texto} de ${b.m}`)
+                        .join(' y ') || 'nada'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -508,6 +548,7 @@ export default function Produccion() {
               e={e}
               paquetes={porSabor.get(e.sabor) ?? []}
               base={base}
+              molde={molde}
               ocupado={ocupado === e.sabor}
               onHornear={(m) => void hornear(e, m)}
               onMerma={() => void merma(e)}

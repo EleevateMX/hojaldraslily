@@ -5,12 +5,12 @@ import {
   cobrarEncargo,
   cancelarEncargo,
   crearEncargo,
-  listarPaquetesDelDia,
+  listarProductosDelDia,
   partirNombreDeVenta,
   type Encargo,
-  type PaqueteDelDia,
+  type ProductoDelDia,
 } from '@lily/supabase'
-import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
+import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**
@@ -167,7 +167,7 @@ function Apartar({
   base,
   onListo,
 }: {
-  existencias: PaqueteDelDia[]
+  existencias: ProductoDelDia[]
   base: string
   onListo: (mensaje: string) => void
 }) {
@@ -285,7 +285,11 @@ function Apartar({
                 const foto = urlDeFoto(f.imagen_url, base)
                 // Se avisa, no se prohibe: se puede apartar mas de lo que hay
                 // hoy porque para eso esta la orden de produccion.
-                const pasado = n > f.paquetes_posibles
+                //
+                // `paquetes_posibles` en null es "se hornea al pedido" (las
+                // roscas, las trenzas, los panes), no "quedan cero": de esos
+                // nunca hay que avisar nada.
+                const pasado = f.paquetes_posibles !== null && n > f.paquetes_posibles
                 return (
                   <div
                     key={f.producto_id}
@@ -295,10 +299,16 @@ function Apartar({
                     <div className="min-w-0 flex-1">
                       <p className="font-body text-sm text-sa-green-ink leading-tight">{sabor}</p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                        {medida ? medida + ' · ' : ''}
-                        {f.paquetes_posibles} libre{f.paquetes_posibles === 1 ? '' : 's'}
+                        {[
+                          medida || medidaDeVenta(f).texto,
+                          f.paquetes_posibles === null
+                            ? 'se hornea al pedido'
+                            : `${f.paquetes_posibles} libre${f.paquetes_posibles === 1 ? '' : 's'}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
-                      {pasado && (
+                      {pasado && f.paquetes_posibles !== null && (
                         <p className="font-body text-[11px] text-sa-banana mt-0.5">
                           Hay que hornear {n - f.paquetes_posibles} más
                         </p>
@@ -362,7 +372,7 @@ function Apartar({
 
 export default function Almacen() {
   const [encargos, setEncargos] = useState<Encargo[]>([])
-  const [existencias, setExistencias] = useState<PaqueteDelDia[]>([])
+  const [existencias, setExistencias] = useState<ProductoDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -373,7 +383,7 @@ export default function Almacen() {
   const cargar = useCallback(async (conSpinner = true) => {
     if (conSpinner) setCargando(true)
     try {
-      const [e, x] = await Promise.all([listarEncargos(sb), listarPaquetesDelDia(sb)])
+      const [e, x] = await Promise.all([listarEncargos(sb), listarProductosDelDia(sb)])
       setEncargos(e)
       setExistencias(x)
       setError(null)

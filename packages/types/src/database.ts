@@ -2379,6 +2379,7 @@ export type Database = {
         Row: {
           cantidad: number
           created_at: string
+          cuadros_por_molde: number | null
           fecha: string
           id: string
           motivo: string
@@ -2391,6 +2392,7 @@ export type Database = {
         Insert: {
           cantidad: number
           created_at?: string
+          cuadros_por_molde?: number | null
           fecha?: string
           id?: string
           motivo?: string
@@ -2403,6 +2405,7 @@ export type Database = {
         Update: {
           cantidad?: number
           created_at?: string
+          cuadros_por_molde?: number | null
           fecha?: string
           id?: string
           motivo?: string
@@ -3631,6 +3634,22 @@ export type Database = {
         Returns: Json
       }
       fn_catalogo_cambios: { Args: never; Returns: Json }
+      fn_catalogo_del_dia: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          cuadros: number
+          cuadros_libres: number
+          imagen_url: string
+          nombre: string
+          paquetes_posibles: number
+          piezas: number
+          precio: number
+          producto_id: string
+          sabor: string
+          vendidos: number
+        }[]
+      }
       fn_catalogo_publicar: {
         Args: { p_clave?: string; p_quien?: string }
         Returns: Json
@@ -4131,6 +4150,23 @@ export type Database = {
           vendidos: number
         }[]
       }
+      fn_existencias_por_molde: {
+        Args: { p_fecha?: string }
+        Returns: {
+          categoria: string
+          cuadros_apartados: number
+          cuadros_horneados: number
+          cuadros_libres: number
+          cuadros_mermados: number
+          cuadros_vendidos: number
+          horneados_24: number
+          horneados_48: number
+          imagen_url: string
+          libres_24: number
+          libres_48: number
+          sabor: string
+        }[]
+      }
       fn_existencias_por_sabor: {
         Args: { p_fecha?: string }
         Returns: {
@@ -4313,6 +4349,16 @@ export type Database = {
         }
       }
       fn_historial_pedidos: { Args: { p_limite?: number }; Returns: Json }
+      fn_horneada_de_molde: {
+        Args: {
+          p_cuadros: number
+          p_molde: number
+          p_motivo?: string
+          p_nota?: string
+          p_sabor: string
+        }
+        Returns: number
+      }
       fn_horneada_registrar: {
         Args: {
           p_cuadros: number
@@ -4746,6 +4792,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      fn_prueba_tamano: { Args: { n: number }; Returns: number }
       fn_quitar_extra: {
         Args: { p_extra_id: string; p_producto_id: string }
         Returns: undefined

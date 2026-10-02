@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import {
   hornoEnVivo,
   relojDelHorno,
-  listarExistenciasPorSabor,
+  listarExistenciasPorMolde,
   listarEncargos,
   mandarAProducir,
   minutosDeHora,
   MOLDES,
   type HornoEnVivo,
   type Molde,
-  type ExistenciaPorSabor,
+  type ExistenciaPorMolde,
   type Encargo,
 } from '@lily/supabase'
 import { mensajeDeError, urlDeFoto, enMoldes, mxn } from '@lily/utils'
@@ -103,12 +103,20 @@ function Bloque({
   )
 }
 
-/** Lo que queda de un sabor, con su foto y contado en moldes. */
-function Queda({ e, base }: { e: ExistenciaPorSabor; base: string }) {
+/**
+ * Lo que queda de un sabor, con su foto y contado en moldes.
+ *
+ * Los de 48 y los de 24 van en renglones distintos y **nunca sumados**: diez
+ * moldes de 24 son diez de 24, no cinco de 48. El que esté en cero no se
+ * pinta — un «0 de 24» en un día en que solo se usaron moldes de 48 no
+ * significa nada y solo quita sitio.
+ */
+function Queda({ e, base }: { e: ExistenciaPorMolde; base: string }) {
   const foto = urlDeFoto(e.imagen_url, base)
-  const libres = Math.max(0, e.cuadros_libres)
-  const m = enMoldes(libres, e.cuadros_por_molde)
-  const agotado = libres <= 0
+  const bolsas = ([48, 24] as const)
+    .map((m) => ({ molde: m, cuadros: Math.max(0, m === 48 ? e.libres_48 : e.libres_24) }))
+    .filter((b) => b.cuadros > 0)
+  const agotado = bolsas.length === 0
 
   return (
     <div className="flex items-center gap-3 py-1.5 border-b border-sa-green-ink/5 last:border-0">
@@ -116,7 +124,9 @@ function Queda({ e, base }: { e: ExistenciaPorSabor; base: string }) {
       <div className="min-w-0 flex-1">
         <p className="font-body text-sm text-sa-green-ink leading-tight truncate">{e.sabor}</p>
         <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-          {libres} cuadro{libres === 1 ? '' : 's'} · moldes de {e.cuadros_por_molde}
+          {agotado
+            ? 'no queda nada'
+            : bolsas.map((b) => `${b.cuadros} de ${b.molde}`).join(' · ') + ' cuadros'}
         </p>
       </div>
       <p
@@ -125,7 +135,9 @@ function Queda({ e, base }: { e: ExistenciaPorSabor; base: string }) {
           agotado ? 'text-sm text-sa-strawberry' : 'text-lg text-sa-green-ink',
         ].join(' ')}
       >
-        {agotado ? 'se acabó' : m.texto}
+        {agotado
+          ? 'se acabó'
+          : bolsas.map((b) => enMoldes(b.cuadros, b.molde).texto).join(' · ')}
       </p>
     </div>
   )
@@ -134,7 +146,7 @@ function Queda({ e, base }: { e: ExistenciaPorSabor; base: string }) {
 export function PanelDeProduccion() {
   const navigate = useNavigate()
   const [datos, setDatos] = useState<HornoEnVivo | null>(null)
-  const [sabores, setSabores] = useState<ExistenciaPorSabor[]>([])
+  const [sabores, setSabores] = useState<ExistenciaPorMolde[]>([])
   const [encargos, setEncargos] = useState<Encargo[]>([])
   const [abierto, setAbierto] = useState(false)
   const [ahora, setAhora] = useState(() => new Date())
@@ -167,7 +179,7 @@ export function PanelDeProduccion() {
 
   /** Las existencias son más pesadas y solo se miran con el cajón abierto. */
   const cargarSabores = useCallback(async () => {
-    setSabores(await listarExistenciasPorSabor(sb).catch(() => []))
+    setSabores(await listarExistenciasPorMolde(sb).catch(() => []))
   }, [])
 
   useEffect(() => {

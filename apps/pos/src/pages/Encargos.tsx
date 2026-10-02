@@ -5,16 +5,16 @@ import {
   crearEncargo,
   cobrarEncargo,
   cancelarEncargo,
-  listarPaquetesDelDia,
+  listarProductosDelDia,
   listarOrdenesConTiempo,
   faltaPara,
   horaDeSalida,
   partirNombreDeVenta,
   type Encargo,
-  type PaqueteDelDia,
+  type ProductoDelDia,
   type OrdenConTiempo,
 } from '@lily/supabase'
-import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
+import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { sb } from '@/lib/sb'
 
 /**
@@ -56,7 +56,7 @@ const btn =
 export function Encargos() {
   const navigate = useNavigate()
   const [encargos, setEncargos] = useState<Encargo[]>([])
-  const [existencias, setExistencias] = useState<PaqueteDelDia[]>([])
+  const [existencias, setExistencias] = useState<ProductoDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -87,7 +87,7 @@ export function Encargos() {
       // Las existencias por sabor se dejaron de pedir aqui: eran para
       // "mandar a producir", que ahora vive en el panel de Produccion de la
       // caja. Una consulta menos en una pantalla que se relee sola.
-      const [e, x] = await Promise.all([listarEncargos(sb), listarPaquetesDelDia(sb)])
+      const [e, x] = await Promise.all([listarEncargos(sb), listarProductosDelDia(sb)])
       setEncargos(e)
       setExistencias(x)
       setError(null)
@@ -306,8 +306,19 @@ export function Encargos() {
                         {sabor}
                       </p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                        {medida ? medida + ' · ' : ''}
-                        {f.paquetes_posibles} libre{f.paquetes_posibles === 1 ? '' : 's'}
+                        {[
+                          medida || medidaDeVenta(f).texto,
+                          // `null` no es cero: las roscas, las trenzas, la
+                          // Hojaldra de Corazon y los panes se hornean para el
+                          // pedido, asi que no hay existencia que agotar. Leer
+                          // ese null como «0 libres» escondia del mostrador
+                          // justo lo que siempre se puede encargar.
+                          f.paquetes_posibles === null
+                            ? 'se hornea al pedido'
+                            : `${f.paquetes_posibles} libre${f.paquetes_posibles === 1 ? '' : 's'}`,
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
                       </p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
