@@ -2571,6 +2571,7 @@ export type Database = {
           nombre: string
           onzas: number | null
           orden: number
+          piezas: number | null
           precio: number
           sabor: string | null
         }
@@ -2595,6 +2596,7 @@ export type Database = {
           nombre: string
           onzas?: number | null
           orden?: number
+          piezas?: number | null
           precio?: number
           sabor?: string | null
         }
@@ -2619,6 +2621,7 @@ export type Database = {
           nombre?: string
           onzas?: number | null
           orden?: number
+          piezas?: number | null
           precio?: number
           sabor?: string | null
         }
@@ -4177,6 +4180,7 @@ export type Database = {
           nombre: string
           onzas: number | null
           orden: number
+          piezas: number | null
           precio: number
           sabor: string | null
         }
@@ -4269,6 +4273,7 @@ export type Database = {
           nombre: string
           onzas: number | null
           orden: number
+          piezas: number | null
           precio: number
           sabor: string | null
         }

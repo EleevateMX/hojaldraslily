@@ -5,7 +5,7 @@ import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import { ModalPersonalizar } from './ModalPersonalizar'
 import { nombreParaOrdenar, partirNombreDeVenta } from '@lily/supabase'
-import { urlDeFoto } from '@lily/utils'
+import { urlDeFoto, medidaDeVenta } from '@lily/utils'
 
 interface Props {
   productos: ProductoVenta[]
@@ -13,6 +13,23 @@ interface Props {
   extras: ExtraDeProducto[]
   /** Los productos extra en sí (el catálogo normal los excluye). */
   productosExtra: ProductoVenta[]
+}
+
+/**
+ * El nombre de la variante dentro de su grupo: «Chica», «Grande», «Nutella».
+ *
+ * Sale de lo que va después del primer `·` del nombre. Se devuelve vacío
+ * cuando eso NO nombra nada, sino que repite la medida: el renglón
+ * «Pastelitos de Lomo · 5 pzas» tiene por medida «5 pzas», y el mosaico ya
+ * pinta «5 / piezas» arriba. Escribirlo otra vez abajo daba
+ * «5 · PIEZAS · 5 pzas», que es el mismo defecto que ya se corrigió una vez
+ * en el Horno («3 moldes de 48 · 3 moldes»).
+ */
+const SOLO_MEDIDA = /^[\d\s.,]*(pza|pzas|pieza|piezas|cuadro|cuadros)?$/i
+
+function nombreDeVariante(medida: string): string {
+  const primera = medida.replace(/·.*$/, '').trim()
+  return SOLO_MEDIDA.test(primera) ? '' : primera
 }
 
 export function CatalogoBusqueda({ productos, categorias, extras, productosExtra }: Props) {
@@ -91,7 +108,10 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
       l.push(p)
       m.set(clave, l)
     }
-    for (const l of m.values()) l.sort((a, b) => (a.cuadros ?? 0) - (b.cuadros ?? 0))
+    // Del mas chico al mas grande. Un renglon se mide en cuadros (una
+    // hojaldra) o en piezas (un pastelito), nunca en los dos.
+    const tamano = (p: ProductoVenta) => medidaDeVenta(p).cuanto ?? 0
+    for (const l of m.values()) l.sort((a, b) => tamano(a) - tamano(b))
     return [...m.entries()]
   }, [productosFiltrados])
 
@@ -185,12 +205,38 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-3">
-            {porSabor.map(([sabor, piezas]) => {
+            {porSabor.map(([sabor, variantes]) => {
+              /**
+               * La pieza suelta no se pinta como un tamano mas.
+               *
+               * Un paquete de 5 y "una pieza" no son dos tamanos entre los
+               * que se elige: son el paquete, y la forma de cuadrar lo que no
+               * es multiplo de 5 (17 pastelitos = 3 paquetes y 2 piezas). Como
+               * tarjeta de tamano se leeria "1 pieza $22" al lado de "5 pzas
+               * $110", y alguien terminaria cobrando cinco piezas de una en
+               * una. Abajo se pinta como lo que es: +1, +2, +3 y +4.
+               *
+               * Si la pieza anda sola (sin su paquete en la pantalla) si es
+               * una tarjeta normal: ahi no hay con que confundirla.
+               */
+              const suelta =
+                variantes.length > 1 ? variantes.find((p) => medidaDeVenta(p).esSuelta) : undefined
+              const tamanos = suelta ? variantes.filter((p) => p.id !== suelta.id) : variantes
               const abierto = saborAbierto === sabor
-              const foto = urlDeFoto(piezas[0].imagen_url, import.meta.env.BASE_URL)
+              const foto = urlDeFoto(tamanos[0].imagen_url, import.meta.env.BASE_URL)
               // Un sabor con un solo tamano no necesita segundo paso: entra
               // al ticket de un toque, como un cafe.
-              const unico = piezas.length === 1
+              const unico = tamanos.length === 1 && !suelta
+              /**
+               * ¿Las variantes de este grupo se distinguen por un NUMERO?
+               *
+               * Una hojaldra si (12, 24, 48 cuadros); un paquete de pastelitos
+               * tambien (5 piezas). La Hojaldra de Corazon no: es un solo
+               * tamano con cinco rellenos, y ahi el numero grande salia «—»
+               * con «uno» debajo, tapando lo unico que importa, que es el
+               * relleno. Cuando no hay numero, manda el nombre.
+               */
+              const conMedida = tamanos.some((t) => medidaDeVenta(t).cuanto !== null)
 
               return (
                 <div
@@ -203,7 +249,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                   ].join(' ')}
                 >
                   <button
-                    onClick={() => (unico ? tocar(piezas[0]) : setSaborAbierto(abierto ? null : sabor))}
+                    onClick={() => (unico ? tocar(tamanos[0]) : setSaborAbierto(abierto ? null : sabor))}
                     className="w-full flex flex-col items-center p-3 active:scale-95 transition-transform"
                   >
                     {foto && (
@@ -214,39 +260,98 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                     </p>
                     <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
                       {unico
-                        ? mxn(precioDe(piezas[0]))
+                        ? [medidaDeVenta(tamanos[0]).texto, mxn(precioDe(tamanos[0]))]
+                            .filter(Boolean)
+                            .join(' · ')
                         : abierto
-                          ? '¿de qué tamaño?'
-                          : `${piezas.length} tamaños`}
+                          ? conMedida ? '¿de qué tamaño?' : '¿cuál?'
+                          : tamanos.length === 1 && suelta
+                            ? 'paquete o piezas'
+                            : `${tamanos.length} ${conMedida ? 'tamaños' : 'opciones'}`}
                     </p>
                   </button>
 
                   {abierto && !unico && (
-                    <div className="grid grid-cols-3 gap-2 px-3 pb-3">
-                      {piezas.map((p) => {
-                        const { medida } = partirNombreDeVenta(p.nombre)
-                        return (
-                          <button
-                            key={p.id}
-                            onClick={() => { tocar(p); setSaborAbierto(null) }}
-                            className="rounded-sa bg-white border border-sa-green-ink/10 hover:border-sa-green px-3 py-3 active:scale-95 transition-all"
-                          >
-                            <p className="font-display text-2xl text-sa-green-ink leading-none">
-                              {p.cuadros ?? '—'}
+                    <>
+                      <div
+                        className={[
+                          'grid gap-2 px-3 pb-3',
+                          // Un solo tamano no se queda flotando en un tercio
+                          // de ancho con dos tercios de hueco al lado.
+                          tamanos.length === 1 ? 'grid-cols-1' : tamanos.length === 2 ? 'grid-cols-2' : 'grid-cols-3',
+                        ].join(' ')}
+                      >
+                        {tamanos.map((p) => {
+                          const med = medidaDeVenta(p)
+                          const variante =
+                            nombreDeVariante(partirNombreDeVenta(p.nombre).medida) ||
+                            (conMedida ? '' : 'Normal')
+                          return (
+                            <button
+                              key={p.id}
+                              onClick={() => { tocar(p); setSaborAbierto(null) }}
+                              className="rounded-sa bg-white border border-sa-green-ink/10 hover:border-sa-green px-3 py-3 active:scale-95 transition-all"
+                            >
+                              {med.cuanto !== null ? (
+                                <>
+                                  <p className="font-display text-2xl text-sa-green-ink leading-none">
+                                    {med.cuanto}
+                                  </p>
+                                  <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
+                                    {med.unidad}
+                                  </p>
+                                  {variante && (
+                                    <p className="font-body text-xs text-sa-green-ink/70 mt-1 leading-tight">
+                                      {variante}
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                /* Sin numero que pintar, el nombre ES el titular. */
+                                <p className="font-display text-lg text-sa-green-ink leading-tight">
+                                  {variante}
+                                </p>
+                              )}
+                              <p className="font-mono text-sm font-medium text-sa-green mt-1.5">
+                                {mxn(precioDe(p))}
+                              </p>
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/*
+                        Las piezas sueltas, para cuadrar lo que no es multiplo
+                        del paquete. Llega hasta 4 a proposito: con 5 ya se
+                        toca el paquete, que cuesta exactamente lo mismo.
+                      */}
+                      {suelta && (
+                        <div className="mx-3 mb-3 rounded-sa bg-white border border-sa-green-ink/10 px-3 py-2.5">
+                          <div className="flex items-baseline justify-between mb-2">
+                            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/50">
+                              y piezas sueltas
                             </p>
-                            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-                              cuadros
+                            <p className="font-mono text-[11px] text-sa-green-ink/45">
+                              {mxn(precioDe(suelta))} c/u
                             </p>
-                            <p className="font-body text-xs text-sa-green-ink/70 mt-1 leading-tight">
-                              {medida.replace(/·.*$/, '').trim() || 'Paquete'}
-                            </p>
-                            <p className="font-mono text-sm font-medium text-sa-green mt-1.5">
-                              {mxn(precioDe(p))}
-                            </p>
-                          </button>
-                        )
-                      })}
-                    </div>
+                          </div>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[1, 2, 3, 4].map((n) => (
+                              <button
+                                key={n}
+                                onClick={() => { agregarItem(suelta, null, n); setSaborAbierto(null) }}
+                                className="rounded-sa bg-sa-cream-soft border border-sa-green-ink/10 hover:border-sa-green py-2 active:scale-95 transition-all"
+                              >
+                                <p className="font-display text-xl text-sa-green-ink leading-none">+{n}</p>
+                                <p className="font-mono text-[9px] uppercase tracking-wide text-sa-green-ink/45 mt-0.5">
+                                  {n === 1 ? 'pieza' : 'piezas'}
+                                </p>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               )

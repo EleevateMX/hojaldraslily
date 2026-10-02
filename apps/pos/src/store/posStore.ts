@@ -68,7 +68,11 @@ interface PosStore {
   items: LineaCarrito[]
   descuentoManual: DescuentoManual | null
 
-  agregarItem: (p: ProductoVenta, personalizacion?: string | null) => void
+  /**
+   * Mete un producto al ticket. `cuantos` existe para las piezas sueltas:
+   * "+3 piezas" es un toque, no tres.
+   */
+  agregarItem: (p: ProductoVenta, personalizacion?: string | null, cuantos?: number) => void
   incrementar: (lineaId: string) => void
   decrementar: (lineaId: string) => void
   quitarItem: (lineaId: string) => void
@@ -108,9 +112,12 @@ export const usePosStore = create<PosStore>((set, get) => ({
   items: [],
   descuentoManual: null,
 
-  agregarItem: (p, personalizacion = null) =>
+  agregarItem: (p, personalizacion = null, cuantos = 1) =>
     set((state) => {
       const nota = personalizacion?.trim() || null
+      // Nunca menos de una: un "+0 piezas" dejaria una linea vacia en el
+      // ticket, que es peor que no haber tocado nada.
+      const n = Math.max(1, Math.floor(cuantos))
       // Solo se agrupa con una línea existente del mismo producto si ambas
       // van sin personalización; con nota distinta va como línea aparte.
       const i = state.items.findIndex(
@@ -118,13 +125,13 @@ export const usePosStore = create<PosStore>((set, get) => ({
       )
       if (i >= 0) {
         const items = [...state.items]
-        items[i] = { ...items[i], cantidad: items[i].cantidad + 1 }
+        items[i] = { ...items[i], cantidad: items[i].cantidad + n }
         return { items }
       }
       return {
         items: [
           ...state.items,
-          { lineaId: nuevaLineaId(), producto: p, cantidad: 1, personalizacion: nota },
+          { lineaId: nuevaLineaId(), producto: p, cantidad: n, personalizacion: nota },
         ],
       }
     }),
