@@ -31,6 +31,7 @@ const C = {
   enc: { id: 'c-enc', nombre: 'Por encargo', orden: 2, activa: true, cocinas: null },
   boc: { id: 'c-boc', nombre: 'Bocadillos', orden: 29, activa: true, cocinas: null },
   pan: { id: 'c-pan', nombre: 'Panes', orden: 30, activa: true, cocinas: null },
+  tem: { id: 'c-tem', nombre: 'Menú de Temporada', orden: 3, activa: true, cocinas: null },
 }
 let n = 0
 const p = (nombre: string, precio: number, cat: any, extra: any = {}) => ({
@@ -70,13 +71,25 @@ const productos = [
   p('Hojaldra de Corazón · Nutella', 440, C.enc),
   // y uno pelado, sin medida y sin hermanos
   p('Pata de Canela', 60, C.pan),
+  // el menu de temporada: cuatro sabores de dos tamanos
+  p('Pan de Muerto Tradicional · Chica', 80, C.tem),
+  p('Pan de Muerto Tradicional · Grande', 130, C.tem),
+  p('Pan de Muerto Queso Philadelphia · Chica', 120, C.tem),
+  p('Pan de Muerto Queso Philadelphia · Grande', 230, C.tem),
+  p('Pan de Muerto Queso de Bola · Chica', 120, C.tem),
+  p('Pan de Muerto Queso de Bola · Grande', 230, C.tem),
+  p('Pan de Muerto Nutella · Chica', 120, C.tem),
+  p('Pan de Muerto Nutella · Grande', 230, C.tem),
+  // la rosca: la misma en dos tamanos, que tienen que agrupar juntas
+  p('Rosca de Queso Philadelphia', 310, C.pan),
+  p('Rosca de Queso Philadelphia · Grande', 570, C.enc),
 ]
 
 createRoot(document.getElementById('root')!).render(
   <div style={{ height: '100vh', background: 'var(--sa-cream)' }}>
     <CatalogoBusqueda
       productos={productos}
-      categorias={[C.enc, C.boc, C.pan] as any}
+      categorias={[C.tem, C.enc, C.boc, C.pan] as any}
       extras={[]}
       productosExtra={[]}
     />

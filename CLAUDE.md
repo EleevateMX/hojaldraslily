@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **180 migraciones aplicadas en orden, y 180
+`fzkdgqqvfkogmxdgqsxj` tiene **181 migraciones aplicadas en orden, y 181
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -39,11 +39,7 @@ Lo que falta para abrir, todo fuera del código:
    vender — hay que contarlo a mano.
    Falta también **ponerle mínimo** a las cosas: la lista de compra sale de
    comparar contra el mínimo, y todo arranca en cero.
-4. **Los precios del Pan de Muerto.** El **Menú de Temporada** ya tiene sus
-   ocho renglones (chico y grande × tradicional, queso de bola, queso
-   Philadelphia y Nutella), en cero y con la sección apagada. Cuando lleguen
-   los precios se capturan y se prende desde Admin → Menús del día.
-5. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
+4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
 
 **Cómo va todo, con números contra la base:** `docs/estado-del-pos.md`. Ahí
@@ -162,6 +158,17 @@ hornea al pedido»: las roscas, las trenzas, la Hojaldra de Corazón, los panes
 y los bocadillos no llevan existencia de cuadros. Leer ese null como «quedan
 0» escondía del mostrador justo lo que siempre se puede ofrecer — y es lo que
 impedía meterlos en un encargo, que es para lo único que existen.
+
+**El NOMBRE decide cómo se agrupa en la caja.** `partirNombreDeVenta` corta
+por el **primer** `·`: lo de antes es la tarjeta y lo de después es la
+variante. Por eso el Pan de Muerto se llama `Pan de Muerto Tradicional ·
+Chica` y no `Pan de Muerto · Tradicional · Chica` — con tres partes, los ocho
+caían en UNA tarjeta y los mosaicos decían «Tradicional, Tradicional, Queso de
+Bola, Queso de Bola…», cuatro parejas de etiquetas idénticas que solo se
+distinguían por el precio. Con dos partes quedan cuatro tarjetas de dos
+tamaños, que es como está el cartel. Misma razón por la que `Rosca de Queso
+Philadelphia` y `… · Grande` comparten prefijo: es el mismo pan en dos
+tamaños y tiene que ser UNA tarjeta.
 
 **Hay productos que se cuentan en PIEZAS, no en cuadros.** `productos.piezas`
 dice de cuántas es el renglón: 5 el paquete de pastelitos, 1 la pieza suelta,
@@ -434,7 +441,7 @@ empaquetador y se desvían solas:
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
-| Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy están apagados **Café** (lo pidió la casa) y **Menú de Temporada** (hasta que lleguen los precios del Pan de Muerto) |
+| Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
 | Vender piezas sueltas de pastelitos o bolitas | Se toca el bocadillo y abajo salen **+1, +2, +3, +4 piezas**. Hasta 4: con 5 ya se toca el paquete, que cuesta lo mismo |
 | Ver un encargo que ya se recogió | Caja → **Encargos** → pestaña **Historial** |
 | Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
