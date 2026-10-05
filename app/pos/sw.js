@@ -1,6 +1,6 @@
 // Generado por @lily/pwa. No editar a mano: se reescribe en cada build.
-const CASCO = ["/hojaldraslily/app/pos/","/hojaldraslily/app/pos/assets/index-BfEFkssl.css","/hojaldraslily/app/pos/assets/index-BuWRLUA8.js"]
-const CACHE = 'lily-casco-' + "1xmpaj3"
+const CASCO = ["/hojaldraslily/app/pos/","/hojaldraslily/app/pos/assets/index-Co72vp1z.css","/hojaldraslily/app/pos/assets/index-34X0UCvy.js"]
+const CACHE = 'lily-casco-' + "e9ep67"
 
 self.addEventListener('install', (e) => {
   // Se instala pero NO se activa: espera a que la app diga que es seguro.
