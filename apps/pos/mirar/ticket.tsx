@@ -22,7 +22,11 @@ const venta: TicketData = {
     { cantidad: 1, nombre: 'Pastelitos de Lomo · 5 pzas', precioUnitario: 140 },
   ],
   descuento: 50,
-  metodoPago: 'Efectivo $400.00 + Terminal $238.00',
+  metodoPago: 'Efectivo + Terminal',
+  partes: [
+    { metodo: 'Efectivo', monto: 400 },
+    { metodo: 'Terminal', monto: 238 },
+  ],
   referenciaPago: 'CLIP-884213',
   recibido: 400,
   clienteNombre: 'Doña Carmen',
