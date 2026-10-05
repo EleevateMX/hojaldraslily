@@ -30,3 +30,8 @@ demo/app/
 
 # Capturas para enseñarle el sistema al negocio: se regeneran cuando hacen falta.
 muestras/
+
+# Las fuentes de la marca para el banco de pruebas: se bajan cuando hacen falta
+# (ver apps/pos/mirar/ticket.html). No se versionan.
+apps/pos/public/fuentes/
+apps/pos/mirar/fuentes/
