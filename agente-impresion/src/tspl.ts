@@ -98,6 +98,25 @@ export function partir(texto: string, maximo: number): string[] {
 }
 
 /**
+ * El nombre del producto, partido por donde se entiende.
+ *
+ * Los nombres de la casa traen el tamaño detrás de un punto medio: «Jamón y
+ * Queso · Chica · 24 cuadros». Partiéndolo solo por ancho, el `·` caía al
+ * **principio** del renglón siguiente —«JAMON Y QUESO / · CHICA · 24 /
+ * CUADROS»— y en una etiqueta de cocina eso se lee como ruido.
+ *
+ * Se parte por el punto medio: el sabor en sus renglones y el tamaño en los
+ * suyos. Queda lo que quien arma necesita ver de un vistazo, en ese orden:
+ * QUÉ y luego DE QUÉ TAMAÑO.
+ */
+export function lineasDeProducto(producto: string, maximo: number): string[] {
+  const partes = producto.split('·').map((t) => t.trim()).filter(Boolean)
+  if (partes.length < 2) return partir(mayus(producto), maximo)
+  const [sabor, ...resto] = partes
+  return [...partir(mayus(sabor), maximo), ...partir(mayus(resto.join(' ')), maximo)]
+}
+
+/**
  * Abrevia una petición del cliente a la línea corta que va bajo SPEC.
  *
  * No es una tabla de casos sueltos sino la regla que hay detrás: cocina lee
@@ -166,28 +185,32 @@ export function compactarSpec(texto: string): string {
  * ocupar más de dos renglones de 14 caracteres, o empuja el pie fuera de la
  * etiqueta. Hay un test que lo vigila.
  */
+// Dieciseis de las veintidos de antes eran del gimnasio del motor original
+// --- "No pain, no gain", "Beast mode: ON", "Nacido para entrenar", "Eat.
+// Sleep. Shake." --- y se imprimian en CADA etiqueta. Una decia "Eres un
+// hojaldraslily", que es el buscar-y-reemplazar pasado por encima de
+// "shakeaholic" y dejando una frase sin sentido.
+//
+// Es el mismo caso que el bloque de puntos al pie del ticket y que el
+// "Conservelo en refrigeracion": texto del otro negocio que nadie habia
+// mirado porque vive en papel, no en pantalla. Estas son de panaderia.
 export const FRASES = [
   'Buen dia!',
-  'Eres un hojaldraslily',
   'Que lo disfrutes!',
   'Hecho para ti',
   'Gracias por venir',
   'Hoy toca consentirse',
-  'Shake, train and repeat',
-  'No pain, no gain',
-  'Mas fuerte que ayer',
-  'Tu unico rival: ayer',
-  'La ultima rep cuenta',
-  'Sin excusas hoy',
-  'A darle, campeon!',
-  'Suda, sonrie, repite',
-  'Ganado, no regalado',
-  'Beast mode: ON',
-  'Eat. Sleep. Shake.',
-  'Rompe tu record hoy',
-  'Nacido para entrenar',
-  'La disciplina gana',
-  'Proteina y actitud',
+  'Recien salido del horno',
+  'Con mucho gusto',
+  'Que aproveche!',
+  'Hecho hoy, para hoy',
+  'Del horno a tu mesa',
+  'Pan recien hecho',
+  'Gracias por la espera',
+  'Vuelve pronto',
+  'Hecho con calma',
+  'Calientito y listo',
+  'Para compartir',
 ] as const
 
 /**
@@ -305,7 +328,7 @@ export function generarTSPL(e: EtiquetaComanda): string {
   }
 
   gap = 14
-  for (const linea of partir(mayus(e.producto), anchoF2)) {
+  for (const linea of lineasDeProducto(e.producto, anchoF2)) {
     l.escribir(linea, '2', gap)
     gap = 3
   }
@@ -366,7 +389,7 @@ export function vistaPrevia(e: EtiquetaComanda): string {
   fila()
   for (const t of partir(mayus(e.nombre), caracteresPorLinea('3'))) fila(t)
   fila()
-  for (const t of partir(mayus(e.producto), caracteresPorLinea('2'))) fila(t)
+  for (const t of lineasDeProducto(e.producto, caracteresPorLinea('2'))) fila(t)
   // (El tamaño no se imprime: solo pantalla — ver arriba.)
   const spec = lineasSpec(e)
   if (spec.length > 0) {

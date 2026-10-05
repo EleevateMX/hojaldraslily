@@ -132,6 +132,14 @@ export function Cobro() {
         metodoPago: mixto
           ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
           : metodoSel.label,
+        // En mixto van las dos partes por separado, para que en el papel se
+        // vea que suman el total. La frase de arriba se queda de respaldo.
+        partes: mixto
+          ? [
+              { metodo: 'Efectivo', monto: efectivoMixto },
+              { metodo: 'Terminal', monto: tarjetaMixto },
+            ]
+          : undefined,
         referenciaPago: referencia.trim() || null,
         recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
       }

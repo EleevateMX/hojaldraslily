@@ -33,6 +33,16 @@ export interface TicketData {
   items: TicketItem[]
   descuento?: number
   metodoPago: string // 'Efectivo' | 'Tarjeta' | 'Clip' | ...
+  /**
+   * El desglose cuando se cobró con dos formas de pago.
+   *
+   * Va como DATOS y no como texto ya armado («Efectivo $400 + Terminal
+   * $238»), porque esa línea sola no se lee: en el papel quedaba el desglose
+   * a la izquierda y el total a la derecha, y el cliente tiene que poder
+   * comprobar que las dos partes suman lo que pagó. Con datos se pinta un
+   * renglón por parte, cada uno con su importe.
+   */
+  partes?: { metodo: string; monto: number }[]
   referenciaPago?: string | null // voucher/autorización Clip
   recibido?: number // efectivo entregado (para el cambio)
   // Lealtad
@@ -132,7 +142,13 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     <tr><td class="lbl">Subtotal</td><td class="p">${money(subtotal)}</td></tr>
     ${descuento ? `<tr><td class="lbl">Descuento</td><td class="p">-${money(descuento)}</td></tr>` : ''}
     <tr><td class="lbl big">TOTAL</td><td class="p big">${money(total)}</td></tr>
-    <tr><td class="lbl">${esc(data.metodoPago)}</td><td class="p">${money(total)}</td></tr>
+    ${
+      data.partes && data.partes.length > 0
+        ? data.partes
+            .map((x) => `<tr><td class="lbl">${esc(x.metodo)}</td><td class="p">${money(x.monto)}</td></tr>`)
+            .join('')
+        : `<tr><td class="lbl">${esc(data.metodoPago)}</td><td class="p">${money(total)}</td></tr>`
+    }
     ${data.recibido != null ? `<tr><td class="lbl">Recibido</td><td class="p">${money(data.recibido)}</td></tr>` : ''}
     ${cambio != null ? `<tr><td class="lbl">Cambio</td><td class="p">${money(cambio)}</td></tr>` : ''}
     ${data.referenciaPago ? `<tr><td class="lbl">Ref.</td><td class="p">${esc(data.referenciaPago)}</td></tr>` : ''}

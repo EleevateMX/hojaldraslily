@@ -7,6 +7,7 @@ import {
   frasePara,
   generarTSPL,
   limpiar,
+  lineasDeProducto,
   partir,
   vistaPrevia,
   type EtiquetaComanda,
@@ -414,5 +415,42 @@ describe('familia de la bebida en el nombre', () => {
     expect(Math.min(...xs)).toBeGreaterThan(24)
     expect(tspl).toContain('HYDRATION')
     expect(tspl).toContain('WATERMELON')
+  })
+})
+
+describe('lineasDeProducto', () => {
+  const ancho = caracteresPorLinea('2')
+
+  it('parte por el punto medio: el sabor arriba, el tamano abajo', () => {
+    // El sabor estrena renglon y el tamano va despues, ya sin el punto medio.
+    // Que el tamano ocupe uno o dos renglones lo decide el ancho de la
+    // etiqueta, no esta prueba.
+    const lineas = lineasDeProducto('Jamón y Queso · Chica · 24 cuadros', ancho)
+    expect(lineas[0]).toBe('JAMON Y QUESO')
+    expect(lineas.slice(1).join(' ')).toBe('CHICA 24 CUADROS')
+  })
+
+  it('nunca deja el punto medio colgando al inicio de un renglon', () => {
+    for (const nombre of [
+      'Jamón y Queso · Chica · 24 cuadros',
+      'Pan de Muerto Tradicional · Chica',
+      'Pastelitos solo queso · 1 pza',
+      'Rosca de Queso Philadelphia · Grande',
+    ]) {
+      for (const linea of lineasDeProducto(nombre, ancho)) {
+        expect(linea.startsWith('·')).toBe(false)
+        expect(linea).not.toContain('·')
+      }
+    }
+  })
+
+  it('un producto sin punto medio se parte como siempre', () => {
+    expect(lineasDeProducto('Hojaldritas', ancho)).toEqual(['HOJALDRITAS'])
+  })
+
+  it('ningun renglon se pasa del ancho de la etiqueta', () => {
+    for (const linea of lineasDeProducto('Hojaldra de Corazón · Pasta de Guayaba, Philadelphia y Nuez', ancho)) {
+      expect(linea.length).toBeLessThanOrEqual(ancho)
+    }
   })
 })
