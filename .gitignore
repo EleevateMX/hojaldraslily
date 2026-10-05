@@ -27,3 +27,6 @@ apps/cliente-pwa/android/
 
 # Artefactos de build publicados en GitHub Pages (los compila el workflow)
 demo/app/
+
+# Capturas para enseñarle el sistema al negocio: se regeneran cuando hacen falta.
+muestras/
