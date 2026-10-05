@@ -310,7 +310,26 @@ function Apartar({
                       >
                         −
                       </button>
-                      <span className="font-mono text-base w-8 text-center tabular-nums">{n}</span>
+                      {/*
+                        Se teclea, igual que en la caja: hay encargos de 13 o
+                        de 17 piezas, y subirlos de uno en uno es una pantalla
+                        tactil pulsada trece veces. El tope de 999 evita que un
+                        dedo pegado aparte un encargo absurdo.
+                      */}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={n === 0 ? '' : String(n)}
+                        onChange={(e) =>
+                          setPiezas((p) => ({
+                            ...p,
+                            [f.producto_id]: Math.min(999, Number(e.target.value.replace(/\D/g, '') || 0)),
+                          }))
+                        }
+                        placeholder="0"
+                        aria-label={`Cuántas de ${sabor}`}
+                        className="font-mono text-base w-10 text-center tabular-nums bg-transparent border-b border-sa-green-ink/15 focus:outline-none focus:border-sa-green"
+                      />
                       <button
                         onClick={() => setPiezas((p) => ({ ...p, [f.producto_id]: n + 1 }))}
                         className="w-9 h-9 rounded-full bg-sa-green text-sa-cream font-display"

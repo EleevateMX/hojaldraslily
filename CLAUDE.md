@@ -449,7 +449,7 @@ empaquetador y se desvían solas:
 | Meter y sacar del horno | Pantalla del **Horno**. Lo que se **saca** es lo que sube al inventario |
 | Saber qué pasa atrás, desde la caja | El botón **Producción** de la cabecera: horno con su reloj, qué arman los panaderos, encargos de hoy y lo que queda |
 | Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
-| Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén** |
+| Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén**. La cantidad **se teclea**: para 13 pastelitos se escribe 13, no se toca «+» trece veces |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
 | Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Empaque** al entregarlo (es lo único que lo descuenta) |
 | Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |

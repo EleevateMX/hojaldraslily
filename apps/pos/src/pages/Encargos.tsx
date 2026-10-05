@@ -445,7 +445,29 @@ export function Encargos() {
                       >
                         −
                       </button>
-                      <span className="font-mono text-sm w-6 text-center tabular-nums">{n}</span>
+                      {/*
+                        Se teclea, no solo se sube de uno en uno.
+
+                        Los pastelitos de solo queso se encargan en cualquier
+                        cantidad -- 13, 15, 17 -- y con un boton de "+" eso son
+                        trece toques en una pantalla tactil, con el cliente al
+                        telefono. El tope de 999 es para que un dedo pegado no
+                        deje apartado un encargo de cien mil piezas.
+                      */}
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        value={n === 0 ? '' : String(n)}
+                        onChange={(e) =>
+                          setPiezas((p) => ({
+                            ...p,
+                            [f.producto_id]: Math.min(999, Number(e.target.value.replace(/\D/g, '') || 0)),
+                          }))
+                        }
+                        placeholder="0"
+                        aria-label={`Cuántas de ${f.nombre}`}
+                        className="font-mono text-sm w-10 text-center tabular-nums bg-transparent border-b border-sa-green-ink/15 focus:outline-none focus:border-sa-green"
+                      />
                       <button
                         onClick={() => setPiezas((p) => ({ ...p, [f.producto_id]: n + 1 }))}
                         className="w-8 h-8 rounded-full bg-sa-green text-sa-cream"
