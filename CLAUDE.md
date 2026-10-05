@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **181 migraciones aplicadas en orden, y 181
+`fzkdgqqvfkogmxdgqsxj` tiene **182 migraciones aplicadas en orden, y 182
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -441,7 +441,7 @@ empaquetador y se desvían solas:
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
-| Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
+| Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto —mostrador y Rappi—; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
 | Vender piezas sueltas de pastelitos o bolitas | Se toca el bocadillo y abajo salen **+1, +2, +3, +4 piezas**. Hasta 4: con 5 ya se toca el paquete, que cuesta lo mismo |
 | Ver un encargo que ya se recogió | Caja → **Encargos** → pestaña **Historial** |
 | Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
