@@ -47,8 +47,14 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   sucursal: 'Miguel Alemán',
   direccion: 'Calle 29-A #183 por Av. 22, Col. Miguel Alemán, Mérida, Yuc.',
   telefono: '999 926 71 51',
-  rfc: '—', // TODO: RFC real
-  leyenda: 'Gracias por su compra. Consérvelo en refrigeración.',
+  // Vacío, NO un guion: `'—'` es texto, así que la plantilla lo daba por
+  // bueno e imprimía «RFC —» en el papel, a la vista del cliente. Vacío no se
+  // imprime nada, que es lo honesto mientras no esté el dato.
+  rfc: '',
+  // Decía «Consérvelo en refrigeración», que venía de la heladería del motor
+  // original: una hojaldra no se refrigera. Es el mismo caso que el bloque de
+  // los puntos que ya se quitó del pie del ticket.
+  leyenda: '¡Gracias por su compra!',
 }
 
 const money = (n: number) =>
@@ -117,6 +123,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     <div class="folio">#${esc(data.folio)}</div>
     <div class="muted">${fechaTxt}</div>
     ${data.canal ? `<div class="muted">${esc(data.canal)}${data.cajero ? ' · ' + esc(data.cajero) : ''}</div>` : ''}
+    ${data.clienteNombre ? `<div class="code">${esc(data.clienteNombre)}</div>` : ''}
   </div>
   <div class="sep"></div>
   <table>${filas}</table>
@@ -136,13 +143,46 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
 }
 
 /**
- * Abre el ticket en una ventana y dispara la impresión del navegador.
- * Devuelve false si el navegador bloqueó la ventana emergente.
+ * Imprime el ticket desde un marco oculto en la misma pestaña.
+ *
+ * **Antes abría una ventana emergente, y eso fallaba en silencio.** Si Chrome
+ * bloqueaba el `window.open` —que es lo que hace por omisión en cuanto la
+ * impresión no nace de un clic directo— la venta se cobraba igual y el ticket
+ * no salía: nadie se enteraba hasta que el cliente lo pedía. Un `<iframe>` no
+ * se puede bloquear.
+ *
+ * Y de paso habilita lo que la caja de verdad necesita: con Chrome abierto en
+ * `--kiosk-printing` esto imprime **sin el diálogo** de «Imprimir», que son
+ * dos clics menos por cliente. Sin esa bandera sale el diálogo, pero sale.
+ *
+ * El marco se retira solo: al terminar de imprimir, y con una red de
+ * seguridad por si `afterprint` no llega (en impresión silenciosa a veces no
+ * dispara). Quitarlo antes de tiempo cancela la impresión, así que el margen
+ * es generoso: un marco de 0×0 invisible no le estorba a nadie.
  */
 export function imprimirTicket(data: TicketData, negocio: TicketNegocio = NEGOCIO_DEFAULT): boolean {
-  const w = window.open('', '_blank', 'width=380,height=640')
-  if (!w) return false
-  w.document.write(ticketHTML(data, negocio))
-  w.document.close()
+  if (typeof document === 'undefined') return false
+
+  const marco = document.createElement('iframe')
+  marco.setAttribute('aria-hidden', 'true')
+  marco.setAttribute('title', 'Ticket')
+  marco.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden'
+  document.body.appendChild(marco)
+
+  const doc = marco.contentWindow?.document
+  if (!doc) {
+    marco.remove()
+    return false
+  }
+
+  const quitar = () => marco.parentNode && marco.remove()
+  marco.contentWindow?.addEventListener('afterprint', () => setTimeout(quitar, 500))
+  setTimeout(quitar, 60_000)
+
+  // El `<body onload="window.print()">` de la plantilla corre DENTRO del
+  // marco, así que imprime el marco y no la caja que quedó atrás.
+  doc.open()
+  doc.write(ticketHTML(data, negocio))
+  doc.close()
   return true
 }
