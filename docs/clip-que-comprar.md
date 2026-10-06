@@ -10,9 +10,10 @@ Precios de la tienda de Clip al **6 de octubre de 2026**.
 
 ## 1. La respuesta corta
 
-**Clip Ultra, $399.** Si quieren pantalla más grande y pantalla para el
-cliente, **Clip Total 3, $499**. Las dos sirven igual de bien para lo que
-hace falta.
+**Cualquiera de las dos: Clip Ultra ($399) o Clip Total 3 ($499).** Las dos
+sirven igual de bien con el sistema, las dos cobran la misma comisión y las
+dos traen impresora e internet propio. **No hay una mejor**: se elige por
+forma, no por capacidad.
 
 | | Clip Ultra | Clip Total 3 |
 |---|---|---|
@@ -25,13 +26,17 @@ hace falta.
 | Batería | ~14 h | 6,080 mAh, ~15 h |
 | Comisión | 2.99 % + $1 + IVA | 2.99 % + $1 + IVA |
 
-**Por qué el Ultra de primero:** el cliente teclea su NIP en **teclas de
-verdad**, no en un cristal. En un mostrador con prisa, con gente mayor y con
-las manos ocupadas, eso se nota todos los días. Y es la más barata.
+**Lo único que las separa**, y es cuestión de gusto:
 
-**Cuándo conviene la Total 3:** su segunda pantalla de 2.4" mira al cliente
-y le muestra el monto. Si no van a poner el kiosko enfrente, eso sirve. Si
-el kiosko ya va a estar ahí, es un gasto que no cambia nada.
+- **La Ultra** tiene **teclas de verdad** para el NIP, no cristal. En un
+  mostrador con prisa, con gente mayor y con las manos ocupadas, eso se
+  agradece. Y son $100 menos.
+- **La Total 3** tiene una **segunda pantalla de 2.4" que mira al cliente** y
+  le muestra el monto. Sirve si no van a tener el kiosko enfrente; si el
+  kiosko ya va a estar ahí, es un gasto que no cambia nada.
+
+Si no quieren pensarlo: **la que esté disponible el día que vayan a comprar.**
+Para el sistema son la misma cosa.
 
 ---
 
