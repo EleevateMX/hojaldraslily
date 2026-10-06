@@ -161,3 +161,7 @@ De los diez renglones de la cotización, el arranque corto necesita **tres**:
 **≈$11,300**, y lo demás se compra cuando entren las estaciones. Nada de
 esto se desperdicia después: la PC de la caja sigue siendo la de la caja.
 Ver `docs/hardware-caja.md`.
+
+La cotización ya recortada a eso —con los cables, el no-break y los dos
+totales según qué PC se elija— está en `docs/hardware-cotizacion-caja.md`.
+Es la lista que se le puede pasar al proveedor tal cual.
