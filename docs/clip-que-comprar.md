@@ -35,6 +35,71 @@ el kiosko ya va a estar ahí, es un gasto que no cambia nada.
 
 ---
 
+## 1b. Cuánto se lleva Clip
+
+**2.99 % + $1 por transacción aprobada, más IVA sobre esa comisión.** La
+cuenta es:
+
+```
+comisión = (venta × 2.99 % + $1) × 1.16
+```
+
+**Es la misma en todas sus terminales.** Plus 2, Total 3, Ultra: la comisión
+no cambia por el aparato. Lo que cambia entre ellas es el hardware, no la
+tasa — así que **comprar la más cara no baja la comisión**.
+
+### Lo que importa aquí: el $1 fijo
+
+Ese peso fijo pega distinto según el tamaño de la venta, y en una panadería
+la mayoría de los tickets son chicos:
+
+| Venta | Se queda Clip | **% real** |
+|---|---|---|
+| $80 *(Pan de Muerto chica)* | $3.93 | **4.92 %** |
+| $120 *(hojaldra mediana)* | $5.32 | **4.43 %** |
+| $150 | $6.36 | **4.24 %** |
+| $230 *(Pan de Muerto grande)* | $9.14 | **3.97 %** |
+| $300 | $11.57 | **3.86 %** |
+| $500 | $18.50 | **3.70 %** |
+| $570 *(Rosca grande)* | $20.93 | **3.67 %** |
+| $1,000 *(encargo)* | $35.84 | **3.58 %** |
+
+La tasa anunciada es 2.99 %, pero **lo que de verdad se paga en el mostrador
+anda entre 3.6 % y 4.9 %**, y es peor mientras más chica la venta. No es letra
+chica escondida: es el peso fijo más el IVA, que nadie suma al leer el
+anuncio.
+
+La lectura práctica: **donde la tarjeta sale barata es en los encargos y las
+roscas grandes.** En una hojaldra suelta de $80, casi 5 %.
+
+### Un mes de ejemplo
+
+Con $120,000 de venta al mes, la mitad con tarjeta y ticket promedio de $180:
+
+| | |
+|---|---|
+| Venta con tarjeta | $60,000 |
+| Transacciones | ~333 |
+| **Comisión del mes** | **≈$2,465** |
+| Tasa efectiva | **4.11 %** |
+
+Los números son de ejemplo: hay que rehacerlo con las ventas reales cuando
+las haya. Pero sirve para la conversación con el banco — **ese es el número
+que hay que pedirle a Banorte** para poder comparar.
+
+### Cuándo cae el dinero
+
+- **Máximo 24 horas**, cualquier día, incluidos fines de semana y festivos.
+- Con **Clip Cuenta** (su cuenta digital) cae en minutos, los 365 días.
+
+### Meses sin intereses
+
+Suman un sobrecargo del banco **encima** de la comisión, y crece con el plazo.
+Con tickets de $80 a $570 no tiene sentido ofrecerlos: conviene dejarlos
+apagados.
+
+---
+
 ## 2. Las cuatro que sirven, y las que no
 
 Clip tiene dos APIs distintas y **solo una empuja el monto a la terminal**:
@@ -138,6 +203,8 @@ Se puede abrir sin ella.
 ## Fuentes
 
 - [Clip — API de PinPad, introducción](https://developer.clip.mx/reference/introducci%C3%B3n-a-la-api-de-pinpad) — de aquí salen los cuatro lectores compatibles, el requisito de la APK, el KYC, los 10 Mb/s y que solo opera en producción
+- [Clip — cuánto cobra de comisión](https://blog.clip.mx/articulo/cuanto-cobra-de-comision-clip) · [comisión por transacción](https://blog.clip.mx/articulo/comision-de-clip-por-transaccion) · [calculadora](https://www.clip.mx/como-funciona-clip/calculadora-clip) — el 2.99 % + $1 + IVA y los ejemplos con los que se verificó la fórmula
+- [Clip — cuándo depositan el dinero](https://blog.clip.mx/articulo/cuando-depositan-el-dinero-en-clip) · [en 24 horas](https://blog.clip.mx/articulo/no-importa-el-dia-recibe-tu-dinero-en-24-horas)
 - [Clip — Pin Pad para empresas](https://www.clip.mx/clip-para-empresas/pin-pad)
 - [Clip Ultra, tienda oficial](https://shop.clip.mx/products/clip-ultra) · [Clip Total 3, tienda oficial](https://shop.clip.mx/products/clip-total)
 - [Clip — SDK Terminal](https://developer.clip.mx/reference/introducci%C3%B3n-al-sdk-terminal) — el otro camino, para apps Android que corren *dentro* de la terminal; no es el nuestro
