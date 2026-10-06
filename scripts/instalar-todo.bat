@@ -28,7 +28,7 @@ title Hojaldras Lily - dejar la PC lista
 color 0A
 
 set "BASE=C:\Hojaldras Lily"
-set "CRUDO=https://raw.githubusercontent.com/EleevateMX/ventashake/main"
+set "CRUDO=https://raw.githubusercontent.com/EleevateMX/hojaldraslily/main"
 
 REM  Al llamarse a si mismo elevado, el primer argumento es la bandera y el
 REM  segundo la llave.

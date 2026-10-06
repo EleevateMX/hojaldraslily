@@ -29,7 +29,7 @@ color 0A
 set "BASE=C:\Hojaldras Lily"
 set "AGENTE=%BASE%\agente-impresion\arrancar-agente.bat"
 set "PANTALLAS=%BASE%\pantallas.ps1"
-set "CRUDO=https://raw.githubusercontent.com/EleevateMX/ventashake/main"
+set "CRUDO=https://raw.githubusercontent.com/EleevateMX/hojaldraslily/main"
 
 echo.
 echo   HOJALDRAS LILY
@@ -135,12 +135,16 @@ if not exist "%NAV%" (
   echo   [X] No hay Chrome ni Edge en esta PC.
   goto :eof
 )
+REM  El orden es el del camino del pan: produccion, horno, empaque; el kiosko
+REM  al final para que quede encima, que es el que ve el cliente.
 set "F=--noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble"
-start "" "%NAV%" --app=https://barra.hojaldraslily.com  %F% --user-data-dir="%LOCALAPPDATA%\shake-bebidas"
+start "" "%NAV%" --app=https://produccion.hojaldraslily.com %F% --user-data-dir="%LOCALAPPDATA%\lily-produccion"
 timeout /t 3 /nobreak >nul
-start "" "%NAV%" --app=https://cocina.hojaldraslily.com %F% --user-data-dir="%LOCALAPPDATA%\shake-alimentos"
+start "" "%NAV%" --app=https://horno.hojaldraslily.com      %F% --user-data-dir="%LOCALAPPDATA%\lily-horno"
 timeout /t 3 /nobreak >nul
-start "" "%NAV%" --app=https://kiosko.hojaldraslily.com %F% --user-data-dir="%LOCALAPPDATA%\shake-kiosko"
+start "" "%NAV%" --app=https://empaque.hojaldraslily.com    %F% --user-data-dir="%LOCALAPPDATA%\lily-empaque"
+timeout /t 3 /nobreak >nul
+start "" "%NAV%" --app=https://kiosko.hojaldraslily.com     %F% --user-data-dir="%LOCALAPPDATA%\lily-kiosko"
 goto :eof
 
 REM ===========================================================================

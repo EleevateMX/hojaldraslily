@@ -25,7 +25,7 @@
  3. Pegar esta linea y Enter:
 
 ----------------------------------------------------------------
-Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/EleevateMX/ventashake/main/scripts/instalar-todo.bat' -OutFile "$env:TEMP\shake.bat"; & "$env:TEMP\shake.bat"
+Set-ExecutionPolicy Bypass -Scope Process -Force; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; Invoke-WebRequest -UseBasicParsing 'https://raw.githubusercontent.com/EleevateMX/hojaldraslily/main/scripts/instalar-todo.bat' -OutFile "$env:TEMP\shake.bat"; & "$env:TEMP\shake.bat"
 ----------------------------------------------------------------
 
 

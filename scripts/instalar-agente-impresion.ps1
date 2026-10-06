@@ -44,7 +44,7 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $SupabaseUrl = 'https://zyjtnaystsporbuzcmqk.supabase.co'
-$RepoZip     = "https://codeload.github.com/EleevateMX/ventashake/zip/refs/heads/$Rama"
+$RepoZip     = "https://codeload.github.com/EleevateMX/hojaldraslily/zip/refs/heads/$Rama"
 
 # Escribir archivos SIN BOM.
 #

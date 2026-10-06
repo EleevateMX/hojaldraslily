@@ -7,6 +7,10 @@ etiquetadoras. Precios aproximados en MXN (referencia 2026, varían mucho).
 > **Antes de comprar impresoras, lee la sección 3.** Es lo único de esta lista
 > donde comprar el modelo equivocado no da error: simplemente no imprime.
 
+> **Si la tienda va a arrancar con solo caja y tickets**, no compres esta
+> lista: la corta está en **`docs/hardware-caja.md`** (son cuatro cosas, y
+> nada de lo que entra ahí se desperdicia después).
+
 ---
 
 ## 1. El montaje que ya está armado en los scripts
@@ -14,26 +18,31 @@ etiquetadoras. Precios aproximados en MXN (referencia 2026, varían mucho).
 `scripts/pantallas.ps1` y `scripts/abrir-hojaldraslily.bat` asumen esto, y es
 lo más barato que funciona bien:
 
-**Una sola PC con tres monitores** y las dos etiquetadoras en la red.
+**Una sola PC con cuatro monitores** y las dos etiquetadoras en la red.
 
 | Monitor | Qué muestra | Quién lo ve |
 |---|---|---|
 | El **grande** | `kiosko` | El cliente, en la barra |
-| Chico **izquierdo** | `cocina-bebidas` | Barra |
-| Chico **derecho** | `cocina-alimentos` | Cocina |
+| Chico 1 | `produccion` | Quien arma los moldes |
+| Chico 2 | `horno` | Quien hornea |
+| Chico 3 | `empaque` | Quien empaca y entrega |
 
 El reparto **no está escrito a mano**: el script le pregunta a Windows dónde
-están los monitores y reparte por tamaño. Si se equivoca, se manda con
-`C:\Hojaldras Lily\pantallas.txt` (`kiosko=1`, `bebidas=2`, `cocina=3`).
+están los monitores y reparte por tamaño. Los chicos van **de izquierda a
+derecha en el orden del camino del pan**. Si hay menos monitores que
+estaciones, las últimas comparten el de más a la derecha, así que una PC con
+dos monitores sigue abriendo todo. Si se equivoca, se manda con
+`C:\Hojaldras Lily\pantallas.txt` (`kiosko=1`, `produccion=2`, `horno=3`,
+`empaque=4`).
 
 La **caja** (`pos`) y **Admin** no van en el arranque: se abren cuando se
 necesitan con `abrir-caja-y-admin.bat`, en esa misma PC o en cualquier otra.
 El turno se abre desde el kiosko (5 toques a la hojaldra).
 
 *Contrapartida honesta:* es un solo punto de falla. Si esa PC se apaga se
-caen las tres pantallas **y** las dos impresoras. Los pedidos no se pierden
-—quedan en la cola de la base y se reimprimen al volver— pero la cocina se
-queda a ciegas mientras tanto. Por eso el no-break no es opcional.
+caen las cuatro pantallas **y** las dos impresoras. Los pedidos no se pierden
+—quedan en la cola de la base y se reimprimen al volver— pero las estaciones
+se quedan a ciegas mientras tanto. Por eso el no-break no es opcional.
 
 Si se prefiere separar, ver `docs/dia-de-instalacion.md`, opción B: una PC
 por estación. Más caro, pero una avería solo tumba una estación.
@@ -49,8 +58,9 @@ por estación. Más caro, pero una avería solo tumba una estación.
 
 Requisitos reales:
 
-- **Tres salidas de video** (o dos + una tarjeta/adaptador). Un mini-PC N100
-  típico trae dos HDMI + un USB-C con video: alcanza.
+- **Tres o cuatro salidas de video** (o dos + una tarjeta/adaptador). Un
+  mini-PC N100 típico trae dos HDMI + un USB-C con video: alcanza para tres,
+  y con menos monitores que estaciones el script las junta.
 - **Node.js 20 o superior** — lo necesita el agente de impresión.
 - **Google Chrome**.
 - **Cable de red**, no WiFi: tiene que hablar con las dos impresoras por IP.
@@ -72,6 +82,10 @@ queda marcado como impreso, en Admin todo se ve verde, y la comanda nunca
 llega. No hay síntoma que investigar. Está documentado en
 `docs/etiquetas-comanda-tspl.md`.
 
+Y al revés también: **la etiquetadora TSPL no puede imprimir el ticket del
+cliente.** Son dos papeles distintos y dos impresoras distintas; la tabla que
+las compara está en `docs/hardware-caja.md`, §4.
+
 Lo que se necesita, una por estación:
 
 | | Detalle |
@@ -82,15 +96,18 @@ Lo que se necesita, una por estación:
 | Etiqueta | rollo de **80 mm** de ancho × **25 mm** de avance, **gap de 4 mm** |
 | Aprox. | $2,500–4,500 c/u |
 
-Van dos: **barra** (bebidas) y **cocina** (alimentos). El reparto de cada
-comanda lo decide el servidor por la estación del producto, no la PC.
+El reparto de cada comanda lo decide el servidor por la estación del
+producto, no la PC.
 
 Consumible: rollos de etiqueta térmica de 80 × 25 mm con separación (gap).
 No sirve el papel continuo de recibos.
 
-**Lo que NO hace falta:** impresora de tickets en la caja. Hoy el
-comprobante del cliente sale por el diálogo de impresión del navegador si se
-quiere; las comandas son estas dos etiquetadoras.
+**Y además, una tercera impresora: la de tickets.** Es la térmica de recibos
+de 80 mm por USB que usa cualquier restaurante, va en la caja, y es la que
+entrega el comprobante al cliente. El detalle de qué comprar y cómo
+configurarla está en `docs/hardware-caja.md`, §1.3 — incluido el ajuste que
+no se puede olvidar: **tiene que quedar como predeterminada en Windows**, o
+el ticket se imprime en otra parte sin dar error.
 
 ---
 
@@ -98,15 +115,19 @@ quiere; las comandas son estas dos etiquetadoras.
 
 | Puesto | Mínimo | Recomendado | Aprox. |
 |---|---|---|---|
+| **Caja** (cajero) | Monitor 19–22" + mouse | **Monitor táctil 15.6–21.5"** | $3,500–6,500 |
 | **Kiosko** (cliente) | Monitor 21.5" + mouse | **Monitor táctil 21.5"** en pedestal | $3,500–6,500 |
-| **Barra** | Monitor 19–24" | + táctil o mouse inalámbrico | $2,000–3,500 |
-| **Cocina** | Monitor 19–24" | + táctil o mouse inalámbrico | $2,000–3,500 |
+| **Producción** | Monitor 19–24" | + táctil o mouse inalámbrico | $2,000–3,500 |
+| **Horno** | Monitor 19–24" | + táctil o mouse inalámbrico | $2,000–3,500 |
+| **Empaque** | Monitor 19–24" | + táctil o mouse inalámbrico | $2,000–3,500 |
 | **Folios** (opcional) | Smart TV + Fire Stick | TV dedicada | $4,000–5,500 |
 
 - El kiosko **conviene que sea táctil**: es el cliente quien lo usa. Hay un
   script (`scripts/tactil.ps1`) para dejarlo bien configurado.
-- Barra y cocina necesitan **alguna forma de marcar "listo"**: pantalla
-  táctil, o un mouse inalámbrico junto a cada estación. Un mouse basta.
+- La caja también: el catálogo es de tarjetas grandes y el cobro tiene
+  teclado de pantalla. Con mouse funciona, pero en hora pico se nota.
+- Las tres estaciones necesitan **alguna forma de marcar lo suyo**: pantalla
+  táctil, o un mouse inalámbrico junto a cada mesa. Un mouse basta.
 - La **pantalla de folios** (`cliente-display`, la TV que muestra qué está
   listo) es la única de la lista que se puede dejar para después.
 
@@ -154,20 +175,26 @@ la venta y deja las tres pantallas y las dos impresoras fuera.
 |---|---|
 | Mini-PC N100 (3 salidas de video) | $4,500 |
 | Monitor táctil 21.5" para el kiosko + pedestal | $6,000 |
-| 2 monitores 22" (barra y cocina) | $5,000 |
+| Monitor táctil para la caja | $4,500 |
+| 3 monitores 22" (producción, horno, empaque) | $7,500 |
+| Impresora térmica de tickets 80 mm USB | $2,800 |
 | 2 etiquetadoras TSPL de red 203 dpi | $7,000 |
-| 2 mouse inalámbricos | $600 |
+| 3 mouse inalámbricos | $900 |
 | Router + respaldo 4G | $2,500 |
 | No-break | $1,800 |
-| Rollos de etiqueta 80 × 25 mm (arranque) | $800 |
-| **Total** | **~$28,000** |
+| Rollos (etiqueta 80 × 25 y papel de 80 mm) | $1,200 |
+| **Total** | **~$38,700** |
 | Pantalla de folios (se puede dejar para después) | +$4,500 |
 | Terminal de cobro | por definir |
 
-**Versión de arranque mínimo (~$14,000):** la PC, dos monitores baratos
-—kiosko y una estación— y **una** etiquetadora. Se opera, aunque barra y
-cocina compartan pantalla (el script lo contempla: con 2 monitores avisa y
-las junta). Se crece después.
+**Arranque corto, solo caja y tickets (~$7,000–12,000):** la PC que haya, un
+monitor táctil y la impresora de tickets. Es la etapa con la que se abre
+hoy — la lista completa y lo que implica están en `docs/hardware-caja.md`.
+
+**Arranque intermedio (~$20,000):** lo del arranque corto más el monitor del
+kiosko, dos monitores para las estaciones y **una** etiquetadora. Se opera,
+aunque dos estaciones compartan pantalla (el script lo contempla: con menos
+monitores que estaciones avisa y las junta). Se crece después.
 
 ---
 
@@ -177,8 +204,11 @@ las junta). Se crece después.
   en autoarranque. No se instala nada más: las actualizaciones del software
   llegan solas al recargar.
 - Lo único que se instala de verdad es el **agente de impresión**, y solo en
-  la PC que ve a las impresoras: es quien habla con el hardware. Nada externo
-  puede imprimir por él.
-- Para el montaje paso a paso, `docs/dia-de-instalacion.md`. Para las
-  impresoras, `docs/etiquetas-comanda-tspl.md` y
+  la PC que ve a las etiquetadoras: es quien habla con ese hardware. Nada
+  externo puede imprimir por él. **El ticket del cliente no pasa por ahí**:
+  lo manda Chrome a la impresora predeterminada de Windows, así que funciona
+  sin agente.
+- Para el arranque corto (solo caja y tickets), `docs/hardware-caja.md`.
+  Para el montaje paso a paso, `docs/dia-de-instalacion.md`. Para las
+  etiquetadoras, `docs/etiquetas-comanda-tspl.md` y
   `docs/instalacion-agente-impresion.md`.

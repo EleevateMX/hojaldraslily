@@ -342,6 +342,23 @@ Red de seguridad: webhook + sondeo del kiosko + barrido cada 2 minutos
 y habla TSPL con dos etiquetadoras de red. Sin esa ventana abierta, las
 pantallas muestran comandas pero **no sale papel**.
 
+**Pero el TICKET del cliente no pasa por ahí.** `imprimirTicket` escribe el
+HTML en un marco oculto y llama `window.print()`: va de Chrome a la impresora
+**predeterminada de Windows**, sin agente, sin cola y sin etiquetadoras. Es lo
+que permite arrancar la tienda con **solo caja y tickets** mientras las
+estaciones siguen pendientes (`docs/hardware-caja.md`).
+
+Dos consecuencias que hay que respetar:
+
+- La caja se abre con **`--kiosk-printing`** (está en
+  `scripts/abrir-caja-y-admin.bat`). Sin esa bandera, cada cobro saca el
+  diálogo de Chrome y el cajero tiene que darle "Imprimir" con el cliente
+  enfrente; con prisa se cierra sin imprimir.
+- Con la bandera puesta, **la predeterminada decide dónde sale el ticket, y
+  si es la equivocada no hay ningún error**: la venta queda bien cobrada y el
+  papel se va a un PDF o a la láser de la oficina. Es el mismo modo de fallo
+  silencioso que la etiquetadora que no es TSPL.
+
 - Reclama trabajos con `fn_imprimir_reclamar_trabajos` y late con
   `fn_imprimir_latido`, que ahora **reporta su versión** — visible en
   Admin → En vivo junto a cada impresora. Si dice ámbar, falta actualizar.
@@ -454,6 +471,7 @@ empaquetador y se desvían solas:
 | Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Empaque** al entregarlo (es lo único que lo descuenta) |
 | Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |
 | Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
+| Si el ticket del cliente no sale | Esa es **otra** impresora: la de recibos por USB. Se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
@@ -480,6 +498,16 @@ empaquetador y se desvían solas:
   momentos distintos: el cron de Clip, `apps/costos/index.html`, y los
   workflows de Cloudflare y TestFlight. Al rotar una llave, **decodifica el
   `ref`** — que "se vea diferente" no prueba nada.
+- Y lo mismo con el **repo**: cinco scripts de la PC de la tienda apuntaban a
+  `EleevateMX/ventashake`, el del otro negocio. No es cosmético — el arranque
+  diario **sobrescribe `pantallas.ps1`** con el que baja de ahí, así que la PC
+  de Lily se habría reconfigurado sola con las pantallas de la otra tienda
+  (barra y cocina en vez de producción, horno y empaque), y el instalador del
+  agente habría bajado el código del otro negocio. Arreglado; la lección es
+  que el buscar-y-reemplazar de la replicación cubrió dominios y no cubrió
+  **rutas de GitHub**. Ojo también: este repo **todavía no tiene rama
+  `main`**, y esas URL apuntan a `/main` — el autoservicio de la PC no
+  funciona hasta que `main` exista.
 
 **Postgres**
 
