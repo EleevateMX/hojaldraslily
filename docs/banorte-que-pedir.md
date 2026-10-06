@@ -6,33 +6,45 @@ e-commerce no sirve y de dónde salió cada dato— está en
 
 ---
 
-## Dos cosas deciden todo lo demás
+## El punto de partida: la terminal YA EXISTE
 
-**1. ¿La afiliación incluye INTERREDES?**
+La tienda **ya tiene su terminal física de Banorte y su afiliación**. Eso
+cambia la pregunta: no se trata de contratar de cero, sino de **conectar al
+sistema la terminal que ya está ahí**.
 
-- **Sí** → se puede integrar. Sigue el resto de esta hoja.
-- **No, es terminal suelta** → **no hay nada que programar.** La terminal es
-  una caja aparte: la cajera teclea el monto a mano, y el sistema nunca se
-  entera de si se cobró. El corte de caja se cuadra a mano contra el reporte
-  de la terminal.
+Dos consecuencias, y la primera es buena:
 
-El nombre exacto que hay que pedir es **«Banorte Interredes Web»**. Pedir
-«una terminal» a secas trae lo otro.
+- **Los papeles ya no son el problema.** Tener terminal significa que la
+  afiliación ya se aprobó: cuenta de cheques, acta, RFC, buró y los estados
+  de cuenta ya pasaron. El §1 queda como referencia histórica, no como
+  pendiente.
+- **Lo que falta es el servicio y el modo.** Una terminal trabaja en uno de
+  dos modos, y es la distinción que decide todo:
 
-**2. ¿El negocio ya tiene tres meses de historial?**
+| | Cómo trabaja | ¿Se integra? |
+|---|---|---|
+| **Modo independiente** (standalone) | La cajera teclea el monto en la terminal | **No.** El sistema nunca se entera de si se cobró |
+| **Modo integrado** | El punto de venta le manda el monto; la terminal cobra y devuelve el resultado | **Sí.** Es lo que queremos |
 
-Banorte pide, para la afiliación, **estados de cuenta y declaraciones de
-impuestos de los últimos tres meses** y buen historial en Buró. Lily está
-**pre-apertura**: todavía no los tiene. Esto no es un trámite más, es una
-puerta — puede que Interredes no se pueda contratar hasta que la tienda lleve
-unos meses vendiendo.
+Casi con seguridad la de ellos está en **modo independiente**, que es como se
+entregan por omisión.
 
-Hay que preguntarlo **antes** de hacer cualquier otra cosa, porque si la
-respuesta es «faltan tres meses», la decisión ya está tomada: se abre con
-Clip y Banorte se ve después.
+**La pregunta de fondo**: ¿esta terminal se puede pasar a modo integrado con
+el servicio **Banorte Interredes Web** sobre la afiliación que ya tienen, o
+hay que cambiarla por otro aparato?
 
-No se escribe una línea de código hasta tener estas dos respuestas por
-escrito.
+Banorte describe Interredes como *«interconectar tu servidor con el de
+Banorte… integrando las transacciones generadas en **tus** Terminales Punto de
+Venta Banorte»*, o sea sobre las terminales que el comercio ya tiene. Pero no
+publica si cualquier modelo sirve, y **eso solo lo contesta el ejecutivo**.
+
+**Y hay un detalle que Kenny puede contestar solo, mirando el aparato:**
+
+- Terminal **de cable** (LAN/Ethernet o con cable a la PC) → se puede integrar.
+- Terminal **inalámbrica** (WiFi o GPRS/3G, de las que se llevan a la mesa) →
+  **probablemente no.** El modo integrado necesita un cable al punto de venta.
+
+No se escribe una línea de código hasta tener esto por escrito.
 
 ---
 
@@ -72,36 +84,38 @@ con la pinpad.
 
 Se puede copiar tal cual:
 
-> Buen día. Estamos integrando nuestro punto de venta con la terminal y
-> necesitamos confirmar lo siguiente:
+> Buen día. **Ya tenemos terminal Banorte con ustedes.** Queremos conectarla a
+> nuestro sistema de punto de venta, para que el sistema le mande el monto y
+> la cajera no lo teclee dos veces. Necesito confirmar lo siguiente:
 >
-> 0. El negocio **acaba de abrir**, así que todavía no tenemos tres meses de
->    estados de cuenta ni de declaraciones. ¿Se puede contratar **Interredes
->    Web** de todas formas, o hay que esperar? Si hay que esperar, ¿cuánto?
-> 1. ¿Nuestra afiliación incluye **Interredes Web**, o solo la terminal
->    independiente?
-> 2. ¿Nos pueden enviar el **manual de integración de Interredes** (el
->    técnico, con los mensajes y los códigos de respuesta)?
-> 3. ¿Qué **modelo de pinpad** nos entregan y cómo se conecta: USB, serial o
->    Ethernet?
+> 1. ¿La terminal que ya tenemos **se puede pasar a modo integrado**, o hay que
+>    cambiarla por otro equipo? Si hay que cambiarla, ¿cuál y qué costo tiene?
+> 2. Para integrarla, ¿qué hay que contratar — **Banorte Interredes Web** —, se
+>    agrega a nuestra afiliación actual, y cuánto tarda el trámite?
+> 3. ¿Cómo se **conecta la terminal a la computadora** en modo integrado: USB,
+>    serial o Ethernet? ¿Hace falta un **driver** y nos lo entregan ustedes?
 > 4. El **API Banorte** que ustedes entregan, ¿en qué forma viene: un
 >    **DLL/ActiveX de Windows**, un ejecutable, o se puede hablar por **socket
 >    TCP** o por servicio web? Nuestro sistema está hecho en Node.js y corre
 >    sobre Windows.
-> 5. ¿Hay **ambiente de pruebas** con tarjetas de prueba? ¿Cómo se distingue
+> 5. ¿Nos pueden enviar el **manual de integración de Interredes** (el
+>    técnico, con los mensajes y los códigos de respuesta)?
+> 6. ¿Hay **ambiente de pruebas** con tarjetas de prueba? ¿Cómo se distingue
 >    de producción, para no cobrar de verdad durante las pruebas?
-> 6. ¿Cómo se **cancela** una operación del mismo día y cómo se hace una
->    **devolución**?
 > 7. Si **se cae el internet a media transacción**, ¿podemos consultar el
 >    estado de esa operación con nuestro propio folio, o queda a ciegas?
-> 8. La respuesta de una venta aprobada, ¿trae **folio de autorización** y los
+> 8. ¿Cómo se **cancela** una operación del mismo día y cómo se hace una
+>    **devolución**?
+> 9. La respuesta de una venta aprobada, ¿trae **folio de autorización** y los
 >    **4 últimos dígitos** de la tarjeta? Los necesitamos para el ticket.
-> 9. ¿Cuál es la **tasa de descuento** para nuestro giro y volumen, y en
->    cuántos días cae el depósito?
-> 10. ¿Hay costo por el servicio de Interredes, aparte de la tasa?
+> 10. ¿**Cambia nuestra tasa de descuento** al pasar a Interredes, y hay algún
+>     costo mensual por el servicio? ¿Nos pasan el Anexo A de comisiones?
 
-Las preguntas **4** y **7** son las que más pesan en el trabajo:
+Las preguntas **1**, **4** y **7** son las que deciden:
 
+- La **1** decide si hay proyecto o no. Si la terminal que tienen no se puede
+  integrar y no quieren cambiarla, se acabó: se queda tecleando el monto a
+  mano.
 - La **4** decide si se puede hacer desde el agente que ya existe o hay que
   escribir un puente aparte en otro lenguaje.
 - La **7** decide si un cobro se puede perder. Sin poder consultar el estado,
@@ -145,13 +159,13 @@ Nada de esto se puede adelantar: cada paso depende del anterior.
 
 | # | Paso | Quién |
 |---|---|---|
-| 1 | Preguntar si se puede contratar **sin** tres meses de historial | **El negocio**, con su ejecutivo |
-| 2 | Si se puede: abrir **cuenta de cheques** y juntar papeles del §1 | **El negocio** |
-| 3 | Firmar la **afiliación** pidiendo **Interredes Web** por nombre | **El negocio** |
+| 1 | Mirar la terminal: ¿de cable o inalámbrica? ¿qué marca y modelo dice? | **El negocio**, hoy mismo |
+| 2 | Preguntarle al ejecutivo si **esa** terminal se pasa a modo integrado | **El negocio** |
+| 3 | Contratar **Interredes Web** sobre la afiliación que ya tienen | **El negocio** |
 | 4 | Mandar el correo del §2 y traer las respuestas **por escrito** | **El negocio** |
-| 5 | Recibir del banco: **manual de Interredes, API Banorte, pinpad y su driver** | Banco → negocio |
+| 5 | Recibir del banco: **manual de Interredes, API Banorte, el cable o el equipo nuevo, y el driver** | Banco → negocio |
 | 6 | Recibir las credenciales: **ID de afiliación, usuario y contraseña**, y las de **pruebas** | Banco → negocio |
-| 7 | Instalar driver y pinpad en la PC de la caja, confirmar el puerto COM | Nosotros, en el local |
+| 7 | Instalar driver y terminal en la PC de la caja, confirmar el puerto COM | Nosotros, en el local |
 | 8 | Escribir el proveedor y la cola de cobros, y probar contra el ambiente de pruebas | Nosotros |
 | 9 | Pasar a producción y cobrar de verdad una venta chica | Los dos |
 
