@@ -15,25 +15,36 @@ dentro del Stand. El diseño funciona en tres niveles progresivos — los
 tres terminan igual: `pagos.estado = 'aprobado'` → la base dispara
 cocina + inventario.
 
-## Realidad del hardware (investigado 2026-07, developer.clip.mx)
+## Realidad del hardware
+
+> **Corregido en octubre de 2026.** Lo que decía esta sección —que solo el
+> Clip Pin Pad expone el API y que el Stand 2 no— **ya no es cierto**. Clip
+> amplió la lista. Qué terminal comprar y por qué está en
+> `docs/clip-que-comprar.md`; abajo queda el resumen.
 
 Clip ofrece dos rutas de integración y **el hardware importa**:
 
 - **API de Checkout (redirigido)**: genera un cobro/link/QR que el cliente
   paga; se confirma por **webhook**. Sirve para e-commerce y cobro por QR,
-  pero **no empuja el monto a la pantalla del Stand 2**.
-- **Integración por API a terminal física**: Clip la ofrece oficialmente
-  para su **Clip Pin Pad** (terminal de mostrador diseñada para conectarse
-  a un POS externo por API y cobrar sin teclear el monto). El **Clip Stand
-  2** es una terminal Android autónoma con su propia app; **no expone hoy
-  un API local** para que un POS externo le dispare el cobro.
+  pero no empuja el monto a la pantalla de la terminal.
+- **API de PinPad**: es la que usa este repo
+  (`POST https://api.payclip.io/f2f/pinpad/v1/payment`, §2.3 de CLAUDE.md).
+  El POS manda el monto y la terminal cobra sin que nadie lo teclee.
 
-**Conclusión para Hojaldras Lily (hardware actual = Stand 2):** se opera con
-la **ruta manual** (nivel 1). La confirmación automática requiere la API
-de Checkout (nivel 2/3, opcional, necesita cuenta + token de developer).
-El "cobro automático empujando el monto a la terminal" requeriría un
-**Clip Pin Pad**, no el Stand 2. Decisión del negocio: **arrancamos en
-manual**; el sistema queda listo para subir de nivel sin reescribir.
+**La API de PinPad es compatible hoy con cuatro lectores**: Clip **Total 3**,
+Clip **Ultra**, **Clip Pin Pad** y Clip **Stand 2**. En los tres primeros hay
+que tener instalada la **APK de Clip PinPad** en el aparato.
+
+Dos condiciones que no se negocian y que conviene saber antes de prometer
+fechas:
+
+- **No hay ambiente de pruebas.** La API de PinPad **solo opera en
+  producción**. Probar significa cobrar de verdad y devolver.
+- **WiFi estable de 10 Mb/s o más**, y el KYC de la cuenta completo.
+
+**Conclusión para Hojaldras Lily:** el nivel 1 (manual) sigue sirviendo para
+abrir mañana, y el nivel 2 ya no depende de comprar un Pin Pad de empresa:
+alcanza con una Total 3 o una Ultra de mostrador.
 
 **Estado en el POS**: el flujo manual ya está implementado en
 `apps/pos` (método "Clip (Stand 2)" pide la referencia del voucher y
