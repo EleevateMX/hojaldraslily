@@ -92,7 +92,7 @@ Lo que se necesita, una por estación:
 |---|---|
 | Tipo | Etiquetadora térmica directa, **lenguaje TSPL** |
 | Resolución | **203 dpi** (8 puntos por mm) |
-| Conexión | **Ethernet**, con IP fija, puerto **9100** |
+| Conexión | **Ethernet**, con IP fija, puerto **9100** — ver el aviso de abajo |
 | Etiqueta | rollo de **80 mm** de ancho × **25 mm** de avance, **gap de 4 mm** |
 | Aprox. | $2,500–4,500 c/u |
 
@@ -101,6 +101,15 @@ producto, no la PC.
 
 Consumible: rollos de etiqueta térmica de 80 × 25 mm con separación (gap).
 No sirve el papel continuo de recibos.
+
+**Y la conexión por red no es una preferencia, es un requisito.** Casi todas
+estas etiquetadoras traen USB *y* Ethernet, y es fácil cablear la que llegó
+por el USB que viene en la caja. Si se hace eso, **el agente de impresión no
+arranca**: `agente-impresion/src/config.ts` exige que una impresora con
+`lenguaje: "tspl"` tenga su `interface` como `tcp://IP:PUERTO`, y si no,
+lanza. Está así a propósito — el comentario del código lo dice: por USB
+*"el agente fallaría al primer trabajo real, en plena venta. Mejor que no
+arranque"*. Cable de red e **IP fija** a las dos.
 
 **Y además, una tercera impresora: la de tickets.** Es la térmica de recibos
 de 80 mm por USB que usa cualquier restaurante, va en la caja, y es la que

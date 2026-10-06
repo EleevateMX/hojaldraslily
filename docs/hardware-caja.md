@@ -3,7 +3,8 @@
 Esto es el arranque corto: cobrar en la caja y entregar ticket impreso, sin
 las pantallas de producción, horno y empaque todavía. La guía completa del
 montaje final está en `docs/hardware.md`; esta es la lista de lo que hace
-falta **esta semana**.
+falta **esta semana**. Si hay una cotización sobre la mesa, el renglón por
+renglón contra Amazon está en `docs/hardware-cotizacion-vs-amazon.md`.
 
 La pregunta de fondo era si se puede arrancar así, y la respuesta es sí, por
 una razón concreta: **el ticket del cliente no pasa por el agente de
