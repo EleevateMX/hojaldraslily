@@ -26,7 +26,22 @@ escribir la primera línea.
 
 **Interredes es el camino.** Es el producto de Banorte para que un punto de
 venta le mande el monto a la terminal, la terminal cobre, y el sistema reciba
-la respuesta — que es exactamente lo que hoy hace el kiosko con Clip.
+la respuesta — que es exactamente lo que hoy hace el kiosko con Clip. El
+nombre que hay que pedir por contrato es **«Banorte Interredes Web»**.
+
+**Y el banco entrega una pieza de software, no solo documentación.** La ficha
+de Interredes lista entre sus requerimientos el **«API Banorte (conector
+proporcionado por Banorte)»**, junto con internet, un sistema de punto de
+venta y una impresora para el comprobante. Qué forma tiene ese conector —DLL
+de Windows, ejecutable, socket o servicio web— sigue sin saberse, y es la
+pregunta 4 de la hoja de `docs/banorte-que-pedir.md`: es la que decide si el
+trabajo cabe en el agente de Node que ya existe.
+
+**Lo que puede frenar todo antes de lo técnico:** la contratación pide
+**estados de cuenta y declaraciones de impuestos de los últimos tres meses**,
+más buen historial en Buró. Lily está pre-apertura y no los tiene. Eso se
+pregunta primero, porque si la respuesta es «hay que esperar», no hay nada que
+decidir: se abre con Clip.
 
 ---
 
@@ -211,7 +226,9 @@ y está descrito arriba.
 
 - [Banorte Developer Portal — Productos API](https://developers.banorte.com/es/apis) · [Primeros pasos](https://developers.banorte.com/es/primeros-pasos) *(bloqueados por el proxy; solo resumen de búsqueda)*
 - [Banorte — Terminales punto de venta (TPV)](https://www.banorte.com/Empresas/Servicios/Soluciones-de-cobro-para-tu-negocio/Productos/Terminales-punto-de-venta--TPV-.html)
-- [Banorte — Interredes](https://www.banorte.com/wps/portal/empresas/Home/gobierno/recaudacion/tarjeta-de-credito-y-debito/interredes/) · [Guía Interredes (PDF)](https://www.banorte.com/cms/banorte/pdf/guia-interredes.pdf)
+- [Banorte — Interredes](https://www.banorte.com/Empresas/Servicios/Soluciones-de-cobro-para-tu-negocio/Productos/Interredes.html) · [Interredes (Gobierno)](https://www.banorte.com/Gobierno/Recaudacion/Tarjeta-de-Credito-y-Debito/Interredes.html) · [Guía Interredes (PDF)](https://www.banorte.com/cms/banorte/pdf/guia-interredes.pdf) — de aquí salen los requisitos de contratación y el «API Banorte»
+- [Banorte — Contrato de afiliación 2025 (PDF)](https://www.banorte.com/cms/banorte/pdf/PDF-Contrato-afiliacion-2025.pdf) · [Anexo A, cargos y comisiones 2025 (PDF)](https://www.banorte.com/cms/banorte/pdf/ANEXO-A-Cargos-Comisiones-2025.pdf) — el anexo es donde vienen las comisiones por escrito; **pedirlo al ejecutivo**, el proxy no lo deja abrir desde aquí
+- [Microsip — configurar un pinpad Banorte de Interredes](https://club.microsip.com/microsip-punto-de-venta/post/microsip-punto-de-venta-como-configurar-un-pinpad-banorte-de-interredes-OaQFYLBP1DJMJ2Q) · [doctorpyme](https://www.doctorpyme.mx/software/configurar-un-pin-pad-banorte-en-microsip-punto-de-venta) — dos puntos de venta que ya lo hicieron; confirman USB + puerto serial virtual
 - [Banorte — Comercio Electrónico](https://www.banorte.com/wps/portal/empresas/Home/empresas-corporativos/servicios-especializados/soluciones-de-pago-para-tu-negocio/productos/comercio-electronico/)
 - [arturoleon/Banorte-Payworks-PHP](https://github.com/arturoleon/Banorte-Payworks-PHP) — de aquí salen el endpoint y los nombres de campo. **Comunidad, no oficial**
 - [sixplus1/banorte-magento2](https://github.com/sixplus1/banorte-magento2) — módulo Payworks 2.0 + 3D Secure; de aquí sale la lista de credenciales

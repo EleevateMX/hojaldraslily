@@ -6,9 +6,9 @@ e-commerce no sirve y de dónde salió cada dato— está en
 
 ---
 
-## Lo primero, y decide todo lo demás
+## Dos cosas deciden todo lo demás
 
-**¿La afiliación incluye INTERREDES?**
+**1. ¿La afiliación incluye INTERREDES?**
 
 - **Sí** → se puede integrar. Sigue el resto de esta hoja.
 - **No, es terminal suelta** → **no hay nada que programar.** La terminal es
@@ -16,17 +16,50 @@ e-commerce no sirve y de dónde salió cada dato— está en
   entera de si se cobró. El corte de caja se cuadra a mano contra el reporte
   de la terminal.
 
-No se escribe una línea de código hasta tener esta respuesta por escrito.
+El nombre exacto que hay que pedir es **«Banorte Interredes Web»**. Pedir
+«una terminal» a secas trae lo otro.
+
+**2. ¿El negocio ya tiene tres meses de historial?**
+
+Banorte pide, para la afiliación, **estados de cuenta y declaraciones de
+impuestos de los últimos tres meses** y buen historial en Buró. Lily está
+**pre-apertura**: todavía no los tiene. Esto no es un trámite más, es una
+puerta — puede que Interredes no se pueda contratar hasta que la tienda lleve
+unos meses vendiendo.
+
+Hay que preguntarlo **antes** de hacer cualquier otra cosa, porque si la
+respuesta es «faltan tres meses», la decisión ya está tomada: se abre con
+Clip y Banorte se ve después.
+
+No se escribe una línea de código hasta tener estas dos respuestas por
+escrito.
 
 ---
 
 ## 1. Lo que hay que contratar con el banco
 
-- [ ] **Cuenta de cheques Banorte** a nombre del negocio
+Requisitos de contratación, de la propia ficha de Interredes:
+
+- [ ] **Cuenta de cheques Banorte** (persona moral o PFAE)
+- [ ] **Acta constitutiva** (si es persona moral)
+- [ ] **Identificación del representante legal**
+- [ ] **RFC** y comprobante de domicilio del negocio
+- [ ] **Estados de cuenta y declaraciones de impuestos de los últimos 3 meses**
+- [ ] **Buen historial en Buró de Crédito**
 - [ ] **Contrato de afiliación** como comercio
-- [ ] **Servicio Interredes** (es aparte de la terminal)
-- [ ] Alta en el SAT y domicilio del negocio
-- [ ] Internet en la tienda (ya hay)
+- [ ] **Servicio Interredes Web** (es aparte de la terminal)
+
+Y del lado operativo, cosas que **ya están resueltas** con la compra de la
+caja (`docs/hardware-caja.md`):
+
+- [x] Conexión a internet en la tienda
+- [x] Sistema de punto de venta — es este
+- [x] Impresora para el comprobante — la térmica de 80 mm
+
+Falta una que sí la pone el banco:
+
+- [ ] **API Banorte**: el conector que entrega el propio banco. Sin él no hay
+      integración, y es lo que hay que pedir por escrito junto con su manual.
 
 Del contrato salen tres datos que son los que el sistema necesita:
 **ID de Afiliación**, **usuario** y **contraseña**. Más un usuario adicional
@@ -42,15 +75,19 @@ Se puede copiar tal cual:
 > Buen día. Estamos integrando nuestro punto de venta con la terminal y
 > necesitamos confirmar lo siguiente:
 >
-> 1. ¿Nuestra afiliación incluye **Interredes**, o solo la terminal
+> 0. El negocio **acaba de abrir**, así que todavía no tenemos tres meses de
+>    estados de cuenta ni de declaraciones. ¿Se puede contratar **Interredes
+>    Web** de todas formas, o hay que esperar? Si hay que esperar, ¿cuánto?
+> 1. ¿Nuestra afiliación incluye **Interredes Web**, o solo la terminal
 >    independiente?
 > 2. ¿Nos pueden enviar el **manual de integración de Interredes** (el
 >    técnico, con los mensajes y los códigos de respuesta)?
 > 3. ¿Qué **modelo de pinpad** nos entregan y cómo se conecta: USB, serial o
 >    Ethernet?
-> 4. El componente que se instala en la PC, ¿es un **DLL/ActiveX de Windows**,
->    o se puede hablar con la terminal por **socket TCP**? Nuestro sistema
->    está hecho en Node.js.
+> 4. El **API Banorte** que ustedes entregan, ¿en qué forma viene: un
+>    **DLL/ActiveX de Windows**, un ejecutable, o se puede hablar por **socket
+>    TCP** o por servicio web? Nuestro sistema está hecho en Node.js y corre
+>    sobre Windows.
 > 5. ¿Hay **ambiente de pruebas** con tarjetas de prueba? ¿Cómo se distingue
 >    de producción, para no cobrar de verdad durante las pruebas?
 > 6. ¿Cómo se **cancela** una operación del mismo día y cómo se hace una
@@ -83,6 +120,44 @@ Las preguntas **4** y **7** son las que más pesan en el trabajo:
       **puerto COM**
 - [ ] Las credenciales del punto 1, guardadas como secretos (**nunca en el
       repo ni en el chat**)
+
+**Lo del puerto COM ya está confirmado por dos fuentes**, y es la parte que no
+cambia: la pinpad se conecta por **USB**, pero su driver **virtualiza un
+puerto serial**, y es por ese puerto por donde el API habla con ella. Por eso
+el cobro vive en `agente-impresion/` y no en la nube: un navegador no abre un
+puerto COM.
+
+Ojo con el reparto, porque son **dos piezas y se confunden**:
+
+| | Qué hace | Dónde vive |
+|---|---|---|
+| **La pinpad** | Lee la tarjeta y cifra el PIN | La PC de la tienda, por puerto COM |
+| **Interredes** | Lleva la transacción de nuestro sistema al motor Payworks del banco | Por internet |
+
+La segunda podría salir de cualquier lado. **La primera es la que ancla todo a
+esa computadora**, y es la razón de la advertencia del §5.
+
+---
+
+## 3b. Los pasos, en orden, y quién hace cada uno
+
+Nada de esto se puede adelantar: cada paso depende del anterior.
+
+| # | Paso | Quién |
+|---|---|---|
+| 1 | Preguntar si se puede contratar **sin** tres meses de historial | **El negocio**, con su ejecutivo |
+| 2 | Si se puede: abrir **cuenta de cheques** y juntar papeles del §1 | **El negocio** |
+| 3 | Firmar la **afiliación** pidiendo **Interredes Web** por nombre | **El negocio** |
+| 4 | Mandar el correo del §2 y traer las respuestas **por escrito** | **El negocio** |
+| 5 | Recibir del banco: **manual de Interredes, API Banorte, pinpad y su driver** | Banco → negocio |
+| 6 | Recibir las credenciales: **ID de afiliación, usuario y contraseña**, y las de **pruebas** | Banco → negocio |
+| 7 | Instalar driver y pinpad en la PC de la caja, confirmar el puerto COM | Nosotros, en el local |
+| 8 | Escribir el proveedor y la cola de cobros, y probar contra el ambiente de pruebas | Nosotros |
+| 9 | Pasar a producción y cobrar de verdad una venta chica | Los dos |
+
+**Lo que de verdad frena son los pasos 5 y 6.** Mientras no lleguen el manual
+y las credenciales de prueba, no hay nada que programar que sirva — y lo que
+se escriba sin eso habría que rehacerlo.
 
 ---
 
