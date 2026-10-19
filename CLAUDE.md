@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **203 migraciones aplicadas en orden, y 203
+`fzkdgqqvfkogmxdgqsxj` tiene **205 migraciones aplicadas en orden, y 205
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -41,6 +41,13 @@ Lo que falta para abrir, todo fuera del código:
    comparar contra el mínimo, y todo arranca en cero.
 4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
+
+**El contrato de las cuatro funciones principales** —venta, inventario, caja
+e impresiones— está en **`docs/base-de-replicacion.md`**: qué función hace
+qué, qué invariante protege, qué pasa si se rompe, qué conviene llevarse a
+otra tienda y qué no. Ahí está también la lista honesta de lo que a Lily le
+falta para estar a la par, y la consulta de §6 que encuentra los huecos de
+permisos listando en vez de leyendo.
 
 **Cómo va todo, con números contra la base:** `docs/estado-del-pos.md`. Ahí
 está también la comparación tabla por tabla contra Shakeaholic — qué no se
@@ -645,6 +652,21 @@ empaquetador y se desvían solas:
   `pg_get_functiondef`, **verificar que el ancla aparece exactamente N
   veces**, reemplazar y `execute`. Si el ancla no cuadra, abortar — así el
   parche falla ruidosamente en vez de corromper la función.
+
+  **«Exactamente N veces» es la parte que se salta y la que muerde.** Al
+  quitar la `fn_precio_linea` duplicada, el ancla se verificó con «aparece
+  al menos una vez»: la MISMA llamada estaba escrita dos veces con formato
+  distinto —una repartida en varias líneas y otra en una—, el parche agarró
+  solo una, y como el paso siguiente tiraba la función vieja, **el kiosko se
+  quedó sin poder crear órdenes**. Lo encontró la prueba de punta a punta,
+  no la lectura. Mejor todavía que contar el ancla: comprobar al final la
+  propiedad que de verdad importa (ahí, que no quedara ninguna llamada sin
+  canal).
+
+  Y las cadenas del reemplazo van **todas** con `E''` si traen `\n`. Una
+  mitad sin el prefijo metió los `\n` literales en el cuerpo de la función;
+  Postgres la rechazó por sintaxis y la transacción se deshizo entera — que
+  es el comportamiento correcto, pero cuesta un viaje.
 - **Agregarle un escalón a una cadena de estados es DOS cambios, no uno.**
   `fn_produccion_refrescar_estado` empezó a poner `'en_horno'` y el
   `ordenes_produccion_estado_check` lo rechazó: el estado nuevo hay que
@@ -1100,6 +1122,20 @@ explican por qué una pantalla tiene la forma que tiene.
   dispositivo" en Costeos (Realtime aplica RLS igual que una consulta).
   **La lección que se repite**: cerrar la puerta principal no sirve si el
   dato entra por otro lado. Pregunta siempre *quién más escribe esta tabla*.
+- **Lo que está mal se encuentra LISTANDO, no leyendo.** La consulta de
+  `docs/base-de-replicacion.md` §6 —cruzar `proacl` contra «¿el cuerpo
+  nombra algún candado?»— encontró en una tarde cinco huecos que meses de
+  leer código no habían visto, dos de ellos **escalada de privilegios
+  directa**: `fn_crear_empleado` dejaba darse de alta con rol de gerencia y
+  el PIN que uno quisiera, y `fn_staff_vincular_auth` —un `update` de una
+  línea sin candado— dejaba colgar el empleado «gerencia» de la cuenta de
+  Auth de cualquiera. Córrela cada vez que se agreguen funciones.
+  **`service_role` se salta los GRANT**, así que lo que solo llaman las Edge
+  Functions se puede cerrar a todo el mundo y sigue andando.
+- **Antes de cerrar una función hay que buscar quién la llama en TODO el
+  repo**, no solo en `apps/` y `packages/`. Cerrar las cinco de impresoras
+  rompió `scripts/instalar-agente-impresion.ps1` porque la búsqueda no
+  incluyó `.ps1`; las Edge Functions son el otro lugar que se olvida.
 - **Un `grant` no quita nada: suma.** Postgres le da EXECUTE a `PUBLIC` por
   omisión en cada función nueva, así que `grant execute ... to authenticated`
   deja la puerta de PUBLIC abierta igual. Se ve en `pg_proc.proacl` como una
