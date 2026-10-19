@@ -1131,7 +1131,7 @@ function renderInventario(m){
   state.invSesion=state.invSesion||{inicio:"",fin:"",firma:""};
   const ses=state.invSesion;
   m.innerHTML=`<h2>Inventario</h2>
-   <p class="hint no-print"><b>Bodega</b> = mercancía en presentación original. <b>Kiosko</b> = lo disponible para venta individual o por porción. En <b>Bodega</b> y <b>Kiosko</b> tienes una columna <b>Conteo</b> editable para el inventario físico, con su diferencia contra el sistema. Traspasa de bodega a kiosko con la clave del encargado.</p>
+   <p class="hint no-print"><b>Esta pantalla es para contar e imprimir la hoja, no para fijar existencias.</b> Las existencias del sistema se llevan en <b>Admin → Inventario</b>, donde cada cambio queda como un movimiento con su fecha y su motivo. Aquí se captura el <b>Conteo</b> para ver la diferencia e imprimir la hoja con la que se recorre el almacén; lo contado se aplica en Admin → Inventario → <b>Contar</b>.</p>
    <div class="printhead">📋 Inventario físico · Hojaldras Lily · ${new Date().toLocaleDateString("es-MX")}</div>
    <div class="invsession">
      <div class="gtitle" style="margin-bottom:8px">📋 Sesión de inventario físico</div>
@@ -1140,7 +1140,7 @@ function renderInventario(m){
        <label class="fld"><span>Término (fecha y hora)</span><div class="urow"><input type="datetime-local" id="sesFin" value="${esc(ses.fin)}"><button class="btn mini ghost no-print" id="sesFinNow">Ahora</button></div></label>
        <label class="fld"><span>Firma (responsable del conteo)</span><input id="sesFirma" value="${esc(ses.firma)}" placeholder="Nombre de quien cuenta"></label>
      </div>
-     <div class="sessbtns"><button class="btn no-print" id="invPrint">🖨 Imprimir conteo</button><button class="btn ghost no-print" id="invApply">✓ Aplicar conteo a existencias</button></div>
+     <div class="sessbtns"><button class="btn no-print" id="invPrint">🖨 Imprimir conteo</button></div>
    </div>
    <div class="seg" id="invSeg" role="tablist">
      <button data-v="todos" class="${invView==="todos"?"active":""}">Todos</button>
@@ -1165,11 +1165,12 @@ function renderInventario(m){
   m.querySelector("#sesIniNow").onclick=()=>{ses.inicio=nowLocal();m.querySelector("#sesIni").value=ses.inicio;save();};
   m.querySelector("#sesFinNow").onclick=()=>{ses.fin=nowLocal();m.querySelector("#sesFin").value=ses.fin;save();};
   m.querySelector("#invPrint").onclick=()=>window.print();
-  m.querySelector("#invApply").onclick=()=>{if(!confirm("¿Aplicar el conteo capturado a las existencias? Sobrescribe el stock del sistema con lo contado en Bodega y Kiosko."))return;
-    Object.keys(INV).forEach(cat=>state[cat].forEach((it,i)=>{const cfg=INV[cat],f=new Date().toISOString().slice(0,10);
-      if(it.conteoBodega!==undefined&&it.conteoBodega!==""){it[cfg.orig]=+it.conteoBodega||0;kardexPush(cat,i,{f,tipo:"ajuste",ent:0,sal:0,exist:+it[cfg.orig]||0,precio:"",cad:"",nota:"Conteo físico (bodega)"});}
-      if(it.conteoKiosko!==undefined&&it.conteoKiosko!==""){it[cfg.ind]=+it.conteoKiosko||0;kardexPush(cat,i,{f,tipo:"ajuste",ent:0,sal:0,exist:+it[cfg.ind]||0,precio:"",cad:"",nota:"Conteo físico (kiosko)"});}}));
-    save();render();};
+  /* Aqui estaba "Aplicar conteo a existencias", y se quito el 19/10/26.
+     Escribia el conteo en los numeros del documento, y de ahi la existencia
+     del sistema se movia por DIFERENCIA contra el ultimo valor que Costeos
+     recordaba. Ese camino ya no existe: la existencia solo cambia por
+     movimientos (Admin -> Inventario). Dejar el boton habria sido peor que
+     quitarlo: se tocaba, no pasaba nada, y nadie se enteraba. */
   paintInv();
 }
 function kpis(arr){
