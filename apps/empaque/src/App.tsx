@@ -5,6 +5,7 @@ import {
   suscribirProduccion,
   loQueHayQueEmpacar,
   loQueHayQueEmpacarPorHora,
+  TEMPRANO_HASTA_MIN,
   type FranjaPorEmpacar,
   minutosDeHora,
   horaEn12h,
@@ -64,7 +65,7 @@ const REFRESCO_MS = 10000
  * Lo puso la casa: un encargo que se recoge antes de las 10:30 no da tiempo
  * de prepararlo esa misma mañana, así que se empaca la tarde anterior.
  */
-const TEMPRANO_HASTA = 10 * 60 + 30
+const TEMPRANO_HASTA = TEMPRANO_HASTA_MIN
 
 /** Días de diferencia entre la entrega del encargo y hoy. 0 = hoy, 1 = mañana. */
 function diasDeEntrega(e: Encargo): number {

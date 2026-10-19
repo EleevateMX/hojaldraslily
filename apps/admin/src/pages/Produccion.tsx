@@ -16,6 +16,7 @@ import {
   type HornoEnVivo,
 } from '@lily/supabase'
 import { mensajeDeError, urlDeFoto, enMoldes, nombreDeTamano, medidaDeVenta } from '@lily/utils'
+import { SelectorDeHora } from '@lily/ui'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**
@@ -774,11 +775,10 @@ export default function Produccion() {
                 decide, con los renglones ya enfrente. */}
             <div className="flex items-center gap-3 pt-5 flex-wrap">
               <span className={cx.label}>Para las</span>
-              <input
-                type="time"
+              <SelectorDeHora
                 value={horaObjetivo}
-                onChange={(ev) => setHoraObjetivo(ev.target.value)}
-                className="rounded-sa border border-sa-green-ink/15 px-3 py-2 font-mono text-sm"
+                onChange={setHoraObjetivo}
+                className="rounded-sa border border-sa-green-ink/15 px-3 py-2 font-mono text-sm bg-white"
                 aria-label="Hora a la que tiene que estar lista"
               />
               {horaObjetivo && (

@@ -619,7 +619,8 @@ empaquetador y se desvían solas:
 | Abrir/cerrar caja o cambiar turno | En la **caja**: entrar con PIN → «Abrir caja» contando el cajón; «Corte de caja» para cerrar. Al cerrar, el corte **sale solo en la térmica** si hay una dada de alta |
 | Cambiar el teléfono, la dirección, el **horario** o los avisos del ticket | Admin → **Sistema** → «Lo que dice el ticket». El horario tiene su casilla y sale como «Horario: …» delante de los avisos; quien cobró **no** sale (la casa no lo quiere). El siguiente ticket ya sale así; no se toca la PC |
 | Saber qué hay que tener listo antes de las 12 | Pantalla de **Producción** («Encargado para hoy», por hora) y **Empaque** («Hay que empacar», con el desglose por hora debajo): «10 Jamón y Queso Chica · 5 Fiesta Mini para las 12:00 p.m.» |
-| Apartar con hora | La hora se escoge en un **selector** (se ve en 12 h con a.m./p.m.), ya no se teclea «6 pm» |
+| Apartar con hora, o ponerle hora a una hornada | La hora se escoge en un **desplegable** en 12 h, partido en **Mañana** y **Tarde** (7:00 a.m. a 9:00 p.m., cada media hora); ya no se teclea «6 pm» |
+| Ver de un vistazo qué se entrega hoy y a qué hora | Admin → **Almacén**, arriba: **fichas por hora** («12:00 p.m. · María Pérez, Panadería Sur»; «1:00 p.m. · Jorge Canul 1:02 p.m.»), con lo que se pasó en carmín y lo empacado marcado; y aparte **Mañana temprano · antes de las 10:30 a.m.**, que se prepara hoy |
 | Revisar un corte de otro día, o saber cuántos billetes había | Admin → **Cortes de caja**. Se toca el renglón y abajo sale el desglose del cajón al abrir y al cerrar, las ventas por método y las notas |
 | Volver a sacar el papel de un corte | Admin → **Cortes de caja** → **Reimprimir en la térmica** (sale en el mostrador) o **Imprimir / guardar PDF** (desde donde sea, para mandarlo por WhatsApp) |
 | Instalar o actualizar la PC de la tienda | Admin → **Descargas**. Arriba dice si cada agente está al día; abajo están los `.bat`. El único permiso que pide es el de administrador, una vez |
@@ -1203,11 +1204,25 @@ tienen política `authenticated` y nada para `anon`, y las pantallas entran
 con PIN. El poll no se quita: el canal muere en silencio cuando la red
 parpadea, y el reintento tarda 5 s.
 
-**La hora de entrega se escoge, no se teclea.** El campo de los encargos
-(caja y Admin → Almacén) es un `<input type="time">`: Chrome lo pinta en
-12 h con a.m./p.m. en una PC en español y guarda «HH:MM», que
-`minutosDeHora` lee sin adivinar. Los encargos viejos con «6 pm» o «por la
-tarde» siguen leyéndose con la misma tolerancia de antes.
+**La hora de entrega se escoge de un desplegable, no se teclea.**
+`SelectorDeHora` (`@lily/ui`) es un `<select>` en 12 h partido en Mañana y
+Tarde (7:00 a.m. a 9:00 p.m. cada media hora) y guarda «HH:MM», que
+`minutosDeHora` lee sin adivinar. Lo usan la caja (Encargos), Admin →
+Almacén y Admin → Producción (la hora de la hornada). Se prefirió al
+`<input type="time">` porque ese se ve distinto en cada aparato —rueda en
+el teléfono, teclado en Windows, 24 h en algunos— y gerencia pidió «un
+desplegable de 12 horas, de mañana y de tarde». Un valor que no está en la
+lista (un encargo viejo con «13:02») se enseña como opción extra, en 12 h,
+para no borrárselo al abrir el formulario. Los encargos con «6 pm» o «por
+la tarde» siguen leyéndose con la misma tolerancia de antes.
+
+**Y el tablero del día en Admin → Almacén**: `fichasDeEncargos` da lo de
+hoy (y lo atrasado) por hora como fichas —nombre, hora exacta, piezas,
+empacado/pagado/de viaje, «se pasó» en carmín— y aparte lo de **mañana
+temprano** (`esTempranoDeManana`, hasta `TEMPRANO_HASTA_MIN` = 10:30), que
+es lo que Empaque ya trabajaba la tarde anterior; la constante vive en
+`@lily/supabase` para que Empaque y Admin partan el día igual. Se mira con
+`apps/admin/mirar/almacen.html`.
 
 **Y lo encargado se dice POR HORA**, además de por producto:
 `loQueHayQueEmpacarPorHora` reusa los bloques de `encargosPorHora` para que

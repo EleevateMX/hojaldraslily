@@ -22,6 +22,7 @@ import {
   type ProductoDelDia,
   type OrdenConTiempo,
 } from '@lily/supabase'
+import { SelectorDeHora } from '@lily/ui'
 import { usePosStore } from '@/store/posStore'
 import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { sb } from '@/lib/sb'
@@ -520,18 +521,15 @@ export function Encargos() {
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
               />
-              {/* Selector de hora y no texto libre: Chrome lo enseña en 12 h
-                  con a.m./p.m. en una PC en español, y lo que guarda es
-                  «HH:MM», que `minutosDeHora` lee sin adivinar nada. Antes
-                  llegaban «6», «6 pm» y «por la tarde», y el «6» pelón se iba
-                  al final de la cola sin hora. */}
-              <input
-                type="time"
-                step={900}
-                className="px-3 py-2.5 border border-sa-green-ink/15 rounded-sa text-sm"
+              {/* Desplegable en 12 h, mañana y tarde, y no texto libre: lo
+                  que guarda es «HH:MM», que `minutosDeHora` lee sin adivinar
+                  nada. Antes llegaban «6», «6 pm» y «por la tarde», y el «6»
+                  pelón se iba al final de la cola sin hora. */}
+              <SelectorDeHora
+                className="px-3 py-2.5 border border-sa-green-ink/15 rounded-sa text-sm bg-white"
                 aria-label="Hora de entrega"
                 value={hora}
-                onChange={(e) => setHora(e.target.value)}
+                onChange={setHora}
               />
             </div>
 

@@ -575,6 +575,46 @@ export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
   return [...por.values()].sort((a, b) => b.cantidad - a.cantidad)
 }
 
+/**
+ * Hasta qué hora un encargo del día siguiente es «tempranero»: 10:30 a.m.
+ *
+ * Lo puso la casa: un encargo que se recoge antes de esa hora no da tiempo
+ * de prepararlo esa misma mañana, así que se trabaja la tarde anterior. Vive
+ * aquí y no en cada pantalla para que Empaque y Admin partan el día igual.
+ */
+export const TEMPRANO_HASTA_MIN = 10 * 60 + 30
+
+/** ¿Es un encargo de MAÑANA que se recoge antes de las 10:30? */
+export function esTempranoDeManana(e: Encargo, hoy = new Date()): boolean {
+  if (!e.fecha_entrega || diasHasta(e.fecha_entrega, hoy) !== 1) return false
+  const min = minutosDeHora(e.hora_entrega)
+  return min !== null && min <= TEMPRANO_HASTA_MIN
+}
+
+/**
+ * Las fichas del día para gerencia: lo de hoy (y lo atrasado) por hora, y
+ * aparte lo de mañana temprano.
+ *
+ * Es la vista de control que pidió la casa: «si tienes un encargo a las 12 y
+ * otro a la 1:02, que aparezcan ahí como fichas de ese día». Lo atrasado
+ * entra en «hoy» porque sigue en una bolsa con el nombre de alguien; lo de
+ * mañana temprano va aparte porque se prepara hoy en la tarde.
+ */
+export function fichasDeEncargos(encargos: Encargo[], hoy = new Date()): {
+  hoy: HoraDeEncargos[]
+  mananaTemprano: Encargo[]
+} {
+  const deHoy = encargos.filter((e) => !e.fecha_entrega || diasHasta(e.fecha_entrega, hoy) <= 0)
+  return {
+    hoy: encargosPorHora(deHoy),
+    mananaTemprano: encargos.filter((e) => esTempranoDeManana(e, hoy)).sort((a, b) => {
+      const ha = minutosDeHora(a.hora_entrega) ?? 9999
+      const hb = minutosDeHora(b.hora_entrega) ?? 9999
+      return ha - hb
+    }),
+  }
+}
+
 /** Una franja de hora con lo que hay que tener listo para entonces. */
 export interface FranjaPorEmpacar {
   /** La hora en punto, en minutos desde medianoche. `null` = sin hora legible. */

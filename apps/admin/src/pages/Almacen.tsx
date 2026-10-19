@@ -11,11 +11,97 @@ import {
   listarProductosDelDia,
   partirNombreDeVenta,
   horaEn12h,
+  fichasDeEncargos,
   type Encargo,
   type ProductoDelDia,
 } from '@lily/supabase'
+import { SelectorDeHora } from '@lily/ui'
 import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
+
+/**
+ * Una ficha: el encargo en una línea, para el tablero del día.
+ *
+ * Nombre, hora exacta y piezas; si ya está empacado lo dice, y si se pasó de
+ * su día va en carmín profundo (el rosa de la marca se ve despintado, §4).
+ */
+function Ficha({ e }: { e: Encargo }) {
+  const vencido = e.fecha_entrega != null && diasHasta(e.fecha_entrega) < 0
+  return (
+    <div
+      className={[
+        'rounded-sa px-3 py-2 border bg-white min-w-[160px]',
+        vencido ? 'border-sa-green-deep/50' : e.empacado_at ? 'border-sa-mint/60' : 'border-sa-green-ink/10',
+      ].join(' ')}
+    >
+      <p className="font-display text-base text-sa-green-ink leading-tight truncate">{e.cliente}</p>
+      <p className="font-mono text-[11px] text-sa-green-ink/60 mt-0.5">
+        {horaEn12h(e.hora_entrega) || 'sin hora'} · {e.piezas} pz · #{e.folio}
+      </p>
+      {(vencido || e.empacado_at || e.para_viaje || e.estado === 'pagado') && (
+        <p
+          className={[
+            'font-mono text-[10px] uppercase tracking-wide mt-1',
+            vencido ? 'text-sa-green-deep font-semibold' : e.empacado_at ? 'text-sa-mint' : 'text-sa-green-ink/60',
+          ].join(' ')}
+        >
+          {[
+            vencido ? 'se pasó' : null,
+            e.empacado_at ? 'empacado' : null,
+            e.estado === 'pagado' ? 'pagado' : null,
+            e.para_viaje ? 'de viaje' : null,
+          ].filter(Boolean).join(' · ')}
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * El tablero del día: los encargos de hoy como fichas, por hora, y aparte
+ * los de mañana temprano (antes de las 10:30), que se preparan hoy.
+ *
+ * Lo pidió gerencia así: «si tienes uno a las 12 y otro a la 1:02, que
+ * aparezcan ahí como fichas de ese día». Es la vista de control de un
+ * vistazo; las tarjetas con el detalle siguen abajo.
+ */
+export function TableroDelDia({ encargos }: { encargos: Encargo[] }) {
+  const { hoy, mananaTemprano } = fichasDeEncargos(encargos)
+  if (hoy.length === 0 && mananaTemprano.length === 0) return null
+  const nHoy = hoy.reduce((s, h) => s + h.encargos.length, 0)
+  return (
+    <div className="rounded-sa bg-sa-cream-warm/50 border-l-4 border-sa-banana px-5 py-4 space-y-4">
+      {nHoy > 0 && (
+        <div>
+          <p className="font-display text-lg text-sa-green-ink">
+            {nHoy === 1 ? 'Un encargo se entrega hoy' : `${nHoy} encargos se entregan hoy`}
+          </p>
+          <div className="mt-3 space-y-3">
+            {hoy.map((h) => (
+              <div key={h.minutos ?? 'sin-hora'} className="flex flex-wrap items-start gap-2">
+                <p className="font-display text-base text-sa-green-deep w-28 shrink-0 pt-2">{h.titulo}</p>
+                <div className="flex flex-wrap gap-2 flex-1">
+                  {h.encargos.map((e) => <Ficha key={e.id} e={e} />)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {mananaTemprano.length > 0 && (
+        <div className={nHoy > 0 ? 'pt-3 border-t border-sa-banana/40' : ''}>
+          <p className="font-display text-lg text-sa-green-ink">
+            Mañana temprano · antes de las 10:30 a.m.
+            <span className="font-body text-sm text-sa-green-ink/60"> — se preparan hoy</span>
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {mananaTemprano.map((e) => <Ficha key={e.id} e={e} />)}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
 
 /**
  * Almacén: lo que está apartado y para quién.
@@ -253,15 +339,9 @@ function Apartar({
             </div>
             <div>
               <label className={cx.label}>¿A qué hora? (opcional)</label>
-              {/* Selector de hora: se ve en 12 h con a.m./p.m. y guarda
-                  «HH:MM», que es lo que la cola sabe ordenar. */}
-              <input
-                type="time"
-                step={900}
-                className={cx.input}
-                value={hora}
-                onChange={(ev) => setHora(ev.target.value)}
-              />
+              {/* Desplegable en 12 h, mañana y tarde: guarda «HH:MM», que
+                  es lo que la cola sabe ordenar. */}
+              <SelectorDeHora className={cx.input} value={hora} onChange={setHora} />
             </div>
           </div>
 
@@ -441,8 +521,6 @@ export default function Almacen() {
 
   const piezasApartadas = encargos.reduce((s, e) => s + e.piezas, 0)
   const dineroApartado = encargos.reduce((s, e) => s + e.total, 0)
-  // Lo de hoy y lo atrasado: las dos cosas hay que atenderlas ya.
-  const paraHoy = encargos.filter((e) => e.fecha_entrega != null && diasHasta(e.fecha_entrega) <= 0)
 
   return (
     <div className="space-y-6">
@@ -479,17 +557,9 @@ export default function Almacen() {
         </div>
       </div>
 
-      {/* Lo de hoy (y lo atrasado) primero: es lo unico accionable ahora. */}
-      {paraHoy.length > 0 && (
-        <div className="rounded-sa bg-sa-cream-warm/50 border-l-4 border-sa-banana px-5 py-4">
-          <p className="font-display text-lg text-sa-green-ink">
-            {paraHoy.length === 1 ? 'Un encargo se entrega hoy' : `${paraHoy.length} encargos se entregan hoy`}
-          </p>
-          <p className="font-body text-sm text-sa-green-ink/70 mt-1">
-            {paraHoy.map((e) => e.cliente).join(' · ')}
-          </p>
-        </div>
-      )}
+      {/* Lo de hoy (y lo atrasado) primero, como fichas por hora, y lo de
+          mañana temprano aparte: es lo unico accionable ahora. */}
+      <TableroDelDia encargos={encargos} />
 
       <Apartar
         existencias={existencias}
