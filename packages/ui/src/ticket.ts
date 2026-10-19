@@ -21,6 +21,18 @@ export interface TicketNegocio {
   leyenda?: string
   /** Segunda línea, más chica: aviso de encargos, redes, horario. */
   pieSecundario?: string
+  /**
+   * Los avisos del pie, uno por renglón: facturación, horario, políticas.
+   *
+   * Va como ARREGLO y no como un párrafo con separadores porque cada aviso
+   * tiene que poder leerse solo. «Por higiene no se hacen cambios» metido en
+   * la misma línea que el horario es una advertencia que nadie lee, y es
+   * justamente la que el mostrador necesita poder señalar.
+   *
+   * Un renglón vacío o en blanco no se imprime: así se puede dejar fuera un
+   * aviso sin tener que borrar la línea.
+   */
+  avisos?: string[]
   /** `false` imprime el nombre en versalitas en vez del logotipo. */
   mostrarLogo?: boolean
   /** `false` esconde quién cobró. Sirve para aclaraciones, así que viene encendido. */
@@ -75,8 +87,14 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   // los puntos que ya se quitó del pie del ticket.
   leyenda: '¡Gracias por su compra!',
   pieSecundario: 'Encarga con 2 días de anticipación · 999 926 71 51',
+  // Los tres avisos que pidió la casa. El HORARIO todavía NO está aquí a
+  // propósito: no me lo dieron, y un horario inventado impreso en el papel es
+  // peor que no tenerlo — el cliente llega a una tienda cerrada. En cuanto lo
+  // digan, se agrega como un renglón más de este arreglo y ya.
+  avisos: ['Solicita tu factura', 'Por higiene NO se hacen cambios de pan'],
   mostrarLogo: true,
-  mostrarCajero: true,
+  // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
+  mostrarCajero: false,
 }
 
 const money = (n: number) =>
@@ -129,6 +147,9 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   const cambio = data.recibido != null && data.recibido >= total ? data.recibido - total : null
 
   // Quién cobró va pegado al canal, y solo si la casa lo quiere ver.
+  // Los avisos del pie, ya limpios: un renglón en blanco no gasta papel.
+  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean)
+
   const canalLinea = [data.canal, negocio.mostrarCajero === false ? null : data.cajero]
     .filter(Boolean)
     .join(' · ')
@@ -265,6 +286,13 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   <div class="center">
     ${negocio.leyenda ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:11px">${esc(negocio.leyenda)}</div>` : ''}
     ${negocio.pieSecundario ? `<div style="font-size:9px;line-height:1.4;margin-top:3px">${esc(negocio.pieSecundario)}</div>` : ''}
+    ${
+      avisos.length > 0
+        ? `<div style="border-top:1px solid #000;margin-top:6px;padding-top:5px;font-size:9px;line-height:1.5">${avisos
+            .map((a) => `<div>${esc(a)}</div>`)
+            .join('')}</div>`
+        : ''
+    }
   </div>
 
 </div>
