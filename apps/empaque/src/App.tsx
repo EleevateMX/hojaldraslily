@@ -44,12 +44,44 @@ import { sb } from './lib/sb'
 const REFRESCO_MS = 15000
 
 /** Si un encargo es de los que se empacan HOY. */
-function esDeHoy(e: Encargo): boolean {
-  if (!e.fecha_entrega) return true // "paso más tarde" es hoy
+/**
+ * Hasta qué hora un encargo se considera «tempranero».
+ *
+ * Lo puso la casa: un encargo que se recoge antes de las 10:30 no da tiempo
+ * de prepararlo esa misma mañana, así que se empaca la tarde anterior.
+ */
+const TEMPRANO_HASTA = 10 * 60 + 30
+
+/** Días de diferencia entre la entrega del encargo y hoy. 0 = hoy, 1 = mañana. */
+function diasDeEntrega(e: Encargo): number {
+  if (!e.fecha_entrega) return 0 // "paso más tarde" es hoy
   const entrega = new Date(e.fecha_entrega + 'T12:00:00')
   const hoy = new Date()
   hoy.setHours(12, 0, 0, 0)
-  return entrega.getTime() <= hoy.getTime()
+  return Math.round((entrega.getTime() - hoy.getTime()) / 86400000)
+}
+
+/**
+ * Qué le toca empacar a esta mesa ahora.
+ *
+ * No es «lo de hoy»: es **lo de hoy que todavía no pasa, más lo de mañana
+ * muy temprano**. Los que se recogen antes de las 10:30 se empacan la tarde
+ * anterior porque a esa hora no hay margen para armarlos.
+ *
+ * Lo atrasado (días negativos) sigue entrando: un encargo que se pasó de su
+ * día es más urgente, no menos, y esconderlo no lo resuelve.
+ *
+ * Una hora que no se entiende cuenta como tardía: ante la duda el encargo se
+ * queda en la lista de su propio día, que es donde alguien va a preguntar por
+ * él. Adelantarlo un día sería mover trabajo con base en un dato que el
+ * sistema no supo leer.
+ */
+function leTocaAhora(e: Encargo): boolean {
+  const dias = diasDeEntrega(e)
+  if (dias <= 0) return true
+  if (dias > 1) return false
+  const min = minutosDeHora(e.hora_entrega)
+  return min !== null && min <= TEMPRANO_HASTA
 }
 
 /**
@@ -320,12 +352,12 @@ export default function App() {
   // `listos` es la repisa.
   const { porEmpacar, masAdelante, listos, queEmpacar } = useMemo(() => {
     const sinEmpacar = encargos.filter((e) => !e.empacado_at)
-    const hoy = sinEmpacar.filter(esDeHoy).sort(porHora)
+    const ahora = sinEmpacar.filter(leTocaAhora).sort(porHora)
     return {
-      porEmpacar: hoy,
-      masAdelante: sinEmpacar.filter((e) => !esDeHoy(e)).sort(porHora),
+      porEmpacar: ahora,
+      masAdelante: sinEmpacar.filter((e) => !leTocaAhora(e)).sort(porHora),
       listos: encargos.filter((e) => e.empacado_at).sort(porHora),
-      queEmpacar: loQueHayQueEmpacar(hoy),
+      queEmpacar: loQueHayQueEmpacar(ahora),
     }
   }, [encargos])
 
