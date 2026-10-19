@@ -890,6 +890,64 @@ export async function cambiarMenuActivo(
   if (error) throw error
 }
 
+/** Un producto de un menú, para prenderlo o guardarlo para después. */
+export interface ProductoDeMenu {
+  id: string
+  nombre: string
+  precio: number
+  imagen_url: string | null
+  activo: boolean
+  /** Guardado para después: existe, con su precio, pero hoy no se vende. */
+  pausado: boolean
+}
+
+/**
+ * Las piezas de un menú, con su pausa.
+ *
+ * Trae también las apagadas —eso es el punto— porque lo que se quiere ver
+ * aquí es justamente lo que está guardado esperando su temporada.
+ */
+export async function listarProductosDeMenu(
+  sb: ClienteLily,
+  categoriaId: string,
+): Promise<ProductoDeMenu[]> {
+  const { data, error } = await sb
+    .from('productos')
+    .select('id, nombre, precio, imagen_url, activo, pausado')
+    .eq('categoria_id', categoriaId)
+    .eq('es_extra', false)
+    .order('nombre')
+  if (error) throw error
+  return ((data ?? []) as ProductoDeMenu[]).map((p) => ({
+    ...p,
+    precio: Number(p.precio),
+    pausado: Boolean(p.pausado),
+  }))
+}
+
+/**
+ * Guarda un producto para después, sin perderle el precio ni la receta.
+ *
+ * Es lo que permite cambiar de temporada dentro de un mismo menú: en enero se
+ * pausa el Pan de Muerto y se despausa la Rosca de Reyes, sin volver a
+ * teclear ocho precios en Costeos ni dejar las dos cosas a la venta a la vez.
+ *
+ * Apagar un producto a mano **no servía**: el siguiente guardado de Costeos lo
+ * revive, porque `fn_sync_app_data` recalcula `activo = precio > 0`. Por eso
+ * la pausa es una bandera aparte, y ese guardado la respeta.
+ */
+export async function pausarProducto(
+  sb: ClienteLily,
+  productoId: string,
+  pausado: boolean,
+): Promise<void> {
+  const { error } = await sb.rpc('fn_producto_pausar', {
+    p_producto_id: productoId,
+    p_pausado: pausado,
+  })
+  if (error) throw error
+}
+
 // ------------------- lo que hay hoy -------------------
 //
 // El inventario se lleva en CUADROS por SABOR, no en paquetes por producto:

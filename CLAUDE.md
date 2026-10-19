@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **197 migraciones aplicadas en orden, y 197
+`fzkdgqqvfkogmxdgqsxj` tiene **198 migraciones aplicadas en orden, y 198
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -300,6 +300,14 @@ Consecuencias que hay que respetar:
 - **Renombrar un producto desde Admin no sirve** para lo que viene de
   Costeos: el siguiente guardado lo revierte. Los scoops y suplementos se
   renombran EN COSTEOS.
+- **Apagar un producto desde Admin tampoco servía**, por lo mismo
+  (`activo = precio > 0`). Ahora hay una segunda bandera,
+  `productos.pausado`, que ese guardado **sí** respeta: es
+  «guardar para después». Existe por el Menú de Temporada, que lleva el Pan de
+  Muerto y la Rosca de Reyes juntos: con un solo interruptor por menú, cambiar
+  de temporada obligaba a ponerle cero a ocho precios —o sea borrarlos— y
+  volver a teclear los otros ocho. Vive en Admin → **Menús del día**, dentro
+  de cada menú.
 - El renombre se ancla en la **Clave** (`codigo`). Sin Clave, el nombre
   nuevo no empata con nada: nace un producto vacío y el viejo se apaga —
   el producto se parte en dos y pierde sus extras. Por eso Costeos asigna
@@ -474,6 +482,7 @@ empaquetador y se desvían solas:
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
+| Guardar una pieza para después (cambio de temporada) | Admin → **Menús del día** → **Ver las piezas** → **Guardar para después**. No le quita el precio ni la receta: en enero se guarda el Pan de Muerto y se saca la Rosca de Reyes |
 | Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto —mostrador y Rappi—; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
 | Vender piezas sueltas de pastelitos o bolitas | Se toca el bocadillo y abajo salen **+1, +2, +3, +4 piezas**. Hasta 4: con 5 ya se toca el paquete, que cuesta lo mismo |
 | Ver un encargo que ya se recogió | Caja → **Encargos** → pestaña **Historial** |

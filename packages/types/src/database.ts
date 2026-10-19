@@ -2589,6 +2589,7 @@ export type Database = {
           nombre: string
           onzas: number | null
           orden: number
+          pausado: boolean
           piezas: number | null
           precio: number
           sabor: string | null
@@ -2614,6 +2615,7 @@ export type Database = {
           nombre: string
           onzas?: number | null
           orden?: number
+          pausado?: boolean
           piezas?: number | null
           precio?: number
           sabor?: string | null
@@ -2639,6 +2641,7 @@ export type Database = {
           nombre?: string
           onzas?: number | null
           orden?: number
+          pausado?: boolean
           piezas?: number | null
           precio?: number
           sabor?: string | null
@@ -4800,6 +4803,10 @@ export type Database = {
           p_tarjeta?: number
         }
         Returns: Json
+      }
+      fn_producto_pausar: {
+        Args: { p_pausado?: boolean; p_producto_id: string }
+        Returns: boolean
       }
       fn_produccion_fijar_hora: {
         Args: { p_hora: string; p_orden_id: string }

@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { listarMenusDelDia, cambiarMenuActivo, type MenuDelDia } from '@lily/supabase'
-import { mxn, mensajeDeError } from '@lily/utils'
+import {
+  listarMenusDelDia,
+  cambiarMenuActivo,
+  listarProductosDeMenu,
+  pausarProducto,
+  type MenuDelDia,
+  type ProductoDeMenu,
+} from '@lily/supabase'
+import { mxn, mensajeDeError, urlDeFoto } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**
@@ -13,14 +20,23 @@ import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
  * lado la cuenta de lo que lleva vendido hoy: la decisión de dejar un menú
  * abierto se toma mirando las dos cosas juntas.
  *
- * Por qué el interruptor vive en la CATEGORÍA y no en cada producto: apagar
- * producto por producto no sirve de nada, porque el siguiente guardado de
- * Costeos los revive (fn_sync_app_data pone `activo = precio > 0`).
- * `categorias.activa` es la única bandera del catálogo que ese guardado no
- * toca, así que es la única que aguanta. Está explicado en CLAUDE.md, 4.
+ * El interruptor grande vive en la CATEGORÍA, no en cada producto, por una
+ * razón que costó caro: apagar producto por producto **no servía**, porque el
+ * siguiente guardado de Costeos los revive (`fn_sync_app_data` pone
+ * `activo = precio > 0`). Está explicado en CLAUDE.md, 4.
  *
- * Apagar un menú NO borra nada ni cambia precios: los productos siguen ahí,
- * con su costeo intacto, y vuelven en cuanto se prenda.
+ * Pero adentro de un menú a veces hay DOS temporadas. El Menú de Temporada
+ * lleva el Pan de Muerto y la Rosca de Reyes, y en enero hay que cambiar uno
+ * por el otro: con un solo interruptor por menú, la única manera era ponerle
+ * cero a los ocho precios del Pan de Muerto —o sea borrarlos— y volver a
+ * teclearlos en octubre.
+ *
+ * Por eso cada pieza tiene además su **«Guardar para después»**, que es una
+ * bandera aparte (`productos.pausado`) y el guardado de Costeos sí respeta.
+ * Guardar una pieza no le quita el precio ni la receta: desaparece del kiosko
+ * y de la caja, y vuelve tal cual estaba.
+ *
+ * Apagar un menú tampoco borra nada ni cambia precios.
  */
 
 /** Cierra el menú si al tocar el interruptor la cuenta no cuadra con la vista. */
@@ -56,6 +72,123 @@ function Interruptor({
         ].join(' ')}
       />
     </button>
+  )
+}
+
+/**
+ * Las piezas de un menú, con su «Guardar para después».
+ *
+ * Va plegado y solo se abre cuando hace falta: en el día a día lo que se toca
+ * es el interruptor del menú entero, y una lista de veintitrés piezas debajo
+ * de cada uno enterraría justo eso.
+ */
+function PiezasDelMenu({ menu, onError }: { menu: MenuDelDia; onError: (m: string) => void }) {
+  const [abierto, setAbierto] = useState(false)
+  const [piezas, setPiezas] = useState<ProductoDeMenu[] | null>(null)
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const base = import.meta.env.BASE_URL
+
+  const traer = useCallback(async () => {
+    try {
+      setPiezas(await listarProductosDeMenu(sb, menu.id))
+    } catch (e) {
+      onError(mensajeDeError(e))
+    }
+  }, [menu.id, onError])
+
+  async function alternar(p: ProductoDeMenu) {
+    setOcupado(p.id)
+    // Se pinta de una vez: el interruptor responde al dedo. Si la base lo
+    // rechaza, el `traer()` de abajo deja la pantalla como está de verdad.
+    setPiezas((antes) =>
+      (antes ?? []).map((x) =>
+        x.id === p.id ? { ...x, pausado: !x.pausado, activo: x.pausado && x.precio > 0 } : x,
+      ),
+    )
+    try {
+      await pausarProducto(sb, p.id, !p.pausado)
+    } catch (e) {
+      onError(mensajeDeError(e))
+    } finally {
+      await traer()
+      setOcupado(null)
+    }
+  }
+
+  const guardadas = (piezas ?? []).filter((p) => p.pausado).length
+
+  return (
+    <div className="border-t border-sa-green-ink/10 mt-3 pt-3">
+      <button
+        onClick={() => {
+          setAbierto((v) => !v)
+          if (!piezas) void traer()
+        }}
+        className="font-mono text-[11px] uppercase tracking-wide text-sa-green hover:brightness-110"
+      >
+        {abierto ? 'Cerrar las piezas' : 'Ver las piezas, una por una'}
+        {guardadas > 0 && !abierto && ` · ${guardadas} guardada${guardadas === 1 ? '' : 's'}`}
+      </button>
+
+      {abierto && (
+        <div className="mt-3 space-y-1">
+          {piezas === null ? (
+            <p className="font-mono text-xs text-sa-green-ink/45">Un momento…</p>
+          ) : piezas.length === 0 ? (
+            <p className="font-body text-sm text-sa-green-ink/55">
+              Este menú no tiene piezas. Se capturan en Costeos.
+            </p>
+          ) : (
+            piezas.map((p) => {
+              const foto = urlDeFoto(p.imagen_url, base)
+              return (
+                <div
+                  key={p.id}
+                  className="flex items-center gap-3 py-1.5 border-b border-sa-green-ink/5 last:border-0"
+                >
+                  {foto && <img src={foto} alt="" className="w-8 h-8 object-contain shrink-0" />}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={[
+                        'font-body text-sm leading-tight',
+                        p.pausado ? 'text-sa-green-ink/40' : 'text-sa-green-ink',
+                      ].join(' ')}
+                    >
+                      {p.nombre}
+                    </p>
+                    <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
+                      {p.precio > 0 ? mxn(p.precio) : 'sin precio'}
+                      {/* Sin precio no se vende aunque no esté guardada, y eso
+                          se arregla en Costeos, no aquí. Decirlo evita que
+                          alguien le dé al interruptor y no pase nada. */}
+                      {p.precio <= 0 && ' · póngale precio en Costeos'}
+                    </p>
+                  </div>
+                  <button
+                    disabled={ocupado === p.id}
+                    onClick={() => void alternar(p)}
+                    className={[
+                      'shrink-0 font-mono text-[11px] uppercase tracking-wide px-3 py-1.5 rounded-full transition-colors',
+                      p.pausado
+                        ? 'bg-sa-green text-sa-cream'
+                        : 'border border-sa-green-ink/15 text-sa-green-ink/60 hover:bg-sa-cream-soft',
+                      ocupado === p.id ? 'opacity-50' : '',
+                    ].join(' ')}
+                  >
+                    {p.pausado ? 'Sacarla de nuevo' : 'Guardar para después'}
+                  </button>
+                </div>
+              )
+            })
+          )}
+          <p className="font-body text-xs text-sa-green-ink/45 pt-2">
+            Guardar una pieza no le quita el precio ni la receta: desaparece del
+            kiosko y de la caja, y vuelve tal cual. Es lo que sirve para cambiar
+            de temporada sin volver a capturar nada.
+          </p>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -139,12 +272,13 @@ export default function Menus() {
             <div
               key={m.id}
               className={[
-                'flex items-center gap-3 sm:gap-5 rounded-sa border p-4 sm:p-5 transition-colors',
+                'rounded-sa border p-4 sm:p-5 transition-colors',
                 m.activa
                   ? 'bg-white border-sa-green/30'
                   : 'bg-sa-cream-soft/60 border-sa-green-ink/10',
               ].join(' ')}
             >
+              <div className="flex items-center gap-3 sm:gap-5">
               <Interruptor
                 encendido={m.activa}
                 ocupado={cambiando === m.id}
@@ -202,6 +336,9 @@ export default function Menus() {
                   {m.activa ? 'Abierto' : 'Cerrado'}
                 </span>
               </div>
+              </div>
+
+              <PiezasDelMenu menu={m} onError={setError} />
             </div>
           )
         })}
