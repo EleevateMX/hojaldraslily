@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **211 migraciones aplicadas en orden, y 211
+`fzkdgqqvfkogmxdgqsxj` tiene **212 migraciones aplicadas en orden, y 212
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -1328,6 +1328,18 @@ explican por qué una pantalla tiene la forma que tiene.
   llama `apps/admin/src/pages/Impresoras.tsx`, que entra con sesión real por
   PIN. El agente no las usa: él se identifica con su token contra
   `fn_imprimir_reclamar_trabajos` y compañía, que no se tocaron.
+- **Los advisors de Supabase se repasaron el 19/10 con todo terminado**
+  (`20261019200000`): sin ERROR. Lo que marcaban de nosotros era
+  `_aplicar_delta_almacen` —el ayudante que mueve existencias— con EXECUTE
+  para PUBLIC (otra vez el «un grant no quita, suma»), nueve funciones de
+  trigger con GRANT de más (no se pueden llamar por RPC, pero un GRANT que
+  sobra se lee como intención), una función de prueba que sobró y tres sin
+  `search_path` fijo. Lo que sigue marcando es **a propósito**: las 20
+  funciones de la lista explícita abiertas a `anon`, ~150 definer abiertas a
+  `authenticated` (así es como cobra la caja), siete tablas con RLS y sin
+  política (solo se llegan por funciones) y la protección de contraseñas
+  filtradas de Auth, que aquí nadie usa contraseña: el personal entra con PIN.
+  Vuélvelos a correr cuando se agreguen funciones (`get_advisors`).
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.
