@@ -386,6 +386,31 @@ export function minutosDeHora(hora: string | null): number | null {
   return h * 60 + min
 }
 
+/**
+ * La hora de entrega, escrita como la lee la casa: 12 horas con a.m./p.m.
+ *
+ * `hora_entrega` es texto libre capturado en la caja, así que llegan «10:00»,
+ * «6 pm», «6» y «por la tarde». Esto NO corrige el dato: lo pinta. Si
+ * `minutosDeHora` pudo leerlo, se pinta normalizado; si no, **se devuelve tal
+ * cual lo escribieron**.
+ *
+ * Esa última parte es a propósito y es la misma regla que ya rige el orden de
+ * la cola: a un dato que no se entiende no se le inventa una hora. «por la
+ * tarde» se queda como «por la tarde» y quien lee decide, en vez de leer un
+ * «12:00 p.m.» que nadie escribió.
+ */
+export function horaEn12h(hora: string | null): string {
+  if (!hora) return ''
+  const min = minutosDeHora(hora)
+  if (min === null) return hora.trim()
+  const h24 = Math.floor(min / 60)
+  const mm = min % 60
+  const sufijo = h24 < 12 ? 'a.m.' : 'p.m.'
+  // 0 → 12 a.m. y 12 → 12 p.m.: el reloj de 12 no tiene hora cero.
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12
+  return `${h12}:${String(mm).padStart(2, '0')} ${sufijo}`
+}
+
 /** Un renglón de la lista de «qué hay que empacar»: un producto y su total. */
 export interface PorEmpacar {
   producto_id: string

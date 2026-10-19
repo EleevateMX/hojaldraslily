@@ -10,6 +10,7 @@ import {
   crearEncargo,
   listarProductosDelDia,
   partirNombreDeVenta,
+  horaEn12h,
   type Encargo,
   type ProductoDelDia,
 } from '@lily/supabase'
@@ -89,7 +90,7 @@ function TarjetaEncargo({
             {tituloDelDia(e.fecha_entrega)}
           </p>
           {e.hora_entrega && (
-            <p className="font-mono text-[11px] text-sa-green-ink/50 mt-1">{e.hora_entrega}</p>
+            <p className="font-mono text-[11px] text-sa-green-ink/50 mt-1">{horaEn12h(e.hora_entrega)}</p>
           )}
         </div>
       </div>

@@ -7,6 +7,7 @@ import {
   listarEncargos,
   mandarAProducir,
   minutosDeHora,
+  horaEn12h,
   MOLDES,
   type HornoEnVivo,
   type Molde,
@@ -393,7 +394,7 @@ export function PanelDeProduccion() {
                         <span className="font-mono text-[10px] text-sa-green-ink/40"> #{e.folio}</span>
                       </p>
                       <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                        {e.hora_entrega || 'sin hora'} · {e.piezas} pieza{e.piezas === 1 ? '' : 's'} ·{' '}
+                        {horaEn12h(e.hora_entrega) || 'sin hora'} · {e.piezas} pieza{e.piezas === 1 ? '' : 's'} ·{' '}
                         {mxn(e.total)}
                       </p>
                     </div>

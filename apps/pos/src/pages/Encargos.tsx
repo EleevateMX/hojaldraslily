@@ -13,6 +13,7 @@ import {
   faltaPara,
   horaDeSalida,
   partirNombreDeVenta,
+  horaEn12h,
   type Encargo,
   type ProductoDelDia,
   type OrdenConTiempo,
@@ -103,7 +104,7 @@ function Tarjeta({
               : 'Sin fecha'
             : null}
           {conFecha && e.hora_entrega ? ' · ' : ''}
-          {e.hora_entrega || (conFecha ? '' : 'sin hora')}
+          {horaEn12h(e.hora_entrega) || (conFecha ? '' : 'sin hora')}
         </p>
       </div>
 
@@ -131,11 +132,19 @@ function Tarjeta({
           <p className="font-display text-xl text-sa-green leading-none">
             {mxn(e.total)}
           </p>
-          {e.anticipo > 0 && (
-            <p className="font-body text-[11px] text-sa-green-ink/60 mt-0.5">
-              anticipo {mxn(e.anticipo)}
+          {/* Pagado NO es entregado. El encargo ya se cobró y el pan sigue
+              aquí, así que esta tarjeta todavía es trabajo: si solo dijera
+              «Pagado», quien la lee la da por cerrada y el cliente llega por
+              algo que nadie apartó. Por eso la línea dice las dos cosas. */}
+          {e.estado === 'pagado' ? (
+            <p className="font-body text-[11px] text-sa-green-deep font-semibold mt-0.5">
+              Pagado · pendiente de entrega
             </p>
-          )}
+          ) : e.anticipo > 0 ? (
+            <p className="font-body text-[11px] text-sa-green-ink/60 mt-0.5">
+              Dejó {mxn(e.anticipo)} de anticipo · faltan {mxn(e.total - e.anticipo)}
+            </p>
+          ) : null}
         </div>
         <div className="flex items-center gap-1.5">{acciones}</div>
       </div>

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   listarEncargos,
-  cobrarEncargo,
   marcarEmpacado,
   loQueHayQueEmpacar,
   minutosDeHora,
+  horaEn12h,
   partirNombreDeVenta,
   entrarConPin,
   empleadoDeLaSesion,
@@ -60,12 +60,13 @@ function esDeHoy(e: Encargo): boolean {
  * «Mañana» un encargo de HOY — justo el que hay que tener listo.
  */
 function cuando(fecha: string | null, hora: string | null): { texto: string; urgente: boolean } {
-  if (!fecha) return { texto: hora ? `Sin fecha · ${hora}` : 'Sin fecha', urgente: false }
+  const h = horaEn12h(hora)
+  if (!fecha) return { texto: h ? `Sin fecha · ${h}` : 'Sin fecha', urgente: false }
   const entrega = new Date(fecha + 'T12:00:00')
   const hoy = new Date()
   hoy.setHours(12, 0, 0, 0)
   const dias = Math.round((entrega.getTime() - hoy.getTime()) / 86400000)
-  const sufijo = hora ? ` · ${hora}` : ''
+  const sufijo = h ? ` · ${h}` : ''
   if (dias < 0) return { texto: `Se pasó ${-dias} día${dias === -1 ? '' : 's'}${sufijo}`, urgente: true }
   if (dias === 0) return { texto: `Hoy${sufijo}`, urgente: true }
   if (dias === 1) return { texto: `Mañana${sufijo}`, urgente: false }
@@ -237,12 +238,10 @@ function Tarjeta({
 function Listo({
   e,
   ocupado,
-  onEntregar,
   onDesmarcar,
 }: {
   e: Encargo
   ocupado: boolean
-  onEntregar: () => void
   onDesmarcar: () => void
 }) {
   const c = cuando(e.fecha_entrega, e.hora_entrega)
@@ -261,6 +260,8 @@ function Listo({
       <p className="font-display text-xl text-sa-green shrink-0">{mxn(e.total)}</p>
       {/* Desmarcar existe porque marcar de más pasa, y sin salida alguien
           "arregla" el error entregando un encargo que no está empacado. */}
+      {/* Desmarcar existe porque marcar de más pasa, y sin salida alguien
+          "arregla" el error entregando un encargo que no está empacado. */}
       <button
         onClick={onDesmarcar}
         disabled={ocupado}
@@ -269,13 +270,10 @@ function Listo({
       >
         Devolver
       </button>
-      <button
-        onClick={onEntregar}
-        disabled={ocupado}
-        className="shrink-0 bg-sa-green hover:bg-sa-green-deep text-sa-cream font-display text-lg px-6 py-3 rounded-sa active:scale-95 transition-all disabled:opacity-50"
-      >
-        {ocupado ? 'Cobrando…' : 'Entregar y cobrar'}
-      </button>
+      {/* Aquí ESTABA «Entregar y cobrar», y la casa pidió quitarlo.
+          Empaque empaca; el dinero se toca en la caja. Mientras el botón
+          estuvo aquí, esta mesa era el único lugar del sistema donde se podía
+          cobrar sin tener el cajón enfrente. */}
     </div>
   )
 }
@@ -335,19 +333,6 @@ export default function App() {
     setOcupado(e.id)
     try {
       await marcarEmpacado(sb, e.id, empacado)
-      await cargar()
-    } catch (err) {
-      setError(mensajeDeError(err))
-    } finally {
-      setOcupado(null)
-    }
-  }
-
-  async function entregar(e: Encargo) {
-    setOcupado(e.id)
-    try {
-      const total = await cobrarEncargo(sb, e.id, 'efectivo')
-      setAviso(`Entregado a ${e.cliente}. Se cobraron ${mxn(total)} y ya salieron del inventario.`)
       await cargar()
     } catch (err) {
       setError(mensajeDeError(err))
@@ -477,7 +462,6 @@ export default function App() {
                       key={e.id}
                       e={e}
                       ocupado={ocupado === e.id}
-                      onEntregar={() => void entregar(e)}
                       onDesmarcar={() => void empacar(e, false)}
                     />
                   ))}

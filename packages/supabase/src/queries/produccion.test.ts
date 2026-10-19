@@ -4,6 +4,7 @@ import {
   precioEnCanal,
   seVendeEnCanal,
   minutosDeHora,
+  horaEn12h,
   loQueHayQueEmpacar,
   encargosPorDia,
   type Encargo,
@@ -78,6 +79,27 @@ describe('precios por canal', () => {
 
   it('sin renglón, se vende: la ausencia no es una prohibición', () => {
     expect(seVendeEnCanal({ id: 'otro' }, 'rappi', precios)).toBe(true)
+  })
+})
+
+describe('horaEn12h', () => {
+  it('pinta la hora en 12 horas con a.m./p.m.', () => {
+    expect(horaEn12h('10:00')).toBe('10:00 a.m.')
+    expect(horaEn12h('14:30')).toBe('2:30 p.m.')
+    expect(horaEn12h('6 pm')).toBe('6:00 p.m.')
+  })
+
+  it('el reloj de 12 no tiene hora cero', () => {
+    expect(horaEn12h('00:15')).toBe('12:15 a.m.')
+    expect(horaEn12h('12:00')).toBe('12:00 p.m.')
+  })
+
+  it('a lo que no se entiende no le inventa una hora', () => {
+    // Se devuelve tal cual lo escribieron. Pintar «por la tarde» como
+    // «12:00 p.m.» seria poner en pantalla una hora que nadie tecleo.
+    expect(horaEn12h('por la tarde')).toBe('por la tarde')
+    expect(horaEn12h(null)).toBe('')
+    expect(horaEn12h('  ')).toBe('')
   })
 })
 
