@@ -401,6 +401,8 @@ Tres cosas que hay que saber para leer el resultado:
 | Impresiones | **La nota con el estilo del diseño** (folio invertido, nombre y total al doble, «ENCARGO PARA») con marcas de estilo que el agente abre y cierra en la misma línea |
 | Caja | **Admin → Cortes de caja**: historial con folio, desglose billete por billete, reimpresión en la térmica y PDF del navegador, los dos del mismo `CorteData` |
 | Impresiones | **Admin → Descargas**: los `.bat` servidos desde el propio dominio, con la versión de los dos agentes comparada contra el latido |
+| Inventario | **El camino del pan avisa en vivo** (Realtime sobre `ordenes_produccion`, `orden_produccion_items`, `produccion`, `encargos`), con el poll de 10 s como red |
+| Venta | **Lo encargado por hora** en Producción y Empaque («para las 12: 10 Jamón y Queso Chica»), la hora con selector de 12 h, y el horario en el pie de la nota |
 | Seguridad | **El cobro exige sesión**: ~40 funciones y cinco políticas `using (true)` cerradas cuando la casa decidió vender solo desde la caja; verificado con `set role anon` |
 
 ### Lo que falta, por orden de lo que duele

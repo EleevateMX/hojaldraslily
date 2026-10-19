@@ -323,7 +323,10 @@ function DatosDelTicketPanel() {
           {campo('rfc', 'RFC (solo si van a facturar)', '')}
           {campo('leyenda', 'Agradecimiento del pie', '¡Gracias por su compra!')}
           {campo('pieSecundario', 'Segunda línea del pie', 'Encargos al 999 926 71 51')}
-          <Field label="Avisos del pie (uno por línea: horario, facturación, políticas)">
+          {/* El horario va en su casilla y no entre los avisos: cambia con la
+              temporada y los festivos, y así se edita sin tocar las políticas. */}
+          {campo('horario', 'Horario (sale como «Horario: …» en el pie)', 'Lun a Dom 7:00 a.m. a 9:00 p.m.')}
+          <Field label="Avisos del pie (uno por línea: facturación, políticas)">
             <textarea
               className={`${cx.input} min-h-[72px]`}
               value={avisos}

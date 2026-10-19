@@ -11,6 +11,7 @@
 
 import { NEGOCIO_DEFAULT } from './ticketTipos'
 import type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
+import { lineasDeAvisos } from './ticketLineas'
 
 export type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
 export { NEGOCIO_DEFAULT } from './ticketTipos'
@@ -79,7 +80,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
 
   // Quién cobró va pegado al canal, y solo si la casa lo quiere ver.
   // Los avisos del pie, ya limpios: un renglón en blanco no gasta papel.
-  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean)
+  const avisos = lineasDeAvisos(negocio)
 
   const canalLinea = [data.canal, negocio.mostrarCajero === false ? null : data.cajero]
     .filter(Boolean)

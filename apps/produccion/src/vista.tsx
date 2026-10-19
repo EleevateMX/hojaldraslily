@@ -3,10 +3,66 @@ import {
   diasHasta,
   horaEn12h,
   minutosDeHora,
+  loQueHayQueEmpacarPorHora,
+  partirNombreDeVenta,
   type OrdenDeProduccion,
   type ItemDeProduccion,
+  type Encargo,
 } from '@lily/supabase'
 import { urlDeFoto } from '@lily/utils'
+
+/**
+ * Lo encargado para HOY, por hora y por producto, para la mesa de producción.
+ *
+ * Es la pregunta de la casa tal cual: «¿qué hay que tener antes de las 12?
+ * — diez de jamón y queso y cinco Fiesta». Una orden de producción dice
+ * cuánto hornear; esto dice **para cuándo**, que es lo que decide qué molde
+ * se arma primero.
+ *
+ * Solo lo de hoy (o sin fecha, que cuenta como hoy) y solo lo que todavía no
+ * está empacado: lo que ya está en su caja no le toca a esta mesa. Vacío no
+ * se pinta — una franja que siempre dice «0» deja de mirarse.
+ */
+export function EncargosPorHora({ encargos, hoy = new Date() }: { encargos: Encargo[]; hoy?: Date }) {
+  const deHoy = encargos.filter(
+    (e) => !e.empacado_at && (e.fecha_entrega === null || diasHasta(e.fecha_entrega, hoy) <= 0),
+  )
+  const franjas = loQueHayQueEmpacarPorHora(deHoy)
+  if (franjas.length === 0) return null
+  const piezas = deHoy.reduce((s, e) => s + e.piezas, 0)
+
+  return (
+    <section className="bg-sa-banana/15 border-2 border-sa-banana rounded-sa-lg p-5">
+      <div className="flex items-baseline justify-between gap-4 mb-3">
+        <p className="font-display text-2xl text-sa-green-ink">Encargado para hoy</p>
+        <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50">
+          {deHoy.length} encargo{deHoy.length === 1 ? '' : 's'} · {piezas} pieza{piezas === 1 ? '' : 's'}
+        </p>
+      </div>
+      <div className="space-y-3">
+        {franjas.map((f) => (
+          <div key={f.minutos ?? 'sin-hora'} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="font-display text-xl text-sa-green-deep w-56 shrink-0 whitespace-nowrap">{f.titulo}</p>
+            <div className="flex flex-wrap gap-2">
+              {f.lista.map((p) => {
+                const { sabor, medida } = partirNombreDeVenta(p.producto)
+                return (
+                  <span
+                    key={p.producto_id}
+                    className="bg-white border border-sa-banana/50 rounded-full px-3 py-1 font-body text-base text-sa-green-ink"
+                  >
+                    <span className="font-display text-xl tabular-nums">{p.cantidad}</span> {sabor}
+                    {medida && <span className="text-sa-green-ink/50"> · {medida}</span>}
+                  </span>
+                )
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
 
 /**
  * Lo que se PINTA en la mesa de producción: los renglones, las tarjetas y el

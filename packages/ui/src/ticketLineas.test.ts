@@ -147,6 +147,21 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.some((x) => x.includes('Solicita tu factura'))).toBe(true)
     expect(l.some((x) => x.includes('Por higiene'))).toBe(true)
   })
+
+  it('el horario sale en el pie solo si Admin lo puso, y delante de los avisos', () => {
+    const sin = texto(armarTicket(venta, NEGOCIO_DEFAULT))
+    expect(sin.some((x) => x.includes('Horario'))).toBe(false)
+    const con = texto(armarTicket(venta, { ...NEGOCIO_DEFAULT, horario: 'L a D 7 a.m. a 9 p.m.' }))
+    const iH = con.findIndex((x) => x.includes('Horario: L a D 7 a.m. a 9 p.m.'))
+    const iF = con.findIndex((x) => x.includes('Solicita tu factura'))
+    expect(iH).toBeGreaterThan(-1)
+    expect(iH).toBeLessThan(iF)
+  })
+
+  it('quien cobró NO sale por omisión: la casa no lo quiere en la nota', () => {
+    expect(NEGOCIO_DEFAULT.mostrarCajero).toBe(false)
+    expect(texto(armarTicket(venta, NEGOCIO_DEFAULT)).some((x) => x.includes('Rosa M.'))).toBe(false)
+  })
 })
 
 /**

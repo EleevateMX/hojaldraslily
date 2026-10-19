@@ -307,6 +307,7 @@ export interface DatosDelTicket {
   leyenda?: string
   pieSecundario?: string
   avisos?: string[]
+  horario?: string
   mostrarCajero?: boolean
 }
 

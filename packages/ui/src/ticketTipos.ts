@@ -37,6 +37,13 @@ export interface TicketNegocio {
    * aviso sin tener que borrar la línea.
    */
   avisos?: string[]
+  /**
+   * El horario de la tienda, para el pie («Horario: L–D 7:00 a.m. a 9:00
+   * p.m.»). Va aparte de los avisos porque es un dato que cambia (temporada,
+   * días festivos) y no una política: así se edita en su propia casilla sin
+   * tocar las demás líneas. Vacío = no se imprime. La casa todavía no lo da.
+   */
+  horario?: string
   /** `false` imprime el nombre en versalitas en vez del logotipo. */
   mostrarLogo?: boolean
   /** `false` esconde quién cobró. Sirve para aclaraciones, así que viene encendido. */

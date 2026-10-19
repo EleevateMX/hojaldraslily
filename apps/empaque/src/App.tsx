@@ -2,7 +2,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   listarEncargos,
   marcarEmpacado,
+  suscribirProduccion,
   loQueHayQueEmpacar,
+  loQueHayQueEmpacarPorHora,
+  type FranjaPorEmpacar,
   minutosDeHora,
   horaEn12h,
   partirNombreDeVenta,
@@ -146,7 +149,7 @@ function porHora(a: Encargo, b: Encargo): number {
  * mira antes de ir por el pan. Si está vacío no se pinta — una franja que
  * siempre está ahí diciendo «0» deja de mirarse.
  */
-function QueHayQueEmpacar({ lista }: { lista: PorEmpacar[] }) {
+function QueHayQueEmpacar({ lista, franjas }: { lista: PorEmpacar[]; franjas: FranjaPorEmpacar[] }) {
   if (lista.length === 0) return null
   const total = lista.reduce((s, p) => s + p.cantidad, 0)
 
@@ -186,6 +189,26 @@ function QueHayQueEmpacar({ lista }: { lista: PorEmpacar[] }) {
           )
         })}
       </div>
+
+      {/* Y por hora: «antes de las 12, diez de jamón y queso». Con una sola
+          franja el total de arriba ya lo dice y el desglose solo repetiría. */}
+      {franjas.length > 1 && (
+        <div className="mt-4 pt-4 border-t border-sa-banana/50 space-y-2">
+          {franjas.map((f) => (
+            <div key={f.minutos ?? 'sin-hora'} className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <p className="font-display text-lg text-sa-green-deep w-52 shrink-0 whitespace-nowrap">{f.titulo}</p>
+              <p className="font-body text-base text-sa-green-ink">
+                {f.lista
+                  .map((p) => {
+                    const { sabor, medida } = partirNombreDeVenta(p.producto)
+                    return `${p.cantidad} ${sabor}${medida ? ` ${medida}` : ''}`
+                  })
+                  .join(' · ')}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
   )
 }
@@ -364,13 +387,17 @@ export default function App() {
     // Se relee sola: la caja aparta desde el mostrador y esto tiene que
     // aparecer aquí sin que nadie vaya a recargar la pantalla.
     const t = setInterval(() => void cargar(), REFRESCO_MS)
-    return () => clearInterval(t)
+    const off = suscribirProduccion(sb, () => void cargar())
+    return () => {
+      clearInterval(t)
+      off()
+    }
   }, [empleado, cargar])
 
   // Las tres pilas. `porEmpacar` es la cola de trabajo de hoy; `masAdelante`
   // es lo que todavía no toca y se muestra abajo para que nadie se adelante;
   // `listos` es la repisa.
-  const { porEmpacar, masAdelante, listos, queEmpacar } = useMemo(() => {
+  const { porEmpacar, masAdelante, listos, queEmpacar, franjas } = useMemo(() => {
     const sinEmpacar = encargos.filter((e) => !e.empacado_at)
     const ahora = sinEmpacar.filter(leTocaAhora).sort(porHora)
     return {
@@ -378,6 +405,7 @@ export default function App() {
       masAdelante: sinEmpacar.filter((e) => !leTocaAhora(e)).sort(porHora),
       listos: encargos.filter((e) => e.empacado_at).sort(porHora),
       queEmpacar: loQueHayQueEmpacar(ahora),
+      franjas: loQueHayQueEmpacarPorHora(ahora),
     }
   }, [encargos])
 
@@ -492,7 +520,7 @@ export default function App() {
           </div>
         ) : (
           <>
-            <QueHayQueEmpacar lista={queEmpacar} />
+            <QueHayQueEmpacar lista={queEmpacar} franjas={franjas} />
 
             {porEmpacar.map((e) => (
               <Tarjeta

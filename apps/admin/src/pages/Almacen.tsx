@@ -253,11 +253,14 @@ function Apartar({
             </div>
             <div>
               <label className={cx.label}>¿A qué hora? (opcional)</label>
+              {/* Selector de hora: se ve en 12 h con a.m./p.m. y guarda
+                  «HH:MM», que es lo que la cola sabe ordenar. */}
               <input
+                type="time"
+                step={900}
                 className={cx.input}
                 value={hora}
                 onChange={(ev) => setHora(ev.target.value)}
-                placeholder="10:00"
               />
             </div>
           </div>

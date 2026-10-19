@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   hornoEnVivo,
   relojDelHorno,
   listarExistenciasPorMolde,
   listarEncargos,
+  suscribirProduccion,
   mandarAProducir,
   minutosDeHora,
   horaEn12h,
@@ -195,9 +196,24 @@ export function PanelDeProduccion() {
 
   useEffect(() => {
     void cargarResumen()
+    // En vivo cuando el horno saca algo o empaque marca una caja, y cada 10 s
+    // por si el canal se cae: era el reclamo de la casa, que la caja tardaba
+    // en enterarse de que ya había pan.
     const t = setInterval(() => void cargarResumen(), REFRESCO_MS)
-    return () => clearInterval(t)
-  }, [cargarResumen])
+    const off = suscribirProduccion(sb, () => {
+      void cargarResumen()
+      if (abiertoRef.current) void cargarSabores()
+    })
+    return () => {
+      clearInterval(t)
+      off()
+    }
+  }, [cargarResumen, cargarSabores])
+
+  // El canal necesita saber si el cajón está abierto sin volver a suscribirse
+  // cada vez que se abre o se cierra.
+  const abiertoRef = useRef(abierto)
+  useEffect(() => { abiertoRef.current = abierto }, [abierto])
 
   useEffect(() => {
     if (!abierto) return

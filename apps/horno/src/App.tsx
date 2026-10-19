@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   hornoEnVivo,
+  suscribirProduccion,
   meterAlHorno,
   sacarDelHorno,
   relojDelHorno,
@@ -213,8 +214,13 @@ export default function App() {
   useEffect(() => {
     if (!empleado) return
     void cargar()
+    // En vivo cuando algo cambia, y cada 10 s por si el canal se cae.
     const t = setInterval(() => void cargar(), REFRESCO_MS)
-    return () => clearInterval(t)
+    const off = suscribirProduccion(sb, () => void cargar())
+    return () => {
+      clearInterval(t)
+      off()
+    }
   }, [empleado, cargar])
 
   // El reloj de la pantalla: un tic por segundo, del lado del navegador.

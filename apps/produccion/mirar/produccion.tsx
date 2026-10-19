@@ -16,9 +16,46 @@
  * molde.
  */
 import { createRoot } from 'react-dom/client'
-import { Tarjeta, ordenesPorDia } from '../src/vista'
-import type { ItemDeProduccion, OrdenDeProduccion } from '@lily/supabase'
+import { Tarjeta, EncargosPorHora, ordenesPorDia } from '../src/vista'
+import type { ItemDeProduccion, OrdenDeProduccion, Encargo } from '@lily/supabase'
 import '../src/index.css'
+
+/** Un encargo de hoy, con lo justo para sumarlo por hora. */
+let ne = 0
+const enc = (hora: string | null, items: [string, number][], p: Partial<Encargo> = {}): Encargo => ({
+  id: 'e' + ++ne,
+  folio: 100 + ne,
+  cliente: 'Cliente ' + ne,
+  telefono: null,
+  fecha_entrega: '2026-10-20',
+  hora_entrega: hora,
+  estado: 'apartado',
+  anticipo: 0,
+  para_viaje: false,
+  nota: null,
+  creado_por: null,
+  created_at: '',
+  empacado_at: null,
+  empacado_por: null,
+  items: items.map(([producto, cantidad], i) => ({
+    id: `i${ne}-${i}`, producto_id: producto, producto, cantidad, precio_unitario: 0, imagen_url: null,
+  })),
+  total: 0,
+  piezas: items.reduce((s, [, n]) => s + n, 0),
+  ...p,
+})
+
+const encargos: Encargo[] = [
+  enc('11:30', [['Jamón y Queso · Chica · 24 cuadros', 6], ['Fiesta · Mini · 12 cuadros', 2]]),
+  enc('12:00', [['Jamón y Queso · Chica · 24 cuadros', 4], ['Fiesta · Mini · 12 cuadros', 3]]),
+  enc('14:00', [['Pasta de Guayaba · Grande · 48 cuadros', 2], ['Rosca de Queso Philadelphia', 10]]),
+  enc('6 pm', [['Hawaiana · Chica · 24 cuadros', 3]]),
+  enc(null, [['Trenza Suiza', 2]]),
+  // Ya empacado: no le toca a esta mesa, no se suma.
+  enc('12:00', [['Fiesta · Grande · 48 cuadros', 9]], { empacado_at: '2026-10-20T09:00:00' }),
+  // De mañana: tampoco.
+  enc('10:00', [['Fiesta · Grande · 48 cuadros', 9]], { fecha_entrega: '2026-10-21' }),
+]
 
 let n = 0
 const it = (sabor: string, p: Partial<ItemDeProduccion> = {}): ItemDeProduccion => ({
@@ -81,6 +118,7 @@ const dias = ordenesPorDia(ordenes, hoy)
 createRoot(document.getElementById('root')!).render(
   <div className="bg-sa-cream-paper min-h-screen text-sa-green-ink">
     <div className="p-6 space-y-5 max-w-5xl mx-auto">
+    <EncargosPorHora encargos={encargos} hoy={hoy} />
     {dias.map((d) => (
       <section key={d.fecha} className="space-y-5">
         <div className="flex items-baseline gap-3 pt-1">

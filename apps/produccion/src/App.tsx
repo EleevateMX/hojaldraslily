@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import {
   listarOrdenesDeProduccion,
+  listarEncargos,
+  suscribirProduccion,
   armarMoldes,
   apuntarMasas,
   entrarConPin,
@@ -9,10 +11,11 @@ import {
   type OrdenDeProduccion,
   type ItemDeProduccion,
   type EmpleadoSesion,
+  type Encargo,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
 import { mensajeDeError } from '@lily/utils'
-import { Tarjeta, ordenesPorDia } from './vista'
+import { Tarjeta, EncargosPorHora, ordenesPorDia } from './vista'
 import { sb } from './lib/sb'
 
 /**
@@ -52,6 +55,10 @@ export default function App() {
   const [empleado, setEmpleado] = useState<EmpleadoSesion | null>(null)
   const [revisando, setRevisando] = useState(true)
   const [ordenes, setOrdenes] = useState<OrdenDeProduccion[]>([])
+  // Los encargos de hoy, para decir «¿qué hay que tener antes de las 12?».
+  // Se tragan su propio error: la mesa tiene que poder marcar moldes aunque
+  // esa consulta falle.
+  const [encargos, setEncargos] = useState<Encargo[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -66,7 +73,12 @@ export default function App() {
   const cargar = useCallback(async (conSpinner = false) => {
     if (conSpinner) setCargando(true)
     try {
-      setOrdenes(await listarOrdenesDeProduccion(sb))
+      const [o, e] = await Promise.all([
+        listarOrdenesDeProduccion(sb),
+        listarEncargos(sb).catch(() => [] as Encargo[]),
+      ])
+      setOrdenes(o)
+      setEncargos(e)
       setError(null)
     } catch (e) {
       setError(mensajeDeError(e))
@@ -79,9 +91,14 @@ export default function App() {
     if (!empleado) return
     void cargar(true)
     // Se relee sola: gerencia manda a hacer desde su teléfono y esto tiene que
-    // aparecer aquí sin que nadie vaya a recargar la pantalla.
+    // aparecer aquí sin que nadie vaya a recargar la pantalla. En vivo cuando
+    // algo cambia, y cada 10 s por si el canal se cae.
     const t = setInterval(() => void cargar(), REFRESCO_MS)
-    return () => clearInterval(t)
+    const off = suscribirProduccion(sb, () => void cargar())
+    return () => {
+      clearInterval(t)
+      off()
+    }
   }, [empleado, cargar])
 
   async function apuntar(item: ItemDeProduccion, masas: number | null) {
@@ -191,6 +208,11 @@ export default function App() {
             {error}
           </p>
         )}
+
+        {/* Lo encargado para hoy, por hora: es lo que decide qué se arma
+            primero. Va antes de las órdenes porque una orden sin hora se
+            puede hacer cuando sea; un encargo de las 12 no. */}
+        {!cargando && <EncargosPorHora encargos={encargos} />}
 
         {cargando ? (
           <p className="font-mono text-sm uppercase tracking-wide text-sa-green-ink/45 text-center py-16">

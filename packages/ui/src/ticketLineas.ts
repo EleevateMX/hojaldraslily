@@ -322,13 +322,24 @@ export function armarTicket(
 
   // Los avisos van cada uno en su renglón y separados por una regla: son lo
   // que el mostrador necesita poder señalar con el dedo.
-  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean)
+  const avisos = lineasDeAvisos(negocio)
   if (avisos.length) {
     L.push(regla())
     for (const a of avisos) for (const l of envolver(a)) L.push(centrar(l.trim()))
   }
 
   return L
+}
+
+/**
+ * El bloque de avisos del pie, ya limpio: el horario primero (si lo hay) y
+ * después los avisos. Lo comparten el papel y el HTML para que los dos digan
+ * exactamente lo mismo.
+ */
+export function lineasDeAvisos(negocio: TicketNegocio): string[] {
+  const horario = (negocio.horario ?? '').trim()
+  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean)
+  return horario ? [`Horario: ${horario}`, ...avisos] : avisos
 }
 
 function hora(iso: string | null | undefined): string {

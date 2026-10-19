@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **209 migraciones aplicadas en orden, y 209
+`fzkdgqqvfkogmxdgqsxj` tiene **210 migraciones aplicadas en orden, y 210
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -603,7 +603,9 @@ empaquetador y se desvían solas:
 |---|---|
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | En la **caja**: entrar con PIN → «Abrir caja» contando el cajón; «Corte de caja» para cerrar. Al cerrar, el corte **sale solo en la térmica** si hay una dada de alta |
-| Cambiar el teléfono, la dirección o los avisos del ticket | Admin → **Sistema** → «Lo que dice el ticket». El siguiente ticket ya sale así; no se toca la PC |
+| Cambiar el teléfono, la dirección, el **horario** o los avisos del ticket | Admin → **Sistema** → «Lo que dice el ticket». El horario tiene su casilla y sale como «Horario: …» delante de los avisos; quien cobró **no** sale (la casa no lo quiere). El siguiente ticket ya sale así; no se toca la PC |
+| Saber qué hay que tener listo antes de las 12 | Pantalla de **Producción** («Encargado para hoy», por hora) y **Empaque** («Hay que empacar», con el desglose por hora debajo): «10 Jamón y Queso Chica · 5 Fiesta Mini para las 12:00 p.m.» |
+| Apartar con hora | La hora se escoge en un **selector** (se ve en 12 h con a.m./p.m.), ya no se teclea «6 pm» |
 | Revisar un corte de otro día, o saber cuántos billetes había | Admin → **Cortes de caja**. Se toca el renglón y abajo sale el desglose del cajón al abrir y al cerrar, las ventas por método y las notas |
 | Volver a sacar el papel de un corte | Admin → **Cortes de caja** → **Reimprimir en la térmica** (sale en el mostrador) o **Imprimir / guardar PDF** (desde donde sea, para mandarlo por WhatsApp) |
 | Instalar o actualizar la PC de la tienda | Admin → **Descargas**. Arriba dice si cada agente está al día; abajo están los `.bat`. El único permiso que pide es el de administrador, una vez |
@@ -1164,6 +1166,31 @@ comen el mismo `CorteData`. La pantalla se revisa con
 `apps/admin/mirar/cortes.html`, que le da de comer una semana con un corte
 que cuadra, uno con faltante, uno con sobrante y el de hoy abierto — por eso
 `Cortes` acepta una `fuente` opcional.
+
+**Lo que sale del horno se ve al instante, y los 10 s son la red.** Las
+cuatro pantallas del camino del pan (caja, producción, horno, empaque) y
+Admin → Producción se releen cada 10 s *y además* escuchan por Realtime
+(`suscribirProduccion`: `ordenes_produccion`, `orden_produccion_items`,
+`produccion`, `encargos`, en la publicación desde `20261019180000`). Un
+UPDATE del horno toca varias filas seguidas —el renglón, el trigger de
+`produccion`, el estado de la orden— así que el canal **junta** los avisos
+en una sola relectura (250 ms). Realtime respeta RLS: las cuatro tablas
+tienen política `authenticated` y nada para `anon`, y las pantallas entran
+con PIN. El poll no se quita: el canal muere en silencio cuando la red
+parpadea, y el reintento tarda 5 s.
+
+**La hora de entrega se escoge, no se teclea.** El campo de los encargos
+(caja y Admin → Almacén) es un `<input type="time">`: Chrome lo pinta en
+12 h con a.m./p.m. en una PC en español y guarda «HH:MM», que
+`minutosDeHora` lee sin adivinar. Los encargos viejos con «6 pm» o «por la
+tarde» siguen leyéndose con la misma tolerancia de antes.
+
+**Y lo encargado se dice POR HORA**, además de por producto:
+`loQueHayQueEmpacarPorHora` reusa los bloques de `encargosPorHora` para que
+Producción («Encargado para hoy») y Empaque (debajo de «Hay que empacar»)
+partan el día igual que la caja: «para las 12:00 p.m. · 10 Jamón y Queso
+Chica · 5 Fiesta Mini». Era la pregunta de la casa — qué hay que tener antes
+de las 12 y qué antes de las 2.
 
 **Las descargas se sirven desde Admin**, no desde GitHub:
 `scripts/copiar-descargas.mjs` copia los cuatro `.bat` a

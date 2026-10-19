@@ -9,6 +9,7 @@ import {
   mandarAProducir,
   fijarHoraDeProduccion,
   hornoEnVivo,
+  suscribirProduccion,
   relojDelHorno,
   type ExistenciaPorMolde,
   type ProductoDelDia,
@@ -257,7 +258,12 @@ function ElHorno() {
     // Cada minuto, no cada segundo: nadie hornea con esa precisión y un
     // contador corriendo solo distrae.
     const t = setInterval(traer, 60000)
-    return () => clearInterval(t)
+    // Y en vivo cuando el horno mete o saca algo: el minuto es la red.
+    const off = suscribirProduccion(sb, traer)
+    return () => {
+      clearInterval(t)
+      off()
+    }
   }, [])
 
   const r = datos?.resumen

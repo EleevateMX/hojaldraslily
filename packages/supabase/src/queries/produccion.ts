@@ -575,6 +575,86 @@ export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
   return [...por.values()].sort((a, b) => b.cantidad - a.cantidad)
 }
 
+/** Una franja de hora con lo que hay que tener listo para entonces. */
+export interface FranjaPorEmpacar {
+  /** La hora en punto, en minutos desde medianoche. `null` = sin hora legible. */
+  minutos: number | null
+  /** «Para las 12:00 p.m.», «Sin hora». */
+  titulo: string
+  lista: PorEmpacar[]
+  encargos: number
+}
+
+/**
+ * Lo que hay que tener listo, **por hora y por producto**.
+ *
+ * Es la pregunta de la casa tal cual: «¿qué hay que entregar antes de las 12?
+ * — diez de jamón y queso y cinco Fiesta». La suma por producto a secas dice
+ * cuánto sacar en el día; esta dice **para cuándo**, que es lo que decide qué
+ * se hornea primero y qué se empaca primero. Reusa los bloques de hora de la
+ * cola (`encargosPorHora`), así que las dos pantallas parten el día igual.
+ */
+export function loQueHayQueEmpacarPorHora(encargos: Encargo[]): FranjaPorEmpacar[] {
+  return encargosPorHora(encargos).map((h) => ({
+    minutos: h.minutos,
+    titulo: h.minutos === null ? 'Sin hora' : `Para las ${h.titulo}`,
+    lista: loQueHayQueEmpacar(h.encargos),
+    encargos: h.encargos.length,
+  }))
+}
+
+/**
+ * Avisa en vivo cuando cambia algo del camino del pan: una orden mandada a
+ * hacer, un molde armado, una charola que entra o sale del horno, un encargo
+ * apartado o empacado.
+ *
+ * Las pantallas ya se releen solas cada 10 s y eso **se queda** como red: el
+ * canal puede morir sin avisar. Esto es para lo que la casa pidió —que al sacar
+ * del horno la caja lo vea ahí mismo— sin tener que bajar el poll a dos
+ * segundos y multiplicar consultas. Las cuatro tablas están en la publicación
+ * de Realtime (`20261019180000`) y Realtime respeta RLS: solo lo ve quien
+ * entró con PIN, igual que la consulta.
+ */
+export function suscribirProduccion(sb: ClienteLily, onCambio: () => void): () => void {
+  let canal: ReturnType<ClienteLily['channel']> | null = null
+  let apagado = false
+  let reintento: ReturnType<typeof setTimeout> | null = null
+  // Un UPDATE del horno toca varias filas seguidas (el renglón, el trigger de
+  // `produccion`, el estado de la orden): se junta en una sola relectura.
+  let espera: ReturnType<typeof setTimeout> | null = null
+  const avisar = () => {
+    if (espera) clearTimeout(espera)
+    espera = setTimeout(onCambio, 250)
+  }
+
+  const conectar = () => {
+    if (apagado) return
+    canal = sb
+      .channel('camino-del-pan')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ordenes_produccion' }, avisar)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orden_produccion_items' }, avisar)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'produccion' }, avisar)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'encargos' }, avisar)
+      .subscribe((estado) => {
+        if (apagado) return
+        if (estado === 'CHANNEL_ERROR' || estado === 'TIMED_OUT' || estado === 'CLOSED') {
+          if (canal) void sb.removeChannel(canal)
+          canal = null
+          if (reintento) clearTimeout(reintento)
+          reintento = setTimeout(conectar, 5000)
+        }
+      })
+  }
+  conectar()
+
+  return () => {
+    apagado = true
+    if (reintento) clearTimeout(reintento)
+    if (espera) clearTimeout(espera)
+    if (canal) void sb.removeChannel(canal)
+  }
+}
+
 /**
  * Cobra el SALDO del encargo. Es lo único que lo descuenta del inventario.
  *

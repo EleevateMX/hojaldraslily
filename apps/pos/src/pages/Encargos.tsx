@@ -520,9 +520,16 @@ export function Encargos() {
                 value={fecha}
                 onChange={(e) => setFecha(e.target.value)}
               />
+              {/* Selector de hora y no texto libre: Chrome lo enseña en 12 h
+                  con a.m./p.m. en una PC en español, y lo que guarda es
+                  «HH:MM», que `minutosDeHora` lee sin adivinar nada. Antes
+                  llegaban «6», «6 pm» y «por la tarde», y el «6» pelón se iba
+                  al final de la cola sin hora. */}
               <input
+                type="time"
+                step={900}
                 className="px-3 py-2.5 border border-sa-green-ink/15 rounded-sa text-sm"
-                placeholder="Hora (10:00)"
+                aria-label="Hora de entrega"
                 value={hora}
                 onChange={(e) => setHora(e.target.value)}
               />
