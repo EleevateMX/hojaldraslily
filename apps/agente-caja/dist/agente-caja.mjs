@@ -33,6 +33,7 @@ var NEGOCIO_DEFAULT = {
 // ../../packages/ui/src/ticketLineas.ts
 var COLUMNAS_80MM = 48;
 var COLUMNAS_58MM = 32;
+var estilo = (texto, m = {}) => ({ tipo: "estilo", texto, ...m });
 function pesos(n) {
   const v = Math.abs(Number(n) || 0);
   const [ent, dec] = v.toFixed(2).split(".");
@@ -87,8 +88,8 @@ function totalDe(data) {
 function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   const { centrar, parear, regla, envolver } = formato(ancho);
   const L = [];
-  L.push(centrar(negocio.nombre.toUpperCase()));
-  if (negocio.sucursal) L.push(centrar(negocio.sucursal));
+  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
+  if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
   for (const renglon of (negocio.direccion ?? "").split("\n")) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()));
   }
@@ -104,12 +105,18 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     hour: "2-digit",
     minute: "2-digit"
   });
-  const aLaDerecha = (izq, der) => der ? parear(izq, der) : izq;
   const cajero = negocio.mostrarCajero === false ? "" : data.cajero ?? "";
-  L.push(aLaDerecha(`Folio: ${data.folio}`, cajero ? `Caja: ${cajero}` : ""));
-  L.push(aLaDerecha(fechaTxt, data.canal ?? ""));
+  L.push("FOLIO");
+  L.push(estilo(` #${data.folio} `, { ancho: 2, alto: 2, invertido: true }));
+  L.push(estilo(fechaTxt, { alinear: "der" }));
+  const canalLinea = [data.canal, cajero].filter(Boolean).join(" \xB7 ");
+  if (canalLinea) L.push(estilo(canalLinea, { alinear: "der" }));
   if (data.clienteNombre) {
-    for (const l of envolver(`Para: ${data.clienteNombre}`)) L.push(l);
+    L.push(regla());
+    L.push("ENCARGO PARA");
+    for (const l of envolver(data.clienteNombre, 0, Math.floor(ancho / 2))) {
+      L.push(estilo(l, { ancho: 2, negrita: true }));
+    }
   }
   L.push(regla("="));
   L.push(parear("CANT DESCRIPCION", "IMPORTE"));
@@ -145,7 +152,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   if (desc > 0) L.push(parear("Descuento", "-" + pesos(desc)));
   if (anticipo > 0) L.push(parear("Anticipo ya pagado", "-" + pesos(anticipo)));
   if (hayRestas) L.push(regla("="));
-  L.push(parear("TOTAL", pesos(total)));
+  L.push(estilo(parear("TOTAL", pesos(total)), { alto: 2, negrita: true }));
   L.push("");
   if (data.partes?.length) {
     for (const p of data.partes) L.push(parear(p.metodo, pesos(p.monto)));
@@ -158,7 +165,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(parear("Cambio", pesos(data.recibido - total)));
   }
   L.push("");
-  if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(centrar(l.trim()));
+  if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(estilo(l.trim(), { negrita: true, alinear: "centro" }));
   if (negocio.pieSecundario) {
     const partes = negocio.pieSecundario.split("\xB7").map((x) => x.trim()).filter(Boolean);
     const cabeEntero = negocio.pieSecundario.length <= ancho;
@@ -201,10 +208,11 @@ function armarCorte(c, negocio, ancho = COLUMNAS_80MM) {
   const { centrar, parear, regla, envolver } = formato(ancho);
   const L = [];
   const n = (v) => Number(v ?? 0);
-  L.push(centrar(negocio.nombre.toUpperCase()));
-  if (negocio.sucursal) L.push(centrar(negocio.sucursal));
+  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
+  if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
   L.push("");
-  L.push(centrar("CORTE DE CAJA"));
+  L.push(estilo("CORTE DE CAJA", { negrita: true, alinear: "centro" }));
+  if (c.folio != null) L.push(estilo(` #${c.folio} `, { ancho: 2, alto: 2, invertido: true, alinear: "centro" }));
   if (c.caja) L.push(centrar(c.caja));
   L.push(regla("="));
   L.push(parear("Abri\xF3", `${hora(c.abierto_en)}${c.abrio ? " \xB7 " + c.abrio : ""}`));
@@ -229,7 +237,7 @@ function armarCorte(c, negocio, ancho = COLUMNAS_80MM) {
   L.push(regla("="));
   const dif = n(c.diferencia);
   const palabra = dif === 0 ? "CUADRA" : dif > 0 ? "SOBRANTE" : "FALTANTE";
-  L.push(parear(palabra, (dif < 0 ? "-" : "") + pesos(Math.abs(dif))));
+  L.push(estilo(parear(palabra, (dif < 0 ? "-" : "") + pesos(Math.abs(dif))), { alto: 2, negrita: true }));
   L.push("");
   if (c.notas) {
     for (const l of envolver(`Notas: ${c.notas}`)) L.push(l);
@@ -274,6 +282,28 @@ var ConstructorEscPos = class {
   }
   linea(s = "") {
     return this.texto(s).crudo(10);
+  }
+  /**
+   * Tamaño del carácter: 1 o 2 veces de ancho y de alto (GS ! n).
+   *
+   * Es lo único que el papel tiene para decir «esto es más importante»: no
+   * hay color ni tipografías. Con `ancho = 2` caben 24 columnas en vez de
+   * 48 — quien arme la línea tiene que saberlo, por eso el ancho viaja en la
+   * marca de estilo y no se adivina aquí.
+   */
+  tamano(ancho = 1, alto = 1) {
+    return this.crudo(GS, 33, ancho - 1 << 4 | alto - 1);
+  }
+  /** Negrita (ESC E n). En térmica es «más calor»: funciona para una línea, no para un párrafo. */
+  negrita(encendida) {
+    return this.crudo(ESC, 69, encendida ? 1 : 0);
+  }
+  /**
+   * Blanco sobre negro (GS B n). El brief del ticket lo dice: gasta mucho
+   * calor, sirve para una palabra —el folio— y no para más.
+   */
+  invertir(encendido) {
+    return this.crudo(GS, 66, encendido ? 1 : 0);
   }
   avanzar(n = 1) {
     return this.crudo(ESC, 100, Math.max(0, Math.min(255, n)));
@@ -365,9 +395,7 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   const neg = negocioDelTrabajo(trabajo.payload, negocio);
   if (esPayloadDeCorte(trabajo.payload)) {
     const b2 = new ConstructorEscPos().inicializar().alinear(0);
-    for (const l of armarCorte(trabajo.payload, neg, ancho)) {
-      if (typeof l === "string") b2.linea(l);
-    }
+    for (const l of armarCorte(trabajo.payload, neg, ancho)) dibujar(b2, l);
     return b2.cortar().construir();
   }
   if (!esPayloadDeTicket(trabajo.payload)) {
@@ -378,16 +406,30 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   const b = new ConstructorEscPos().inicializar();
   if (logo) b.alinear(1).logo(logo).linea();
   b.alinear(0);
-  for (const l of armarTicket(trabajo.payload, neg, ancho)) {
-    if (typeof l === "string") {
-      b.linea(l);
-      continue;
-    }
+  for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l);
+  return b.cortar().construir();
+}
+function dibujar(b, l) {
+  if (typeof l === "string") {
+    b.linea(l);
+    return;
+  }
+  if (l.tipo === "qr") {
     b.alinear(1);
     qr(b, l.contenido);
     b.alinear(0);
+    return;
   }
-  return b.cortar().construir();
+  const alinear = l.alinear === "centro" ? 1 : l.alinear === "der" ? 2 : 0;
+  b.alinear(alinear);
+  b.tamano(l.ancho ?? 1, l.alto ?? 1);
+  if (l.negrita) b.negrita(true);
+  if (l.invertido) b.invertir(true);
+  b.linea(l.texto);
+  if (l.invertido) b.invertir(false);
+  if (l.negrita) b.negrita(false);
+  b.tamano(1, 1);
+  b.alinear(0);
 }
 function qr(b, contenido) {
   const datos = Buffer.from(contenido, "latin1");

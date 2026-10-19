@@ -53,7 +53,33 @@ export interface MarcaQr {
   etiqueta: string
 }
 
-export type LineaTicket = string | MarcaQr
+/**
+ * Una línea con estilo: más grande, en negrita, invertida o centrada.
+ *
+ * Es cómo la térmica dice «esto es lo importante» sin color ni tipografías.
+ * El diseño de la nota (muestras/ticket.png) lo resuelve con tres cosas: el
+ * FOLIO blanco sobre negro, el TOTAL grande y el recuadro «ENCARGO PARA».
+ * Aquí son marcas; el renderer las traduce a comandos (GS !, ESC E, GS B).
+ *
+ * Con `ancho = 2` el texto ocupa el doble, así que caben la mitad de
+ * columnas: la marca trae el texto ya cortado a lo que cabe, y la prueba lo
+ * comprueba. Una línea que se pasa no da error: se parte donde la impresora
+ * quiera y descuadra el ticket entero.
+ */
+export interface MarcaEstilo {
+  tipo: 'estilo'
+  texto: string
+  ancho?: 1 | 2
+  alto?: 1 | 2
+  negrita?: boolean
+  invertido?: boolean
+  alinear?: 'izq' | 'centro' | 'der'
+}
+
+export type LineaTicket = string | MarcaQr | MarcaEstilo
+
+const estilo = (texto: string, m: Omit<MarcaEstilo, 'tipo' | 'texto'> = {}): MarcaEstilo =>
+  ({ tipo: 'estilo', texto, ...m })
 
 /**
  * El importe, con separador de miles.
@@ -160,10 +186,11 @@ export function armarTicket(
   const L: LineaTicket[] = []
 
   // ---- Encabezado ----
-  // El logotipo lo manda el renderer como raster antes de estas líneas; aquí
-  // va el nombre, que es lo que se lee aunque el logo no salga.
-  L.push(centrar(negocio.nombre.toUpperCase()))
-  if (negocio.sucursal) L.push(centrar(negocio.sucursal))
+  // El logotipo no se rasteriza: el brief lo deja como opcional porque gasta
+  // papel y calor. Lo que sostiene la identidad sin color es el nombre al
+  // doble de tamaño — que es lo que se lee aunque el logo no salga.
+  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: 'centro' }))
+  if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
   // La dirección trae saltos de línea propios: se respetan y además se
   // envuelve lo que no quepa.
   for (const renglon of (negocio.direccion ?? '').split('\n')) {
@@ -185,12 +212,24 @@ export function armarTicket(
   // `parear` con la derecha vacía rellenaría de espacios hasta el borde: una
   // línea de puro relleno que en el papel se ve como un renglón en blanco
   // movido. Si no hay nada a la derecha, va el texto solo.
-  const aLaDerecha = (izq: string, der: string) => (der ? parear(izq, der) : izq)
   const cajero = negocio.mostrarCajero === false ? '' : (data.cajero ?? '')
-  L.push(aLaDerecha(`Folio: ${data.folio}`, cajero ? `Caja: ${cajero}` : ''))
-  L.push(aLaDerecha(fechaTxt, data.canal ?? ''))
+  // El folio es lo que se canta en el mostrador y lo que se busca en una
+  // aclaración: va blanco sobre negro y al doble, como en el diseño. La
+  // fecha, el canal y quién cobró, debajo y a la derecha.
+  L.push('FOLIO')
+  L.push(estilo(` #${data.folio} `, { ancho: 2, alto: 2, invertido: true }))
+  L.push(estilo(fechaTxt, { alinear: 'der' }))
+  const canalLinea = [data.canal, cajero].filter(Boolean).join(' · ')
+  if (canalLinea) L.push(estilo(canalLinea, { alinear: 'der' }))
   if (data.clienteNombre) {
-    for (const l of envolver(`Para: ${data.clienteNombre}`)) L.push(l)
+    // El recuadro «ENCARGO PARA»: en el papel es una regla, el rótulo chico y
+    // el nombre al doble de ancho, en negrita. Lo que se lee a un metro es a
+    // quién se le entrega.
+    L.push(regla())
+    L.push('ENCARGO PARA')
+    for (const l of envolver(data.clienteNombre, 0, Math.floor(ancho / 2))) {
+      L.push(estilo(l, { ancho: 2, negrita: true }))
+    }
   }
   L.push(regla('='))
 
@@ -245,7 +284,9 @@ export function armarTicket(
   // no iba ningún renglón: dos reglas pegadas que se leen como un error de
   // impresión. Con restas sí hay qué separar.
   if (hayRestas) L.push(regla('='))
-  L.push(parear('TOTAL', pesos(total)))
+  // El total es lo primero que tiene que encontrar el cliente: al doble de
+  // alto, con las 48 columnas enteras para que el importe quede en su sitio.
+  L.push(estilo(parear('TOTAL', pesos(total)), { alto: 2, negrita: true }))
   L.push('')
 
   // ---- Cómo se pagó ----
@@ -265,7 +306,9 @@ export function armarTicket(
 
   // ---- Pie ----
   L.push('')
-  if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(centrar(l.trim()))
+  // El agradecimiento en negrita, como la Jost del diseño: es lo único del
+  // pie que se lee sin querer.
+  if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(estilo(l.trim(), { negrita: true, alinear: 'centro' }))
   if (negocio.pieSecundario) {
     // Se parte por el `·` de la casa antes que por palabras: envolviendo a
     // secas, «Encarga con 2 días de anticipación · 999 926 71 51» dejaba el
@@ -334,10 +377,12 @@ export function armarCorte(
   const L: LineaTicket[] = []
   const n = (v: number | null | undefined) => Number(v ?? 0)
 
-  L.push(centrar(negocio.nombre.toUpperCase()))
-  if (negocio.sucursal) L.push(centrar(negocio.sucursal))
+  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: 'centro' }))
+  if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
   L.push('')
-  L.push(centrar('CORTE DE CAJA'))
+  L.push(estilo('CORTE DE CAJA', { negrita: true, alinear: 'centro' }))
+  // El folio del corte, como el de la venta: es lo que se dice por teléfono.
+  if (c.folio != null) L.push(estilo(` #${c.folio} `, { ancho: 2, alto: 2, invertido: true, alinear: 'centro' }))
   if (c.caja) L.push(centrar(c.caja))
   L.push(regla('='))
   L.push(parear('Abrió', `${hora(c.abierto_en)}${c.abrio ? ' · ' + c.abrio : ''}`))
@@ -366,7 +411,8 @@ export function armarCorte(
   L.push(regla('='))
   const dif = n(c.diferencia)
   const palabra = dif === 0 ? 'CUADRA' : dif > 0 ? 'SOBRANTE' : 'FALTANTE'
-  L.push(parear(palabra, (dif < 0 ? '-' : '') + pesos(Math.abs(dif))))
+  // Lo que importa a un metro: al doble de alto y en negrita.
+  L.push(estilo(parear(palabra, (dif < 0 ? '-' : '') + pesos(Math.abs(dif))), { alto: 2, negrita: true }))
   L.push('')
 
   if (c.notas) {

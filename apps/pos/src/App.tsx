@@ -9,6 +9,7 @@ import { Encargos } from './pages/Encargos'
 import { usePosStore } from './store/posStore'
 import { registrarPwa } from '@lily/pwa/registrar'
 import { vigilarConexion } from './lib/conexion'
+import { cargarDatosDelTicket } from './lib/ticket'
 import { useVentasSinInternet, vigilarVentasSinInternet } from './store/sinInternet'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
@@ -43,6 +44,7 @@ export default function App() {
   useEffect(() => {
     vigilarConexion()
     vigilarVentasSinInternet()
+    void cargarDatosDelTicket()
   }, [])
 
   return (

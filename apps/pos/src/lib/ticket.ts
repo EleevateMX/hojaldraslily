@@ -1,6 +1,30 @@
-import { encolarTicketCaja } from '@lily/supabase'
-import { imprimirTicket, type TicketData } from '@lily/ui'
+import { encolarTicketCaja, datosDelTicket } from '@lily/supabase'
+import { imprimirTicket, NEGOCIO_DEFAULT, type TicketData, type TicketNegocio } from '@lily/ui'
 import { sb } from './sb'
+import { conRespaldo } from './respaldo'
+
+/**
+ * Los datos del negocio para el papel del navegador.
+ *
+ * Son los de Admin → Sistema («Lo que dice el ticket»), completados con los
+ * del código. Van con respaldo para que sin internet el ticket salga igual
+ * con el teléfono de siempre, y se cargan al abrir la caja —no al cobrar—
+ * para no meter una consulta entre el cobro y el papel.
+ */
+let negocioCargado: TicketNegocio = NEGOCIO_DEFAULT
+
+export async function cargarDatosDelTicket(): Promise<void> {
+  try {
+    const d = await conRespaldo('datos_ticket', () => datosDelTicket(sb))
+    if (d) {
+      const limpio = Object.fromEntries(Object.entries(d).filter(([, v]) => v !== null && v !== undefined))
+      negocioCargado = { ...NEGOCIO_DEFAULT, ...limpio } as TicketNegocio
+    }
+  } catch {
+    // Se queda con lo del código: un ticket con el teléfono de siempre es
+    // mejor que un cobro que espera a una consulta.
+  }
+}
 
 /**
  * Sacar el ticket del cliente, por donde se pueda.
@@ -32,5 +56,5 @@ export async function sacarTicket(ordenId: string | null, ticket: TicketData): P
       // Da igual por qué falló: el cliente tiene que llevarse su papel.
     }
   }
-  imprimirTicket(ticket)
+  imprimirTicket(ticket, negocioCargado)
 }

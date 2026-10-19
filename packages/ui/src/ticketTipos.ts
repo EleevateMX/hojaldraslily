@@ -121,6 +121,7 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
 export interface CorteData {
   tipo: 'corte'
   corte_id: string
+  folio?: number | null
   caja?: string | null
   abierto_en?: string | null
   cerrado_en?: string | null

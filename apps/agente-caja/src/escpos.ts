@@ -67,6 +67,27 @@ export class ConstructorEscPos {
 
   linea(s = ''): this { return this.texto(s).crudo(0x0a) }
 
+  /**
+   * Tamaño del carácter: 1 o 2 veces de ancho y de alto (GS ! n).
+   *
+   * Es lo único que el papel tiene para decir «esto es más importante»: no
+   * hay color ni tipografías. Con `ancho = 2` caben 24 columnas en vez de
+   * 48 — quien arme la línea tiene que saberlo, por eso el ancho viaja en la
+   * marca de estilo y no se adivina aquí.
+   */
+  tamano(ancho: 1 | 2 = 1, alto: 1 | 2 = 1): this {
+    return this.crudo(GS, 0x21, ((ancho - 1) << 4) | (alto - 1))
+  }
+
+  /** Negrita (ESC E n). En térmica es «más calor»: funciona para una línea, no para un párrafo. */
+  negrita(encendida: boolean): this { return this.crudo(ESC, 0x45, encendida ? 1 : 0) }
+
+  /**
+   * Blanco sobre negro (GS B n). El brief del ticket lo dice: gasta mucho
+   * calor, sirve para una palabra —el folio— y no para más.
+   */
+  invertir(encendido: boolean): this { return this.crudo(GS, 0x42, encendido ? 1 : 0) }
+
   avanzar(n = 1): this { return this.crudo(ESC, 0x64, Math.max(0, Math.min(255, n))) }
 
   /**

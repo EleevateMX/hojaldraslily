@@ -23,3 +23,10 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
   Strict-Transport-Security: max-age=31536000; includeSubDomains
+
+# Los instaladores de la PC (Admin -> Descargas) se BAJAN, no se muestran:
+# sin esto un navegador puede abrir el .bat como texto. Y sin cache, para que
+# quien baja hoy se lleve el del ultimo despliegue y no uno guardado.
+/descargas/*
+  Content-Disposition: attachment
+  Cache-Control: no-store

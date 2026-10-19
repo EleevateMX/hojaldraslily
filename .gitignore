@@ -41,3 +41,6 @@ muestras/
 # (ver apps/pos/mirar/ticket.html). No se versionan.
 apps/pos/public/fuentes/
 apps/pos/mirar/fuentes/
+
+# Los instaladores que Admin sirve: se copian en cada build desde scripts/.
+apps/admin/public/descargas/

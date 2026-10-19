@@ -80,8 +80,11 @@ describe('construirDocumento', () => {
     const b = construirDocumento(trabajo(venta), NEGOCIO_DEFAULT, null, 32)
     const texto = b.toString('latin1')
     // Se miran solo los renglones de texto, sin los comandos del principio
-    // y del final.
-    const largas = texto.split('\n').slice(1, -1).filter((l) => l.replace(/[\x00-\x1f]/g, '').length > 32)
+    // y del final. Los de estilo (ESC a, ESC E, GS !, GS B) son de tres
+    // bytes y el de en medio es una letra imprimible: se quitan enteros, o
+    // la «a» de alinear cuenta como texto.
+    const soloTexto = (l: string) => l.replace(/[\x1b\x1d][a-zA-Z!][\s\S]/g, '').replace(/[\x00-\x1f]/g, '')
+    const largas = texto.split('\n').slice(1, -1).filter((l) => soloTexto(l).length > 32)
     expect(largas).toEqual([])
   })
 

@@ -22,16 +22,41 @@ const venta: TicketData = {
   recibido: 700,
 }
 
-const texto = (l: LineaTicket[]) => l.filter((x): x is string => typeof x === 'string')
+// El texto de cada línea, venga suelta o dentro de una marca de estilo.
+const texto = (l: LineaTicket[]) =>
+  l.flatMap((x) => (typeof x === 'string' ? [x] : x.tipo === 'estilo' ? [x.texto] : []))
+/** Lo que una línea ocupa en columnas: al doble de ancho, el doble. */
+const columnas = (x: LineaTicket) =>
+  typeof x === 'string' ? x.length : x.tipo === 'estilo' ? x.texto.length * (x.ancho ?? 1) : 0
 
 describe('armarTicket (líneas de la térmica)', () => {
   it('ninguna línea se pasa del ancho del papel', () => {
     // Es la única regla que no se puede romper: lo que se pasa de 48, la
     // impresora lo tira a la siguiente línea donde le toca y el ticket se
     // desalinea entero.
-    const l = texto(armarTicket(venta, NEGOCIO_DEFAULT))
-    const largas = l.filter((x) => x.length > COLUMNAS_80MM)
+    const l = armarTicket(venta, NEGOCIO_DEFAULT)
+    const largas = l.filter((x) => columnas(x) > COLUMNAS_80MM)
     expect(largas).toEqual([])
+  })
+
+  // El diseño de la nota (muestras/ticket.png) vive de tres cosas sin color:
+  // el folio blanco sobre negro, el TOTAL grande y el recuadro del encargo.
+  // Si alguna deja de ser una marca, el papel vuelve a ser texto plano y
+  // nadie se entera hasta ver el ticket.
+  it('el folio va invertido y al doble; el TOTAL, al doble de alto', () => {
+    const l = armarTicket(venta, NEGOCIO_DEFAULT)
+    const folio = l.find((x) => typeof x !== 'string' && x.tipo === 'estilo' && x.texto.includes('#1042'))
+    expect(folio && folio.tipo === 'estilo' ? [folio.invertido, folio.ancho, folio.alto] : null).toEqual([true, 2, 2])
+    const total = l.find((x) => typeof x !== 'string' && x.tipo === 'estilo' && x.texto.startsWith('TOTAL'))
+    expect(total && total.tipo === 'estilo' ? [total.alto, total.texto.endsWith('$590.00')] : null).toEqual([2, true])
+  })
+
+  it('el nombre del encargo va al doble de ancho y cabe aunque sea largo', () => {
+    const l = armarTicket({ ...venta, clienteNombre: 'María Fernanda Cáceres Pech (encargo #1043)' }, NEGOCIO_DEFAULT)
+    const nombre = l.filter((x) => typeof x !== 'string' && x.tipo === 'estilo' && x.ancho === 2 && x.negrita)
+    expect(nombre.length).toBeGreaterThan(1) // se partió, no se cortó
+    expect(l.every((x) => columnas(x) <= COLUMNAS_80MM)).toBe(true)
+    expect(texto(l).join(' ')).toContain('Cáceres Pech')
   })
 
   it('el importe queda pegado al borde derecho', () => {
@@ -110,7 +135,8 @@ describe('armarTicket (líneas de la térmica)', () => {
     const l = texto(armarTicket(venta, NEGOCIO_DEFAULT))
     expect(l.some((x) => x.includes('Rosa M.'))).toBe(false)
     const con = texto(armarTicket(venta, { ...NEGOCIO_DEFAULT, mostrarCajero: true }))
-    expect(con.some((x) => x.includes('Caja: Rosa M.'))).toBe(true)
+    // Va junto al canal, como en la muestra: «Mostrador · Rosa M.».
+    expect(con.some((x) => x.includes('· Rosa M.'))).toBe(true)
   })
 
   it('cada aviso va en su renglón, y uno en blanco no gasta papel', () => {

@@ -38,6 +38,9 @@ importers:
       '@lily/types':
         specifier: workspace:*
         version: link:../../packages/types
+      '@lily/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       '@lily/utils':
         specifier: workspace:*
         version: link:../../packages/utils

@@ -132,6 +132,7 @@ export type Database = {
           empleado_apertura_id: string | null
           empleado_cierre_id: string | null
           estado: Database["public"]["Enums"]["estado_corte"]
+          folio: number
           fondo_inicial: number
           id: string
           notas: string | null
@@ -146,6 +147,7 @@ export type Database = {
           empleado_apertura_id?: string | null
           empleado_cierre_id?: string | null
           estado?: Database["public"]["Enums"]["estado_corte"]
+          folio?: number
           fondo_inicial?: number
           id?: string
           notas?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           empleado_apertura_id?: string | null
           empleado_cierre_id?: string | null
           estado?: Database["public"]["Enums"]["estado_corte"]
+          folio?: number
           fondo_inicial?: number
           id?: string
           notas?: string | null

@@ -85,3 +85,52 @@ export async function resumenCorte(sb: ClienteLily, corteId: string): Promise<Co
   if (error) throw error
   return data
 }
+
+// ------------------------------ los cortes -------------------------------
+
+/** Un turno, tal cual lo devuelve `fn_cortes_de_caja`: resumen + desglose + quién. */
+export interface CorteDeCaja {
+  corte_id: string
+  folio: number
+  caja: string | null
+  estado: 'abierta' | 'cerrada'
+  abierto_en: string
+  cerrado_en: string | null
+  abrio: string | null
+  cerro: string | null
+  fondo_inicial: number
+  num_ordenes: number
+  total_efectivo: number
+  total_tarjeta: number
+  total_clip: number
+  total_cortesia: number
+  total_otro: number
+  total_pagado: number
+  efectivo_esperado: number
+  efectivo_contado: number | null
+  diferencia: number | null
+  conteo_apertura: unknown
+  conteo_cierre: unknown
+  notas: string | null
+}
+
+/**
+ * El historial de cortes entre dos fechas (del negocio, en Mérida).
+ *
+ * Hasta hoy se cerraba el turno y no había dónde mirarlo: el arqueo existía
+ * en la pantalla de la caja y desaparecía al dar «Seguir». Aquí queda, con
+ * la diferencia y —lo que de verdad sirve para reclamar— cuántos billetes de
+ * cada denominación había.
+ */
+export async function cortesDeCaja(sb: ClienteLily, desde: string, hasta: string): Promise<CorteDeCaja[]> {
+  return (await rpc<CorteDeCaja[] | null>(sb, 'fn_cortes_de_caja', { p_desde: desde, p_hasta: hasta })) ?? []
+}
+
+/**
+ * Manda el corte a la térmica del mostrador desde Admin —desde el teléfono,
+ * sin nadie frente a la PC—. Devuelve el id del trabajo, o `null` si la
+ * tienda no tiene térmica dada de alta: Admin lo dice en vez de fingir.
+ */
+export async function imprimirCorteEnCaja(sb: ClienteLily, corteId: string): Promise<string | null> {
+  return rpc<string | null>(sb, 'fn_corte_imprimir_caja', { p_corte_id: corteId, p_clave: null })
+}

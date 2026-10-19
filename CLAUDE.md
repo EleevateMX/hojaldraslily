@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **208 migraciones aplicadas en orden, y 208
+`fzkdgqqvfkogmxdgqsxj` tiene **209 migraciones aplicadas en orden, y 209
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -604,6 +604,9 @@ empaquetador y se desvían solas:
 | Abrir la tienda | Nada: la PC arranca todo sola |
 | Abrir/cerrar caja o cambiar turno | En la **caja**: entrar con PIN → «Abrir caja» contando el cajón; «Corte de caja» para cerrar. Al cerrar, el corte **sale solo en la térmica** si hay una dada de alta |
 | Cambiar el teléfono, la dirección o los avisos del ticket | Admin → **Sistema** → «Lo que dice el ticket». El siguiente ticket ya sale así; no se toca la PC |
+| Revisar un corte de otro día, o saber cuántos billetes había | Admin → **Cortes de caja**. Se toca el renglón y abajo sale el desglose del cajón al abrir y al cerrar, las ventas por método y las notas |
+| Volver a sacar el papel de un corte | Admin → **Cortes de caja** → **Reimprimir en la térmica** (sale en el mostrador) o **Imprimir / guardar PDF** (desde donde sea, para mandarlo por WhatsApp) |
+| Instalar o actualizar la PC de la tienda | Admin → **Descargas**. Arriba dice si cada agente está al día; abajo están los `.bat`. El único permiso que pide es el de administrador, una vez |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Guardar una pieza para después (cambio de temporada) | Admin → **Menús del día** → **Ver las piezas** → **Guardar para después**. No le quita el precio ni la receta: en enero se guarda el Pan de Muerto y se saca la Rosca de Reyes |
 | Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto —mostrador y Rappi—; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
@@ -1121,6 +1124,57 @@ están leídos uno por uno, no supuesto.
 
 Y lo que más resuelve no es esto: es **un segundo internet** (4G con
 failover). Esto es para cuando también falla ese.
+
+### 2.10 La nota, el comprobante del corte y las descargas
+
+**La nota tiene el estilo del diseño de la casa** (`muestras/ticket.png`,
+`muestras/brief-ticket.md`): nombre al doble, «Sucursal Miguel Alemán», el
+folio **invertido y grande** (`#1042` en blanco sobre negro), fecha y
+`canal · cajero` a la derecha, el bloque «ENCARGO PARA» con el nombre al
+doble, el TOTAL alto en negrita, y el pie con la leyenda y los avisos. Para
+eso `armarTicket` ya no devuelve solo cadenas: `LineaTicket` es `string |
+MarcaQr | MarcaEstilo`, y la marca trae `ancho`, `alto`, `negrita`,
+`invertido` y `alinear`. **La marca se abre y se cierra en la misma línea**
+(`dibujar()` en el agente): un estado abierto es cómo medio ticket sale al
+doble sin que nadie lo pidiera, y en térmica no hay vista previa que avise.
+El HTML del navegador (`ticketHTML`) y el papel (`armarTicket`) siguen
+comiendo el mismo `TicketData`, y `texto()` en las pruebas aplana las marcas
+para seguir comparando renglones.
+
+Ojo con las pruebas que miden el ancho del papel: los códigos de estilo
+(`ESC a`, `ESC E`, `GS !`, `GS B`) son de **tres bytes y el de en medio es
+una letra imprimible**. Quitar solo los bytes de control deja la «a» de
+alinear contada como texto y la prueba de 58 mm falla sin que la línea se
+pase de verdad. Se quitan las secuencias enteras.
+
+**Los datos se personalizan en Admin, no en el código.** `parametros.ticket`
+(Admin → Sistema → «Lo que dice el ticket») viaja **dentro de cada trabajo**
+(`negocio`), así una reimpresión de mañana sale con los datos de hoy y un
+cambio de teléfono no toca la PC. Lo que no esté puesto lo completa
+`NEGOCIO_DEFAULT`; la caja lo carga al abrir, con respaldo para sin internet.
+
+**El corte tiene folio y se puede volver a ver.** `caja_cortes.folio` es
+`serial` (un uuid no se canta por teléfono). `fn_cortes_de_caja(desde,
+hasta)` da el historial con el desglose del cajón al abrir y al cerrar;
+`fn_corte_payload` arma el papel **una sola vez** para el cierre
+(`fn_cerrar_caja`) y para la reimpresión (`fn_corte_imprimir_caja`, que
+devuelve `null` si no hay térmica dada de alta, y Admin lo dice en vez de
+fingir). El PDF del navegador (`corteHTML`) y la térmica (`armarCorte`)
+comen el mismo `CorteData`. La pantalla se revisa con
+`apps/admin/mirar/cortes.html`, que le da de comer una semana con un corte
+que cuadra, uno con faltante, uno con sobrante y el de hoy abierto — por eso
+`Cortes` acepta una `fuente` opcional.
+
+**Las descargas se sirven desde Admin**, no desde GitHub:
+`scripts/copiar-descargas.mjs` copia los cuatro `.bat` a
+`apps/admin/public/descargas/` en cada build (la carpeta va en `.gitignore`:
+dos copias del mismo `.bat` se separan en cuanto alguien toca una) y deja
+`version.json` con la versión de los dos agentes, que Admin compara contra el
+latido de cada impresora. `_headers` pone `Content-Disposition: attachment`
+y `no-store` en esa ruta. **Solo `.bat`, nunca `.ps1`**: un `.ps1` bajado
+del navegador no abre de doble clic. Ojo: los `.bat` siguen apuntando a
+`raw.githubusercontent.com/.../main`, y este repo **todavía no tiene
+`main`** — hasta que exista, el instalador no encuentra qué bajar.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

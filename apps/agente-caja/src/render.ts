@@ -15,7 +15,7 @@
 // arrastra los componentes de React y el `imprimirTicket` que toca
 // `document`, y aquí no hay navegador. `tsc` lo caza aunque el import sea
 // solo de tipos.
-import { armarTicket, armarCorte, COLUMNAS_80MM } from '@lily/ui/papel'
+import { armarTicket, armarCorte, COLUMNAS_80MM, type LineaTicket } from '@lily/ui/papel'
 import type { TicketData, TicketNegocio, CorteData } from '@lily/ui/tipos'
 import { ConstructorEscPos, type LogoRaster } from './escpos.js'
 
@@ -123,9 +123,7 @@ export function construirDocumento(
 
   if (esPayloadDeCorte(trabajo.payload)) {
     const b = new ConstructorEscPos().inicializar().alinear(0)
-    for (const l of armarCorte(trabajo.payload, neg, ancho)) {
-      if (typeof l === 'string') b.linea(l)
-    }
+    for (const l of armarCorte(trabajo.payload, neg, ancho)) dibujar(b, l)
     return b.cortar().construir()
   }
 
@@ -140,16 +138,39 @@ export function construirDocumento(
   if (logo) b.alinear(1).logo(logo).linea()
 
   b.alinear(0)
-  for (const l of armarTicket(trabajo.payload, neg, ancho)) {
-    if (typeof l === 'string') { b.linea(l); continue }
+  for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l)
+
+  return b.cortar().construir()
+}
+
+/**
+ * Una línea del papel, sea texto, marca de estilo o QR.
+ *
+ * La marca de estilo se abre, se imprime la línea y se CIERRA en el mismo
+ * paso: tamaño normal, sin negrita, sin invertir, a la izquierda. Dejar un
+ * estado abierto es cómo medio ticket sale al doble de tamaño sin que nadie
+ * lo pidiera — y en térmica no hay vista previa que lo avise.
+ */
+function dibujar(b: ConstructorEscPos, l: LineaTicket): void {
+  if (typeof l === 'string') { b.linea(l); return }
+  if (l.tipo === 'qr') {
     // Marca de QR: la impresora lo genera nativamente, así no hay que
     // rasterizarlo de este lado y mandarlo por un buffer chico.
     b.alinear(1)
     qr(b, l.contenido)
     b.alinear(0)
+    return
   }
-
-  return b.cortar().construir()
+  const alinear = l.alinear === 'centro' ? 1 : l.alinear === 'der' ? 2 : 0
+  b.alinear(alinear)
+  b.tamano(l.ancho ?? 1, l.alto ?? 1)
+  if (l.negrita) b.negrita(true)
+  if (l.invertido) b.invertir(true)
+  b.linea(l.texto)
+  if (l.invertido) b.invertir(false)
+  if (l.negrita) b.negrita(false)
+  b.tamano(1, 1)
+  b.alinear(0)
 }
 
 /** QR nativo ESC/POS: `GS ( k`. Modelo 2, corrección M. */

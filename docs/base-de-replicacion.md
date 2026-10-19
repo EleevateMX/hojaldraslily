@@ -185,6 +185,8 @@ el catálogo y no aparece en ninguna pantalla de almacén.
 | Sumar el cajón | `fn_suma_conteo(jsonb)`, en el **servidor** |
 | El corte | `vw_corte_resumen`, **calculado en vivo**, nunca guardado |
 | El desglose del mixto | `vw_pagos_por_metodo`: da las **partes** si las hay, y el pago entero si no |
+| El historial de cortes | `fn_cortes_de_caja(desde, hasta)` — con folio (`caja_cortes.folio serial`), quién abrió y cerró, y el desglose del cajón en los dos momentos |
+| El papel del corte | `fn_corte_payload(corte)` lo arma **una vez**; lo usan `fn_cerrar_caja` al cerrar y `fn_corte_imprimir_caja(corte)` al reimprimir desde Admin (`null` si no hay térmica) |
 
 > **Hasta hoy esas dos eran un `insert` y un `update` directos a la tabla**,
 > así que cualquiera con la llave publicable podía abrir un turno, cerrarlo o
@@ -396,6 +398,9 @@ Tres cosas que hay que saber para leer el resultado:
 | Impresiones | **El ticket encolado a la térmica**, con el mismo módulo que la pantalla |
 | Impresiones | Código de instalación, instalador que espera el latido, los dos agentes |
 | Impresiones | **El corte sale solo en la térmica al cerrar**, y los datos del ticket se editan en Admin y viajan dentro de cada trabajo |
+| Impresiones | **La nota con el estilo del diseño** (folio invertido, nombre y total al doble, «ENCARGO PARA») con marcas de estilo que el agente abre y cierra en la misma línea |
+| Caja | **Admin → Cortes de caja**: historial con folio, desglose billete por billete, reimpresión en la térmica y PDF del navegador, los dos del mismo `CorteData` |
+| Impresiones | **Admin → Descargas**: los `.bat` servidos desde el propio dominio, con la versión de los dos agentes comparada contra el latido |
 | Seguridad | **El cobro exige sesión**: ~40 funciones y cinco políticas `using (true)` cerradas cuando la casa decidió vender solo desde la caja; verificado con `set role anon` |
 
 ### Lo que falta, por orden de lo que duele
