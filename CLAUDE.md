@@ -85,6 +85,9 @@ Cloudflare Pages por GitHub Actions al hacer push a `main`.
 | `admin` | `admin.hojaldraslily.com` | Gerencia |
 | `costos` | `costos.hojaldraslily.com` | Costeo e inventario (HTML plano) |
 
+Y **dos programas** que corren en la PC de la tienda, no en la nube:
+`agente-impresion/` (comandas, TSPL) y `apps/agente-caja/` (tickets, ESC/POS).
+
 Los dominios de la tabla son el plan para Lily; los proyectos de
 Cloudflare Pages (`lily-*` en el workflow) se crean solos en el primer
 deploy con los secretos configurados. `api.hojaldraslily.com` (dominio
@@ -386,6 +389,26 @@ HTML en un marco oculto y llama `window.print()`: va de Chrome a la impresora
 **predeterminada de Windows**, sin agente, sin cola y sin etiquetadoras. Es lo
 que permite arrancar la tienda con **solo caja y tickets** mientras las
 estaciones siguen pendientes (`docs/hardware-caja.md`).
+
+**Y ya existe el camino para quitarle eso.** `apps/agente-caja/` es el segundo
+programa de la PC: reclama de la misma cola los trabajos de tipo `ticket`, los
+imprime por ESC/POS en el puerto 9100 y los confirma — así un ticket que no
+salió **se ve en Admin**, en vez de irse callado a un PDF. Está portado del
+agente de Shakeaholic, que ya lleva meses imprimiendo, y probado con seis
+pruebas que miran los bytes (la página de códigos, el avance antes del corte,
+latin1 en los acentos y que un payload roto reviente ruidosamente).
+
+**Falta encenderlo**: hoy **nadie encola tickets**, la caja los sigue
+mandando por el navegador. El agente está listo y sin trabajo que hacer.
+Encolar antes de que haya impresora instalada sería peor — una cola que crece
+y nadie vacía.
+
+**Las líneas del papel las arma `@lily/ui`, no el agente** — el mismo módulo
+que pinta el ticket en pantalla. Por eso el agente vive en `apps/` y no junto
+al de etiquetas: si cada uno tuviera su propio formateador, la vista previa
+dejaría de coincidir con el papel a la primera modificación y nadie se
+enteraría hasta que un cliente reclame. Son **dos renderizadores y UN dato**
+(`TicketData`), con una prueba que compara sus totales.
 
 Dos consecuencias que hay que respetar:
 
@@ -707,6 +730,14 @@ empaquetador y se desvían solas:
   (fue el rojo del login de Rewards).
 - En el kiosko, las imágenes van como fondo CSS y el menú contextual está
   apagado: si no, mantener el dedo sobre la hojaldra abre "buscar imagen".
+- **Un `import type` sí lo sigue el compilador, aunque no llegue al bundle.**
+  El agente de tickets corre en Node y solo quería los tipos del ticket, que
+  vivían en `packages/ui/src/ticket.ts` — el mismo archivo que tiene
+  `imprimirTicket` y toca `document`. `tsc` siguió el `import type` hasta ahí
+  y reventó con «Cannot find name 'document'». Se arregló partiendo los tipos
+  y los datos a `ticketTipos.ts` (sin una línea de navegador) y publicando
+  `@lily/ui/papel` y `@lily/ui/tipos` en `exports`. Quien corra en Node importa
+  esos, nunca el índice: el índice arrastra React.
 - **Lo que importa `vite.config.ts` lo carga Node, no Vite.** Vite empaqueta
   la config pero deja fuera lo que vive en `node_modules`, y pnpm mete ahí
   los paquetes del monorepo como enlaces — así que Node termina abriendo el
@@ -968,6 +999,7 @@ explican por qué una pantalla tiene la forma que tiene.
 pnpm --filter @lily/<app> build   # compila y verifica tipos
 pnpm -r test                       # pruebas de packages
 cd agente-impresion && npx vitest run
+pnpm --filter @lily/ui exec vitest run src/mirarElPapel.test.ts  # ver el ticket
 node scripts/verificar-scripts-ascii.mjs
 ```
 

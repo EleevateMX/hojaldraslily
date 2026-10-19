@@ -16,5 +16,10 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./papel": "./src/ticketLineas.ts",
+    "./tipos": "./src/ticketTipos.ts"
   }
 }

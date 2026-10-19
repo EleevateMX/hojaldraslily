@@ -33,7 +33,7 @@
  * cabe, y si no cabe se envuelve.
  */
 
-import type { TicketData, TicketNegocio, TicketItem } from './ticket'
+import type { TicketData, TicketNegocio, TicketItem } from './ticketTipos'
 
 /** FontA en papel de 80 mm. Es el que usa la casa. */
 export const COLUMNAS_80MM = 48
