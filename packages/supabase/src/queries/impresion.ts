@@ -23,10 +23,22 @@ async function rpc<T>(sb: ClienteLily, fn: string, args: Record<string, unknown>
  */
 export type ImpresoraAdmin = Omit<Impresora, 'agente_token'> & { conectada: boolean }
 
+/**
+ * Para qué sirve esta impresora.
+ *
+ * `comandas` es una etiquetadora TSPL de una estación; `tickets` es la
+ * térmica ESC/POS del mostrador, la que atiende `apps/agente-caja`. Va
+ * escrito en la base y no se adivina por «no tiene estación»: el día que
+ * alguien diera de alta una etiquetadora sin estación, el ticket del cliente
+ * saldría en la de producción.
+ */
+export type RolImpresora = 'comandas' | 'tickets'
+
 export interface ImpresoraInsertDatos {
   sucursal_id: string
   nombre: string
   cocina_id: string | null
+  rol: RolImpresora
   tipo_conexion: TipoConexionImpresora
   ip: string | null
   puerto: number | null
@@ -57,6 +69,7 @@ export async function crearImpresora(sb: ClienteLily, datos: ImpresoraInsertDato
     p_copias: datos.copias,
     p_corte_automatico: datos.corte_automatico,
     p_buzzer: datos.buzzer,
+    p_rol: datos.rol,
   })
   return filas[0]
 }
@@ -79,6 +92,7 @@ export async function actualizarImpresora(
     p_copias: cambios.copias,
     p_corte_automatico: cambios.corte_automatico,
     p_buzzer: cambios.buzzer,
+    p_rol: cambios.rol,
   })
 }
 
@@ -100,6 +114,34 @@ export async function activarImpresora(sb: ClienteLily, id: string, activa: bool
  */
 export async function mandarPruebaDeImpresion(sb: ClienteLily, impresoraId: string): Promise<void> {
   await rpc(sb, 'fn_imprimir_prueba_staff', { p_impresora_id: impresoraId })
+}
+
+/**
+ * Manda el ticket de una venta a la térmica del mostrador.
+ *
+ * Devuelve el id del trabajo, o **null** si esta sucursal todavía no tiene
+ * térmica dada de alta. Ese null es la respuesta importante: la caja lo lee
+ * como «imprime tú por el navegador, como hasta hoy». Encolar sin impresora
+ * instalada sería peor que no encolar — una cola que crece y nadie vacía es
+ * un indicador que no vuelve a verde.
+ *
+ * Lo que viaja es el `TicketData` entero, no las líneas ya formadas: las 48
+ * columnas las arma `@lily/ui/papel` del lado del agente, el mismo módulo
+ * que pinta la vista previa. Dos formateadores para un mismo papel es
+ * exactamente lo que se evitó al escribir el agente.
+ *
+ * Es idempotente por orden: el doble toque del cajero, o un reintento tras
+ * un timeout, no sacan dos tickets.
+ */
+export async function encolarTicketCaja(
+  sb: ClienteLily,
+  ordenId: string,
+  ticket: unknown,
+): Promise<string | null> {
+  return rpc<string | null>(sb, 'fn_imprimir_ticket_caja', {
+    p_orden_id: ordenId,
+    p_ticket: ticket,
+  })
 }
 
 /** Rota el token de una impresora (sospecha de compromiso, o se perdió printers.config.json). Devuelve el nuevo token UNA vez. */

@@ -25,6 +25,7 @@ import { createClient } from '@supabase/supabase-js'
 // Del submódulo sin DOM, no del índice de `@lily/ui`: ese arrastra React y
 // el `imprimirTicket` que toca `document`, y aquí no hay navegador.
 import { NEGOCIO_DEFAULT, type TicketNegocio } from '@lily/ui/tipos'
+import { COLUMNAS_80MM, COLUMNAS_58MM } from '@lily/ui/papel'
 import { construirDocumento, type TrabajoCaja } from './render.js'
 import { enviar, estaViva } from './socket.js'
 
@@ -44,6 +45,9 @@ const SUPABASE_ANON_KEY = requerido('SUPABASE_ANON_KEY')
 const TOKEN = requerido('IMPRESORA_TOKEN')
 const HOST = requerido('IMPRESORA_HOST')
 const PUERTO = Number(process.env.IMPRESORA_PUERTO || 9100)
+// El ancho del papel decide las columnas, y equivocarse no da error: el
+// sobrante se tira al siguiente renglón y el ticket se desalinea entero.
+const ANCHO = process.env.IMPRESORA_ANCHO?.trim() === '58mm' ? COLUMNAS_58MM : COLUMNAS_80MM
 const AGENTE_ID = process.env.AGENTE_ID?.trim() || 'agente-caja-01'
 const POLL_MS = Number(process.env.POLL_INTERVALO_SEGUNDOS || 3) * 1000
 const LATIDO_MS = Number(process.env.LATIDO_INTERVALO_SEGUNDOS || 30) * 1000
@@ -84,7 +88,7 @@ async function cicloDeImpresion(): Promise<void> {
     const trabajos = (data ?? []) as TrabajoCaja[]
     for (const t of trabajos) {
       try {
-        const bytes = construirDocumento(t, datosDelNegocio(), null)
+        const bytes = construirDocumento(t, datosDelNegocio(), null, ANCHO)
         await enviar(bytes, HOST, PUERTO)
         const { error: e } = await sb.rpc('fn_imprimir_confirmar', {
           p_token: TOKEN,
@@ -119,7 +123,7 @@ async function latir(): Promise<void> {
 async function arrancar(): Promise<void> {
   console.log('')
   console.log('  Hojaldras Lily — agente de tickets de caja')
-  console.log(`  version ${VERSION} · impresora ${HOST}:${PUERTO}`)
+  console.log(`  version ${VERSION} · impresora ${HOST}:${PUERTO} · ${ANCHO} columnas`)
   console.log('')
 
   // Se comprueba la impresora ANTES de ponerse a reclamar trabajos. Arrancar

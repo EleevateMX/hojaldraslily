@@ -28,6 +28,7 @@ color 0A
 
 set "BASE=C:\Hojaldras Lily"
 set "AGENTE=%BASE%\agente-impresion\arrancar-agente.bat"
+set "AGENTECAJA=%BASE%\agente-caja\iniciar.bat"
 set "PANTALLAS=%BASE%\pantallas.ps1"
 set "CRUDO=https://raw.githubusercontent.com/EleevateMX/hojaldraslily/main"
 
@@ -77,6 +78,30 @@ if not errorlevel 1 (
     echo   [!] El agente de impresion no esta instalado en esta PC.
     echo       Las pantallas abren igual, pero NO saldra papel.
     echo       Para instalarlo: instalar-todo.bat
+  )
+)
+
+REM ---------------------------------------------------------------------------
+REM 2b. Agente de TICKETS - el otro programa, el de la termica del mostrador
+REM ---------------------------------------------------------------------------
+REM  Son dos programas y corren a la vez a proposito: si uno se cae, el otro
+REM  sigue imprimiendo. Una etiquetadora atorada no puede dejar al mostrador
+REM  sin tickets, ni al reves.
+REM
+REM  Si no esta instalado, la caja sigue sacando el ticket por el navegador
+REM  (a la impresora predeterminada de Windows). Funciona, pero ahi un ticket
+REM  que se va a un PDF no levanta ningun error.
+tasklist /v /fi "imagename eq cmd.exe" 2>nul | find /i "Hojaldras Lily - agente de tickets" >nul
+if not errorlevel 1 (
+  echo   [OK] El agente de tickets ya estaba corriendo.
+) else (
+  if exist "%AGENTECAJA%" (
+    echo   Arrancando el agente de tickets...
+    start "" "%AGENTECAJA%"
+    echo   [OK] Agente de tickets arrancado.
+  ) else (
+    echo   [i] El agente de tickets no esta instalado. El ticket del cliente
+    echo       sale por el navegador, a la impresora predeterminada.
   )
 )
 

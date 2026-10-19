@@ -45,11 +45,54 @@ export function esPayloadDeTicket(p: unknown): p is TicketData {
   )
 }
 
+/**
+ * La prueba de impresión de Admin.
+ *
+ * Es el MISMO payload `prueba: true` que el agente de etiquetas ya sabe
+ * dibujar. Inventarle un tipo propio obligaría a actualizar el agente de la
+ * tienda antes de poder probar nada — y esa conversación («tu agente es
+ * viejo y no sabe imprimir esto») es justo la que una prueba de impresión
+ * viene a evitar.
+ */
+export interface PayloadPrueba {
+  prueba: true
+  impresora?: string
+  hora?: string
+}
+
+export function esPayloadDePrueba(p: unknown): p is PayloadPrueba {
+  return !!p && typeof p === 'object' && (p as { prueba?: unknown }).prueba === true
+}
+
+function construirPrueba(p: PayloadPrueba, ancho: number): Buffer {
+  const b = new ConstructorEscPos().inicializar().alinear(1)
+  const centrar = (s: string) =>
+    s.length >= ancho ? s.slice(0, ancho) : ' '.repeat(Math.floor((ancho - s.length) / 2)) + s
+
+  b.linea('='.repeat(ancho))
+  b.linea(centrar('PRUEBA DE IMPRESION'))
+  b.linea('='.repeat(ancho))
+  b.linea()
+  if (p.impresora) b.linea(centrar(p.impresora))
+  b.linea(centrar(new Date(p.hora ?? Date.now()).toLocaleString('es-MX', { timeZone: 'America/Merida' })))
+  b.linea()
+  // Las acentuadas van a propósito: si salen con basura, la página de
+  // códigos está mal y se ve AQUÍ, no en el ticket de un cliente.
+  b.linea(centrar('Si lees esto, la cadena completa sirve:'))
+  b.linea(centrar('base, cola, agente, red e impresora.'))
+  b.linea()
+  b.linea(centrar('Acentos: áéíóú ñÑ ¿? ¡! °'))
+  return b.cortar().construir()
+}
+
 export function construirDocumento(
   trabajo: TrabajoCaja,
   negocio: TicketNegocio,
   logo: LogoRaster | null,
+  ancho: number = COLUMNAS_80MM,
 ): Buffer {
+  if (esPayloadDePrueba(trabajo.payload)) return construirPrueba(trabajo.payload, ancho)
+
   if (!esPayloadDeTicket(trabajo.payload)) {
     throw new Error(
       `El trabajo ${trabajo.id} no trae un ticket que se pueda imprimir ` +
@@ -61,7 +104,7 @@ export function construirDocumento(
   if (logo) b.alinear(1).logo(logo).linea()
 
   b.alinear(0)
-  for (const l of armarTicket(trabajo.payload, negocio, COLUMNAS_80MM)) {
+  for (const l of armarTicket(trabajo.payload, negocio, ancho)) {
     if (typeof l === 'string') { b.linea(l); continue }
     // Marca de QR: la impresora lo genera nativamente, así no hay que
     // rasterizarlo de este lado y mandarlo por un buffer chico.

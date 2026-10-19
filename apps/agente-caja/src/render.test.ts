@@ -57,6 +57,34 @@ describe('construirDocumento', () => {
       .toThrow(/no trae un ticket/)
   })
 
+  // La prueba de Admin reusa el payload `prueba: true` que el agente de
+  // etiquetas ya conocía. Si en vez de dibujarla reventara, el botón
+  // «Probar» de la térmica no serviría para nada — que es justo lo que se
+  // viene a arreglar.
+  it('la prueba de impresion sale, no revienta', () => {
+    const b = construirDocumento(
+      trabajo({ prueba: true, impresora: 'Caja mostrador', hora: '2026-10-19T20:26:00Z' }),
+      NEGOCIO_DEFAULT,
+      null,
+    )
+    expect(b.toString('latin1')).toContain('PRUEBA DE IMPRESION')
+    expect(b.toString('latin1')).toContain('Caja mostrador')
+    // Y las acentuadas en latin1, igual que el ticket: si salen con basura,
+    // la pagina de codigos esta mal y se ve en la prueba, no con un cliente
+    // enfrente.
+    expect(hex(b)).toContain(Buffer.from('áéíóú', 'latin1').toString('hex'))
+    expect(hex(b).endsWith('1b6406' + '1d5601')).toBe(true)
+  })
+
+  it('a 58 mm ninguna linea se pasa del papel', () => {
+    const b = construirDocumento(trabajo(venta), NEGOCIO_DEFAULT, null, 32)
+    const texto = b.toString('latin1')
+    // Se miran solo los renglones de texto, sin los comandos del principio
+    // y del final.
+    const largas = texto.split('\n').slice(1, -1).filter((l) => l.replace(/[\x00-\x1f]/g, '').length > 32)
+    expect(largas).toEqual([])
+  })
+
   it('esPayloadDeTicket distingue lo imprimible', () => {
     expect(esPayloadDeTicket(venta)).toBe(true)
     expect(esPayloadDeTicket(null)).toBe(false)

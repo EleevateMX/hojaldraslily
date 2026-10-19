@@ -6,7 +6,8 @@ import {
   listarOrdenesPendientesCajaConItems, cobrarOrden, suscribirOrdenesPendientesCaja,
   type OrdenConItems,
 } from '@lily/supabase'
-import { imprimirTicket, type TicketData } from '@lily/ui'
+import { type TicketData } from '@lily/ui'
+import { sacarTicket } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
 
@@ -77,7 +78,7 @@ export function PedidosPendientes() {
         })),
         metodoPago: METODOS.find((m) => m.key === metodo)?.label ?? metodo,
       }
-      imprimirTicket(ticket)
+      await sacarTicket(ordenSeleccionada.id, ticket)
 
       setOrdenSeleccionada(null)
       await cargar()

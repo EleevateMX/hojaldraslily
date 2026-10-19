@@ -1038,6 +1038,7 @@ export type Database = {
           nombre: string
           nombre_dispositivo: string | null
           puerto: number | null
+          rol: string
           sucursal_id: string
           tipo_conexion: Database["public"]["Enums"]["tipo_conexion_impresora"]
           ultima_conexion: string | null
@@ -1059,6 +1060,7 @@ export type Database = {
           nombre: string
           nombre_dispositivo?: string | null
           puerto?: number | null
+          rol?: string
           sucursal_id: string
           tipo_conexion?: Database["public"]["Enums"]["tipo_conexion_impresora"]
           ultima_conexion?: string | null
@@ -1080,6 +1082,7 @@ export type Database = {
           nombre?: string
           nombre_dispositivo?: string | null
           puerto?: number | null
+          rol?: string
           sucursal_id?: string
           tipo_conexion?: Database["public"]["Enums"]["tipo_conexion_impresora"]
           ultima_conexion?: string | null
@@ -3579,6 +3582,7 @@ export type Database = {
           p_nombre: string
           p_nombre_dispositivo: string
           p_puerto: number
+          p_rol?: string
           p_tipo_conexion: Database["public"]["Enums"]["tipo_conexion_impresora"]
         }
         Returns: undefined
@@ -3600,6 +3604,7 @@ export type Database = {
         Returns: {
           activa: boolean
           agente_id: string
+          agente_version: string
           ancho_papel: Database["public"]["Enums"]["ancho_papel"]
           buzzer: boolean
           cocina_id: string
@@ -3612,6 +3617,7 @@ export type Database = {
           nombre: string
           nombre_dispositivo: string
           puerto: number
+          rol: string
           sucursal_id: string
           tipo_conexion: Database["public"]["Enums"]["tipo_conexion_impresora"]
           ultima_conexion: string
@@ -3938,6 +3944,7 @@ export type Database = {
           p_nombre: string
           p_nombre_dispositivo?: string
           p_puerto?: number
+          p_rol?: string
           p_sucursal_id: string
           p_tipo_conexion: Database["public"]["Enums"]["tipo_conexion_impresora"]
         }
@@ -4494,6 +4501,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      fn_imprimir_ticket_caja: {
+        Args: { p_orden_id: string; p_ticket: Json }
+        Returns: string
       }
       fn_imprimir_reclamar_trabajos: {
         Args: { p_agente: string; p_limite?: number; p_token: string }

@@ -8,7 +8,8 @@ import {
   cobrarOrdenMixto,
   entregarEncargoConVenta,
 } from '@lily/supabase'
-import { imprimirTicket, type TicketData } from '@lily/ui'
+import { type TicketData } from '@lily/ui'
+import { sacarTicket } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
 
@@ -97,6 +98,9 @@ export function Cobro() {
       const conTarjeta = mixto ? tarjetaMixto : metodo === 'efectivo' ? 0 : totalNeto
 
       let folio: number
+      // El id de la orden, para mandarle el ticket a la térmica. Si queda en
+      // null, el papel sale por el navegador como hasta hoy.
+      let ordenId: string | null = null
 
       if (encargo) {
         /**
@@ -126,6 +130,7 @@ export function Cobro() {
           items.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })),
         )
         folio = r.folio
+        ordenId = r.orden_id
       } else {
         const orden = await crearOrden(
           sb,
@@ -146,6 +151,7 @@ export function Cobro() {
           })),
         )
         folio = orden.folio
+        ordenId = orden.id
         // Cobro inmediato aprobado → el trigger descuenta inventario y manda a
         // cocina. `idempotencyKey`: si esta llamada se reintenta (timeout de
         // red, doble toque) la base devuelve el mismo pago en vez de crear uno
@@ -201,7 +207,7 @@ export function Cobro() {
         referenciaPago: referencia.trim() || null,
         recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
       }
-      imprimirTicket(ticket)
+      await sacarTicket(ordenId, ticket)
 
       limpiarOrden()
       navigate('/', { replace: true })

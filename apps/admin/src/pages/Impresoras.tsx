@@ -4,7 +4,7 @@ import {
   listarImpresoras, crearImpresora, actualizarImpresora, activarImpresora, rotarTokenImpresora, listarCocinasParaImpresoras,
   mandarPruebaDeImpresion,
   listarTrabajosImpresion, suscribirTrabajosImpresion, reimprimirTrabajo,
-  listarAlmacenes, type ImpresoraAdmin,
+  listarAlmacenes, type ImpresoraAdmin, type RolImpresora,
 } from '@lily/supabase'
 import type { Cocina, TrabajoImpresion, TipoConexionImpresora, AnchoPapel, EstadoTrabajoImpresion } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
@@ -13,6 +13,7 @@ import { mensajeDeError } from '@lily/utils'
 interface FormState {
   id: string | null
   nombre: string
+  rol: RolImpresora
   cocina_id: string
   tipo_conexion: TipoConexionImpresora
   ip: string
@@ -24,7 +25,7 @@ interface FormState {
   buzzer: boolean
 }
 const VACIO: FormState = {
-  id: null, nombre: '', cocina_id: '', tipo_conexion: 'red', ip: '', puerto: '9100',
+  id: null, nombre: '', rol: 'comandas', cocina_id: '', tipo_conexion: 'red', ip: '', puerto: '9100',
   nombre_dispositivo: '', ancho_papel: '80mm', copias: '1', corte_automatico: true, buzzer: false,
 }
 
@@ -45,7 +46,29 @@ const ESTADO_TONO: Record<EstadoTrabajoImpresion, 'si' | 'no' | 'neutral'> = {
  * configurada como ESC/POS no imprime **ni da error** — el trabajo queda
  * marcado como impreso y la comanda desaparece.
  */
-function bloqueConfig(t: { nombre: string; token: string; ip: string | null; puerto: number | null }): string {
+function bloqueConfig(t: {
+  nombre: string
+  token: string
+  ip: string | null
+  puerto: number | null
+  rol: RolImpresora
+  ancho: AnchoPapel
+}): string {
+  // La termica del mostrador la atiende OTRO programa —`apps/agente-caja`—
+  // y ese no lee `printers.config.json`: lee un `.env`. Darle el JSON de las
+  // etiquetadoras seria mandarlo a configurar el archivo equivocado, y el
+  // sintoma seria «pongo el token y no imprime».
+  if (t.rol === 'tickets') {
+    return [
+      'SUPABASE_URL=https://fzkdgqqvfkogmxdgqsxj.supabase.co',
+      'SUPABASE_ANON_KEY=  # la misma que ya usan las pantallas',
+      `IMPRESORA_TOKEN=${t.token}`,
+      `IMPRESORA_HOST=${t.ip ?? '192.168.1.50'}`,
+      `IMPRESORA_PUERTO=${t.puerto ?? 9100}`,
+      `IMPRESORA_ANCHO=${t.ancho}`,
+      'AGENTE_ID=agente-caja-01',
+    ].join('\n')
+  }
   const esEtiquetadora = t.ip != null
   return JSON.stringify(
     {
@@ -54,7 +77,7 @@ function bloqueConfig(t: { nombre: string; token: string; ip: string | null; pue
       token: t.token,
       interface: esEtiquetadora ? `tcp://${t.ip}:${t.puerto ?? 9100}` : 'printer:NOMBRE_EN_WINDOWS',
       lenguaje: esEtiquetadora ? 'tspl' : 'escpos',
-      anchoPapel: '80mm',
+      anchoPapel: t.ancho,
       copias: 1,
       corteAutomatico: false,
       buzzer: false,
@@ -76,7 +99,10 @@ export default function Impresoras() {
   // Se guarda junto con la impresora: el token solo sirve acompañado de la
   // IP y del lenguaje, y pedirle a alguien que arme el JSON a mano es la
   // parte donde esto se rompe.
-  const [tokenVisible, setTokenVisible] = useState<{ nombre: string; token: string; ip: string | null; puerto: number | null } | null>(null)
+  const [tokenVisible, setTokenVisible] = useState<{
+    nombre: string; token: string; ip: string | null; puerto: number | null
+    rol: RolImpresora; ancho: AnchoPapel
+  } | null>(null)
   const [filtroEstado, setFiltroEstado] = useState<EstadoTrabajoImpresion | 'todos'>('todos')
   const [sucursalId, setSucursalId] = useState<string | null>(null)
 
@@ -116,7 +142,10 @@ export default function Impresoras() {
     try {
       const datosComunes = {
         nombre: form.nombre.trim(),
-        cocina_id: form.cocina_id || null,
+        rol: form.rol,
+        // Una termica de tickets no es de ninguna estacion. El servidor lo
+        // vuelve a forzar: aqui es solo para que el formulario no mienta.
+        cocina_id: form.rol === 'tickets' ? null : form.cocina_id || null,
         tipo_conexion: form.tipo_conexion,
         ip: form.tipo_conexion === 'red' ? form.ip.trim() : null,
         puerto: form.tipo_conexion === 'red' ? Number(form.puerto) || 9100 : null,
@@ -138,6 +167,8 @@ export default function Impresoras() {
           token: nueva.agente_token,
           ip: datosComunes.ip,
           puerto: datosComunes.puerto,
+          rol: datosComunes.rol,
+          ancho: datosComunes.ancho_papel,
         })
       }
       setForm(VACIO)
@@ -166,7 +197,10 @@ export default function Impresoras() {
     )) return
     try {
       const nuevoToken = await rotarTokenImpresora(sb, imp.id)
-      setTokenVisible({ nombre: imp.nombre, token: nuevoToken, ip: imp.ip, puerto: imp.puerto })
+      setTokenVisible({
+        nombre: imp.nombre, token: nuevoToken, ip: imp.ip, puerto: imp.puerto,
+        rol: imp.rol as RolImpresora, ancho: imp.ancho_papel,
+      })
       setOk(`Configuración de "${imp.nombre}" lista abajo.`)
     } catch (e) {
       setError(mensajeDeError(e))
@@ -175,7 +209,7 @@ export default function Impresoras() {
 
   function editar(imp: ImpresoraAdmin) {
     setForm({
-      id: imp.id, nombre: imp.nombre, cocina_id: imp.cocina_id ?? '', tipo_conexion: imp.tipo_conexion,
+      id: imp.id, nombre: imp.nombre, rol: imp.rol as RolImpresora, cocina_id: imp.cocina_id ?? '', tipo_conexion: imp.tipo_conexion,
       ip: imp.ip ?? '', puerto: String(imp.puerto ?? 9100), nombre_dispositivo: imp.nombre_dispositivo ?? '',
       ancho_papel: imp.ancho_papel, copias: String(imp.copias), corte_automatico: imp.corte_automatico, buzzer: imp.buzzer,
     })
@@ -206,7 +240,8 @@ export default function Impresoras() {
     try {
       await mandarPruebaDeImpresion(sb, imp.id)
       setOk(
-        `Etiqueta de prueba encolada para ${imp.nombre}. Si en un momento no sale ` +
+        `${imp.rol === 'tickets' ? 'Ticket' : 'Etiqueta'} de prueba encolada para ${imp.nombre}. ` +
+          'Si en un momento no sale ' +
           'papel, revisa que el agente esté abierto en la PC y que la impresora ' +
           'tenga papel y la tapa cerrada.',
       )
@@ -266,11 +301,31 @@ export default function Impresoras() {
           <Field label="Nombre">
             <input className={cx.input} value={form.nombre} onChange={(e) => setForm({ ...form, nombre: e.target.value })} placeholder="Impresora Cocina" />
           </Field>
-          <Field label="Estación">
-            <select className={cx.input} value={form.cocina_id} onChange={(e) => setForm({ ...form, cocina_id: e.target.value })}>
-              <option value="">— Sin asignar —</option>
-              {cocinas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          {/* Para que sirve va ANTES de la estacion, porque decide si la
+              estacion aplica siquiera: la termica del mostrador no es de
+              ninguna. Y decide tambien que programa la atiende. */}
+          <Field label="Para qué sirve">
+            <select
+              className={cx.input}
+              value={form.rol}
+              onChange={(e) => setForm({ ...form, rol: e.target.value as RolImpresora, cocina_id: '' })}
+            >
+              <option value="comandas">Comandas de una estación (etiquetas)</option>
+              <option value="tickets">Tickets del cliente (mostrador)</option>
             </select>
+          </Field>
+          <Field label="Estación">
+            {form.rol === 'tickets' ? (
+              <p className={`text-xs leading-relaxed pt-2.5 ${cx.muted}`}>
+                La del mostrador no es de ninguna estación: saca el ticket del
+                cliente, no comandas.
+              </p>
+            ) : (
+              <select className={cx.input} value={form.cocina_id} onChange={(e) => setForm({ ...form, cocina_id: e.target.value })}>
+                <option value="">— Sin asignar —</option>
+                {cocinas.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+              </select>
+            )}
           </Field>
           <Field label="Conexión">
             <select className={cx.input} value={form.tipo_conexion} onChange={(e) => setForm({ ...form, tipo_conexion: e.target.value as TipoConexionImpresora })}>
@@ -324,9 +379,13 @@ export default function Impresoras() {
           </div>
         </form>
         <p className={`text-xs mt-3 ${cx.muted}`}>
-          El token del agente se genera solo al crear la impresora — cópialo entonces y pégalo en
+          El token del agente se genera solo al crear la impresora — cópialo entonces.
+          El de comandas va en{' '}
           <code className="mx-1 px-1 bg-sa-cream-soft rounded">printers.config.json</code>
-          del agente local de esa estación (ver docs/instalacion-agente-impresion.md).
+          del agente de esa estación; el de tickets va en el{' '}
+          <code className="mx-1 px-1 bg-sa-cream-soft rounded">.env</code>
+          de <code className="px-1 bg-sa-cream-soft rounded">agente-caja</code>, que es otro
+          programa (ver docs/instalacion-agente-impresion.md y docs/hardware-caja.md).
         </p>
       </Panel>
 
@@ -336,9 +395,19 @@ export default function Impresoras() {
             Configuración de <b>{tokenVisible.nombre}</b> para el agente local.
           </p>
           <p className={`text-xs mb-3 ${cx.muted}`}>
-            Cópiala ahora: el token no se vuelve a mostrar. Va en{' '}
-            <code className="px-1 bg-sa-cream-soft rounded">printers.config.json</code>, dentro de
-            los corchetes, separada de las demás por una coma.
+            Cópiala ahora: el token no se vuelve a mostrar.{' '}
+            {tokenVisible.rol === 'tickets' ? (
+              <>
+                Va en el <code className="px-1 bg-sa-cream-soft rounded">.env</code> de{' '}
+                <code className="px-1 bg-sa-cream-soft rounded">agente-caja</code>, reemplazando el
+                archivo entero.
+              </>
+            ) : (
+              <>
+                Va en <code className="px-1 bg-sa-cream-soft rounded">printers.config.json</code>,
+                dentro de los corchetes, separada de las demás por una coma.
+              </>
+            )}
           </p>
           <pre className="bg-sa-green-ink text-sa-cream px-4 py-3 rounded-sa text-xs font-mono overflow-x-auto whitespace-pre">
 {bloqueConfig(tokenVisible)}
@@ -378,7 +447,13 @@ export default function Impresoras() {
                     <span className="font-medium">{imp.nombre}</span>
                     <div className="text-xs font-mono text-sa-green-ink/40">{imp.ancho_papel} · {imp.copias} copia{imp.copias > 1 ? 's' : ''}</div>
                   </td>
-                  <td className={cx.td}>{cocinaNombrePorId.get(imp.cocina_id ?? '') ?? <span className={cx.muted}>Sin asignar</span>}</td>
+                  <td className={cx.td}>
+                    {imp.rol === 'tickets' ? (
+                      <Chip tone="si">Tickets del cliente</Chip>
+                    ) : (
+                      cocinaNombrePorId.get(imp.cocina_id ?? '') ?? <span className={cx.muted}>Sin asignar</span>
+                    )}
+                  </td>
                   <td className={cx.td}>
                     {imp.tipo_conexion === 'red' ? `${imp.ip}:${imp.puerto}` : imp.nombre_dispositivo}
                   </td>
