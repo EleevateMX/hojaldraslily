@@ -458,12 +458,45 @@ export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
 }
 
 /**
- * Cobra el encargo. Es lo único que lo descuenta del inventario.
+ * Cobra el SALDO del encargo. Es lo único que lo descuenta del inventario.
  *
  * Pasa por el mismo camino que una venta de mostrador, así que cae en el corte
  * de caja y saca sus comandas. Es idempotente: dos toques no cobran dos veces.
- * Regresa el total cobrado, que se recalcula con el precio de hoy.
+ *
+ * Regresa **lo que se cobró ahora**, no el total del encargo: si el cliente
+ * había dejado anticipo, eso ya entró al corte el día que lo dejó y aquí solo
+ * se cobra lo que falta. Es el número que hay que pedirle en el mostrador.
  */
+/**
+ * Recibe un anticipo de un encargo y **lo mete al corte**.
+ *
+ * El anticipo se cobra como una orden propia sin renglones: es dinero a
+ * cuenta, no pan. Por eso entra al corte del día en que se recibió —que es el
+ * día en que de verdad entró al cajón— y el pan se descuenta después, al
+ * entregar, una sola vez.
+ *
+ * Antes esto solo se anotaba en `encargos.anticipo` y el efectivo se quedaba
+ * en el cajón sin pasar por ninguna orden: al cerrar, el corte pedía menos de
+ * lo que había y la diferencia no tenía de dónde salir.
+ *
+ * El servidor acota el monto contra el total del encargo, así que no se puede
+ * anticipar más de lo que se debe. Regresa el anticipo acumulado.
+ */
+export async function registrarAnticipo(
+  sb: ClienteLily,
+  encargoId: string,
+  monto: number,
+  metodo: 'efectivo' | 'tarjeta' = 'efectivo',
+): Promise<number> {
+  const { data, error } = await sb.rpc('fn_encargo_anticipo', {
+    p_encargo_id: encargoId,
+    p_monto: monto,
+    p_metodo: metodo,
+  })
+  if (error) throw error
+  return Number(data ?? 0)
+}
+
 export async function cobrarEncargo(
   sb: ClienteLily,
   encargoId: string,

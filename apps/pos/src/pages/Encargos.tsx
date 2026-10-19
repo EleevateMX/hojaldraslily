@@ -7,6 +7,7 @@ import {
   diasHasta,
   crearEncargo,
   cobrarEncargo,
+  registrarAnticipo,
   cancelarEncargo,
   listarProductosDelDia,
   listarOrdenesConTiempo,
@@ -272,8 +273,43 @@ export function Encargos() {
   async function cobrar(e: Encargo, metodo: 'efectivo' | 'tarjeta') {
     setOcupado(e.id)
     try {
-      const total = await cobrarEncargo(sb, e.id, metodo)
-      setAviso(`Cobrado ${mxn(total)} de ${e.cliente}. Ya entró al corte del turno.`)
+      const saldo = await cobrarEncargo(sb, e.id, metodo)
+      // Es el SALDO, no el total: si dejó anticipo, eso ya entró al corte el
+      // día que lo dejó. Decirle «cobrado $1,580» al cajero cuando en el
+      // cajón entraron $1,380 es mandarlo a cuadrar un dinero que no existe.
+      setAviso(
+        e.anticipo > 0
+          ? `Cobrado ${mxn(saldo)} de ${e.cliente} (ya había dejado ${mxn(e.anticipo)}). Entró al corte del turno.`
+          : `Cobrado ${mxn(saldo)} de ${e.cliente}. Ya entró al corte del turno.`,
+      )
+      await cargar(false)
+      setError(null)
+    } catch (err) {
+      setError(mensajeDeError(err))
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  async function anticipo(e: Encargo) {
+    const falta = e.total - e.anticipo
+    const txt = window.prompt(
+      `Anticipo de ${e.cliente}. Faltan ${mxn(falta)} de ${mxn(e.total)}.\n` +
+        `¿Cuánto deja? El dinero entra al corte de este turno.`,
+    )
+    if (txt === null) return
+    const monto = Number(txt.replace(/[^\d.]/g, ''))
+    if (!Number.isFinite(monto) || monto <= 0) {
+      setError('El anticipo tiene que ser un monto mayor que cero.')
+      return
+    }
+    setOcupado(e.id)
+    try {
+      const acumulado = await registrarAnticipo(sb, e.id, monto, 'efectivo')
+      setAviso(
+        `${e.cliente} dejó ${mxn(monto)}. Lleva ${mxn(acumulado)} de ${mxn(e.total)} ` +
+          `y entró al corte del turno.`,
+      )
       await cargar(false)
       setError(null)
     } catch (err) {
@@ -615,6 +651,20 @@ export function Encargos() {
                           >
                             Cancelar
                           </button>
+                          {/* Anticipo va en gris y los de cobrar en color: el
+                              que cierra la venta es el que la cajera busca con
+                              prisa, y el que solo abona no debe competir con
+                              él. Se esconde cuando ya está todo pagado, para
+                              que nadie cobre de más por error. */}
+                          {e.anticipo < e.total && (
+                            <button
+                              onClick={() => void anticipo(e)}
+                              disabled={ocupado === e.id}
+                              className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                            >
+                              Anticipo
+                            </button>
+                          )}
                           <button
                             onClick={() => void cobrar(e, 'efectivo')}
                             disabled={ocupado === e.id}

@@ -1776,6 +1776,7 @@ export type Database = {
       ordenes: {
         Row: {
           almacen_id: string | null
+          anticipo_aplicado: number
           canal: Database["public"]["Enums"]["canal_orden"]
           cliente_id: string | null
           clip_recibo: string | null
@@ -1799,6 +1800,7 @@ export type Database = {
         }
         Insert: {
           almacen_id?: string | null
+          anticipo_aplicado?: number
           canal?: Database["public"]["Enums"]["canal_orden"]
           cliente_id?: string | null
           clip_recibo?: string | null
@@ -1822,6 +1824,7 @@ export type Database = {
         }
         Update: {
           almacen_id?: string | null
+          anticipo_aplicado?: number
           canal?: Database["public"]["Enums"]["canal_orden"]
           cliente_id?: string | null
           clip_recibo?: string | null
@@ -4047,6 +4050,14 @@ export type Database = {
       fn_encargo_cancelar: {
         Args: { p_encargo_id: string; p_motivo?: string }
         Returns: undefined
+      }
+      fn_encargo_anticipo: {
+        Args: {
+          p_encargo_id: string
+          p_metodo?: Database["public"]["Enums"]["metodo_pago"]
+          p_monto: number
+        }
+        Returns: number
       }
       fn_encargo_cobrar: {
         Args: { p_encargo_id: string; p_metodo?: string }
