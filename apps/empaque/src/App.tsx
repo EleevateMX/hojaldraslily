@@ -38,7 +38,8 @@ import { sb } from './lib/sb'
  * Lo que sale de la cola cuando se marca empacado no desaparece: baja a la
  * repisa de listos. Un encargo empacado sigue apartado, y sigue contado en el
  * inventario: **apartar no es vender, y empacar tampoco**. Lo único que
- * descuenta y mete el dinero al corte es «Entregar y cobrar».
+ * descuenta y mete el dinero al corte es cobrarlo **en la caja** — aquí ya no
+ * hay botón de cobrar, y es a propósito (ver el comentario de `Listo`).
  */
 
 /**

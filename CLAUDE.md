@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **198 migraciones aplicadas en orden, y 198
+`fzkdgqqvfkogmxdgqsxj` tiene **199 migraciones aplicadas en orden, y 199
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -716,6 +716,20 @@ empaquetador y se desvían solas:
   **carmín profundo** (`--sa-green-deep`), y si hace falta sobre una pastilla
   del acento. Antes de usar un token, mira cuál es: el que se llama
   `strawberry` no es el carmín.
+- **«Todavía no se hornea» no es «se acabó», y la pantalla decía las dos a la
+  vez.** En Admin → Producción, un sabor que nunca entró al horno se leía
+  «Todavía no se hornea nada hoy» a la izquierda y «se acabó · no queda nada»
+  en rojo a la derecha. Un sabor que nadie ha hecho no se agotó — es lo
+  contrario de una urgencia. Y de paso, el «se acabó» iba en rosa salmón, que
+  a un metro se ve despintado. Salió **mirando la pantalla** con los cuatro
+  casos juntos (dos moldes vivos, un solo molde, agotado, sin hornear); el
+  arnés es `apps/admin/mirar/produccion.html`.
+- **Un botón que se toca y no pasa nada es peor que un botón que no está.** En
+  «Mandar a producir», el 48/24 de cada renglón leía el molde del pedido, y un
+  renglón en cero no tiene pedido: tocar «24» antes de teclear la cantidad
+  borraba el renglón y el botón no hacía nada. El molde vive ahora en el
+  componente, para poder elegir primero y teclear después — que es el orden en
+  que lo hace quien está mirando la lista.
 - **La ausencia de un dato no es un cero.** `paquetes_posibles = null` en
   `fn_catalogo_del_dia` significa «se hornea al pedido», y pintarlo como
   «0 libres» escondía del mostrador justo lo que siempre se puede ofrecer.
@@ -906,6 +920,16 @@ explican por qué una pantalla tiene la forma que tiene.
   de adentro. No lo explotó nadie, pero una sola capa no es una capa — es un
   punto de falla, y el día que alguien edite la función y se le olvide el
   `if`, el GRANT es lo único que queda. Arreglado en `20260920100000`.
+  **Y volvió a pasar con los encargos y la producción**: ocho funciones más
+  (`fn_encargo_cobrar`, `fn_encargo_crear`, `fn_encargo_cancelar`,
+  `fn_produccion_mandar_a_hacer`…) seguían abiertas a `anon`. Cerradas en
+  `20261019081500`, después de comprobar que solo las llaman Admin y la caja
+  —las dos con sesión real por PIN— y que el kiosko no toca ninguna.
+  **Ojo: aquí no se puede barrer en masa.** El kiosko y las estaciones
+  escriben sin sesión a propósito, así que quitarle `anon` a `fn_crear_orden`
+  o `fn_cobrar_orden` deja a la tienda sin poder vender. Antes de cerrar una,
+  hay que ver **quién la llama**; los advisors de Supabase listan las
+  candidatas, no la respuesta.
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.

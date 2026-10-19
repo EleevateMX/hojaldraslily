@@ -31,7 +31,7 @@ import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
  * existencias distintas cuando son **el mismo pan**.
  */
 
-function Fila({
+export function Fila({
   e,
   paquetes,
   base,
@@ -142,9 +142,27 @@ function Fila({
           le dice nada a nadie, «29 moldes y ½» sí. Y uno por cada tamaño de
           molde, nunca sumados: ese era el reclamo. */}
       <div className="shrink-0 w-44 text-right">
-        {agotado || bolsas.length === 0 ? (
+        {/* «Todavía no se hornea» NO es «se acabó», y el renglón decía las dos
+            cosas a la vez: a la izquierda «Todavía no se hornea nada hoy» y
+            aquí, en rojo, «se acabó · no queda nada». Es la misma lección que
+            `paquetes_posibles = null` (§4): la ausencia de un dato no es un
+            cero. Un sabor que nunca entró al horno no se agotó — nadie lo ha
+            hecho todavía, que es lo contrario de una urgencia.
+
+            Y lo que SÍ se acabó va en carmín profundo, no en el rosa salmón:
+            ese rosa es un acento de la marca y a un metro se ve despintado. */}
+        {sinHornear ? (
           <>
-            <p className="font-display text-2xl leading-none text-sa-strawberry">se acabó</p>
+            <p className="font-display text-2xl leading-none text-sa-green-ink/35">
+              sin hornear
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
+              nadie lo ha hecho hoy
+            </p>
+          </>
+        ) : agotado || bolsas.length === 0 ? (
+          <>
+            <p className="font-display text-2xl leading-none text-sa-green-deep">se acabó</p>
             <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
               no queda nada
             </p>
@@ -156,7 +174,7 @@ function Fila({
                 <p
                   className={[
                     'font-display text-2xl leading-none',
-                    b.cuadros > 0 ? 'text-sa-green-ink' : 'text-sa-strawberry',
+                    b.cuadros > 0 ? 'text-sa-green-ink' : 'text-sa-green-deep',
                   ].join(' ')}
                 >
                   {b.cuadros > 0 ? enMoldes(b.cuadros, b.molde).texto : 'se acabó'}
@@ -316,7 +334,7 @@ interface RenglonPedido {
  * escribe 30, no se toca «+» treinta veces. Es la misma razón por la que la
  * cantidad de un encargo se teclea.
  */
-function RenglonDePedido({
+export function RenglonDePedido({
   clave,
   nombre,
   detalle,
@@ -336,13 +354,32 @@ function RenglonDePedido({
   onCambiar: (r: RenglonPedido | null) => void
 }) {
   const n = valor?.cantidad ?? 0
-  const molde = valor?.molde ?? 48
   const foto = urlDeFoto(imagen, base)
   const corto = unidad === 'molde' ? 'm' : 'pz'
+
+  /**
+   * El molde elegido vive AQUÍ, no en el renglón del pedido.
+   *
+   * Iba leído de `valor?.molde ?? 48`, y un renglón en cero no tiene `valor`:
+   * tocar «24» antes de poner la cantidad llamaba a `poner(0)`, que borra el
+   * renglón, así que el botón **no hacía nada**. Se veía elegido y al poner
+   * la cantidad salía en 48. Un botón que se toca y no pasa nada es peor que
+   * un botón que no está.
+   *
+   * Con el molde en el componente se puede elegir primero y teclear después,
+   * que es el orden en que lo hace quien está mirando la lista.
+   */
+  const [molde, setMolde] = useState<Molde>(valor?.molde ?? 48)
 
   function poner(cantidad: number, conMolde = molde) {
     if (cantidad <= 0) return onCambiar(null)
     onCambiar({ sabor: clave, cantidad, unidad, molde: conMolde })
+  }
+
+  function elegirMolde(m: Molde) {
+    setMolde(m)
+    // Si ya había cantidad, el cambio de molde se aplica de una vez.
+    if (n > 0) poner(n, m)
   }
 
   function teclear() {
@@ -364,30 +401,36 @@ function RenglonDePedido({
       </div>
 
       {/* El molde de ESTE renglón. Solo donde significa algo: una rosca no
-          tiene molde, y ofrecerle uno es ofrecerle una mentira. */}
-      {unidad === 'molde' && (
-        <div
-          className="hidden sm:flex rounded-full border border-sa-green-ink/15 overflow-hidden shrink-0"
-          role="group"
-          aria-label={`Molde de ${nombre}`}
-        >
-          {MOLDES.map((m) => (
-            <button
-              key={m}
-              onClick={() => poner(Math.max(n, 0), m)}
-              aria-pressed={molde === m}
-              className={[
-                'h-9 px-2.5 font-mono text-[11px] uppercase tracking-wide transition-colors',
-                molde === m
-                  ? 'bg-sa-green-ink text-sa-cream'
-                  : 'text-sa-green-ink/55 hover:bg-sa-cream-soft',
-              ].join(' ')}
-            >
-              {m}
-            </button>
-          ))}
-        </div>
-      )}
+          tiene molde, y ofrecerle uno es ofrecerle una mentira.
+
+          El hueco se reserva igual en los de pieza (`w-[5.5rem]`), porque si
+          no, los −/+ de las roscas quedaban en otra columna que los de las
+          hojaldras y la lista se leía como dos listas pegadas. */}
+      <div className="hidden sm:flex w-[5.5rem] shrink-0 justify-end">
+        {unidad === 'molde' && (
+          <div
+            className="flex rounded-full border border-sa-green-ink/15 overflow-hidden"
+            role="group"
+            aria-label={`Molde de ${nombre}`}
+          >
+            {MOLDES.map((m) => (
+              <button
+                key={m}
+                onClick={() => elegirMolde(m)}
+                aria-pressed={molde === m}
+                className={[
+                  'h-9 px-2.5 font-mono text-[11px] uppercase tracking-wide transition-colors',
+                  molde === m
+                    ? 'bg-sa-green-ink text-sa-cream'
+                    : 'text-sa-green-ink/55 hover:bg-sa-cream-soft',
+                ].join(' ')}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="flex items-center gap-2 shrink-0">
         <button

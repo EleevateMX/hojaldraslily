@@ -10,7 +10,11 @@
  * fecha, y encargos ya empacados conviviendo con los que no.
  */
 import { createRoot } from 'react-dom/client'
-import { encargosPorDia, type Encargo } from '../../../packages/supabase/src/queries/produccion'
+import {
+  encargosPorDia,
+  horaEn12h,
+  type Encargo,
+} from '../../../packages/supabase/src/queries/produccion'
 import '../src/index.css'
 
 let n = 0
@@ -32,6 +36,10 @@ const encargos = [
   e('Luis Canul', '2026-10-20', '10:00', { anticipo: 200 }),
   e('Oficina Kanasín', '2026-10-20', 'por la tarde', { nota: 'Son 3 cajas, para un cumpleaños' }),
   e('Rosy', '2026-10-21', '9:30'),
+  // Dos a la misma hora en punto y uno a y media: tienen que caer en UN bloque.
+  e('Fer Canto', '2026-10-20', '12:00'),
+  e('Sra. Tun', '2026-10-20', '12:30'),
+  e('Panadería Sur', '2026-10-20', '12:00', { para_viaje: true }),
   e('Jorge Uc', '2026-10-21', null),
   e('Escuela Lily', '2026-10-22', '7 am'),
   e('Pasa más tarde', null, null),
@@ -52,8 +60,17 @@ createRoot(document.getElementById('root')!).render(
           </span>
           <span className="flex-1 border-b border-sa-green-ink/10" />
         </div>
+        {/* Los bloques de hora. Con uno solo el separador no se pinta: ahí
+            estorba más de lo que ayuda. */}
+        {d.horas.map((h) => (
+          <div key={h.minutos ?? 'sin-hora'} className="space-y-3">
+            {d.horas.length > 1 && (
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sa-green">
+                {h.titulo}
+              </p>
+            )}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-          {d.encargos.map((x) => (
+          {h.encargos.map((x) => (
             <div key={x.id} className="rounded-sa border border-sa-green-ink/10 bg-white p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -68,12 +85,16 @@ createRoot(document.getElementById('root')!).render(
                   )}
                 </div>
                 <p className="font-display text-base shrink-0 text-sa-green-ink/70">
-                  {x.hora_entrega || 'sin hora'}
+                  {/* Pintada en 12 h, que es como la lee la casa. Lo que no se
+                      entiende se deja tal cual lo escribieron. */}
+                  {horaEn12h(x.hora_entrega) || 'sin hora'}
                 </p>
               </div>
             </div>
           ))}
         </div>
+          </div>
+        ))}
       </div>
     ))}
   </div>,
