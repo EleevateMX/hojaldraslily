@@ -202,7 +202,7 @@ export function PedidosPendientes() {
               <button
                 onClick={() => void confirmarCobro()}
                 disabled={cobrando}
-                className="flex-1 bg-sa-strawberry disabled:opacity-40 text-white py-3 rounded-sa font-display text-lg"
+                className="flex-1 bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 text-sa-cream py-3 rounded-sa font-display text-lg"
               >
                 {cobrando ? 'Cobrando…' : 'Confirmar cobro'}
               </button>

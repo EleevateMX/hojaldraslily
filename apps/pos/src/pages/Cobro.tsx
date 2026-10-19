@@ -50,7 +50,23 @@ function IconoMetodo({ tipo }: { tipo: 'efectivo' | 'terminal' }) {
   )
 }
 
-const CAMBIO_RAPIDO = [50, 100, 200, 500]
+/**
+ * Los atajos de «recibido»: lo que el cliente de verdad entrega.
+ *
+ * Antes era una lista fija [50, 100, 200, 500] filtrada por «mayor o igual
+ * al total», así que con un ticket de $625 no salía NINGÚN atajo y la cajera
+ * tenía que teclear. Ahora se redondea el total hacia arriba a 50, 100, 200,
+ * 500 y 1,000: para $625 salen $650, $700, $800 y $1,000, que es lo que
+ * alguien saca de la cartera.
+ */
+function montosRapidos(total: number): number[] {
+  const out = new Set<number>()
+  for (const base of [50, 100, 200, 500, 1000]) {
+    const v = Math.ceil(total / base) * base
+    if (v > total) out.add(v)
+  }
+  return [...out].sort((a, b) => a - b).slice(0, 4)
+}
 
 export function Cobro() {
   const navigate = useNavigate()
@@ -464,7 +480,7 @@ export function Cobro() {
                 />
               </div>
               <div className="flex gap-2 mb-3">
-                {CAMBIO_RAPIDO.filter((v) => v >= totalNeto).slice(0, 4).map((v) => (
+                {montosRapidos(totalNeto).map((v) => (
                   <button
                     key={v}
                     onClick={() => setRecibido(String(v))}
@@ -556,10 +572,13 @@ export function Cobro() {
               <span className="font-display text-2xl text-sa-green-ink">{mxn(totalNeto)}</span>
             </div>
           </div>
+          {/* En carmín, no en el rosa salmón de la marca: ese rosa es un
+              acento y con letras blancas casi no se lee (§4). Es el botón más
+              importante de todo el sistema y tiene que verse como tal. */}
           <button
             onClick={() => void confirmarPago()}
             disabled={!listo || procesando}
-            className="w-full bg-sa-strawberry disabled:opacity-40 hover:brightness-110 active:scale-[0.98] text-white py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
+            className="w-full bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 disabled:hover:bg-sa-green active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
           >
             {procesando ? 'Cobrando…' : `Confirmar pago ${mxn(totalNeto)}`}
           </button>

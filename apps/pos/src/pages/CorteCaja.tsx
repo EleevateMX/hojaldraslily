@@ -95,7 +95,7 @@ export function CorteCaja() {
           </button>
           <button
             onClick={() => { cerrarSesion(); navigate('/login') }}
-            className="bg-sa-strawberry hover:brightness-110 text-white px-8 py-4 rounded-sa-lg font-display text-lg shadow-sa-sm transition-all"
+            className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-8 py-4 rounded-sa-lg font-display text-lg shadow-sa-sm transition-all"
           >
             Cerrar sesión
           </button>
@@ -304,7 +304,7 @@ export function CorteCaja() {
               <button
                 onClick={() => void realizarCorte()}
                 disabled={guardando || sinRegistrar > 0}
-                className="flex-1 bg-sa-strawberry disabled:opacity-50 hover:brightness-110 text-white py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
+                className="flex-1 bg-sa-green disabled:opacity-50 hover:bg-sa-green-deep text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
               >
                 {guardando
                   ? 'Cerrando…'

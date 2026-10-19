@@ -565,6 +565,22 @@ así porque ya se habían desviado — los dos manifests escritos a mano traían
 el verde oscuro del motor original (`#14241D`, `#1A2E26`). Ver
 `docs/apps-instalables.md`.
 
+**Las ilustraciones de los productos se DIBUJAN, no se bajan.** Las 19 que
+había (`fiesta.png`, `cafe-de-olla.png`…) son planas: formas redondeadas sin
+contorno, dos o tres tonos, un brillo blanco y una sombra suave. A la casa
+le gustaron y pidió el resto de la repisa igual. Las 20 nuevas (anís,
+bocadillos, galletas, pan de muerto, panes, roscas, trenza, tutis, la
+Hojaldra de Corazón) viven como SVG en `scripts/generar-ilustraciones.mjs`
+y se rasterizan a 256 px con el Chromium de Playwright hacia los ocho
+`public/productos/` de un jalón (`PLAYWRIGHT_MOD=… CHROMIUM=… node
+scripts/generar-ilustraciones.mjs`). Para retocar un color o agregar una
+pieza se edita ahí y se vuelve a correr: los PNG de las ocho apps no se
+tocan a mano, que es como se desvían. `productos.imagen_url` apunta al
+archivo por nombre y `fn_sync_app_data` no la toca. Se revisan en una **hoja
+de contactos** junto a las viejas, como los iconos de las apps: una pieza
+que se pierde contra el fondo crema (le pasó al pan de leche) solo se ve
+así.
+
 **Las tres excepciones que hay que vigilar**, porque no pasan por el
 empaquetador y se desvían solas:
 
@@ -929,6 +945,16 @@ empaquetador y se desvían solas:
   explicación le comía el ancho: lo único que hay que leer a un metro salía
   roto por la mitad. Se arregló apilándolos. Se vio mirando la pantalla, no
   leyendo el JSX.
+- **Y tampoco es un botón.** Los cinco botones principales de la caja
+  —**Confirmar pago**, Cobrar, Entrar, los del corte y el de pedidos— iban en
+  rosa salmón con letras blancas: el botón más importante de todo el sistema
+  casi no se leía, y deshabilitado se veía igual que habilitado. Van en
+  carmín (`bg-sa-green`) con crema. Salió de **mirar la pantalla de cobro**
+  con el store sembrado (`apps/pos/mirar/cobro.html`, y `#encargo` para el
+  caso con anticipo), que hasta entonces no se podía abrir sin Supabase. De
+  la misma captura: con un ticket de $625 los atajos de «recibido» eran
+  `[50, 100, 200, 500]` filtrados por «≥ total», o sea **ninguno**; ahora se
+  redondea el total hacia arriba (650, 700, 800, 1000).
 - **Un acento de la marca no es una alarma.** El rosa salmón (`--sa-strawberry`,
   `#F49CAC`) es un acento de las bandas del menú, no un color de aviso: a un
   metro se ve despintado. El rótulo «Se pasó» de los encargos iba en ese rosa,

@@ -151,7 +151,7 @@ export function Login() {
                     <button
                       key={i}
                       onClick={() => { setPin(''); setError('') }}
-                      className="h-16 rounded-sa bg-sa-strawberry hover:brightness-110 text-white font-display text-2xl transition-all flex items-center justify-center"
+                      className="h-16 rounded-sa bg-sa-green hover:bg-sa-green-deep text-sa-cream font-display text-2xl transition-all flex items-center justify-center"
                     >
                       C
                     </button>

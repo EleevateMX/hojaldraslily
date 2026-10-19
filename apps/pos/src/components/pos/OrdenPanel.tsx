@@ -184,7 +184,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
           <div className="px-4 pb-4">
             <button
               onClick={onCobrar}
-              className="w-full bg-sa-strawberry hover:brightness-110 active:scale-[0.98] text-white py-4 rounded-sa-lg font-display text-2xl shadow-sa-sm transition-all"
+              className="w-full bg-sa-green hover:bg-sa-green-deep active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-2xl shadow-sa-sm transition-all"
             >
               Cobrar {mxn(aCobrar())}
             </button>

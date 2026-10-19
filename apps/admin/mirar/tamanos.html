@@ -14,7 +14,8 @@
   pero no encoge el viewport: la pagina sigue creyendo que mide 500 y los
   media queries de Tailwind (sm:, md:) no cambian. Un iframe si tiene su
   propio viewport, y adentro los breakpoints responden a SU ancho.
-  Uso:  tamanos.html#impresoras
+  Uso:  tamanos.html#impresoras            (el Admin entero, en esa seccion)
+        tamanos.html?pagina=produccion.html (cualquier otro arnes de mirar/)
 -->
 <div class="fila">
   <div class="marco"><p>Teléfono · 390 px</p><iframe id="tel" width="390" height="1300"></iframe></div>
@@ -22,7 +23,9 @@
 </div>
 <script>
   const h = location.hash || '#dashboard'
-  document.getElementById('tel').src = 'admin.html' + h
-  document.getElementById('tab').src = 'admin.html' + h
+  const pagina = new URLSearchParams(location.search).get('pagina')
+  const src = pagina ? pagina : 'admin.html' + h
+  document.getElementById('tel').src = src
+  document.getElementById('tab').src = src
 </script>
 </body></html>
