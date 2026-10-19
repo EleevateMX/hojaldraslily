@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **199 migraciones aplicadas en orden, y 199
+`fzkdgqqvfkogmxdgqsxj` tiene **200 migraciones aplicadas en orden, y 200
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -289,11 +289,26 @@ inventario y el corte sigue siendo `fn_encargo_cobrar`. `empacado_at` es una
 fecha y no un "sí" por la misma razón que `contado_at`: un dato sin fecha no
 se puede creer.
 
-### 2.1 Costeos es la fuente de la verdad del catálogo
+### 2.1 Costeos manda el CATÁLOGO — ya no la existencia
 
 `apps/costos` (un solo `index.html`, sin build) guarda TODO en una fila de
 `app_data.data` (JSON). Al guardar, un trigger corre `fn_sync_app_data()`,
 que crea/actualiza productos, insumos y recetas.
+
+**Pero la EXISTENCIA ya no pasa por ahí** (19/10/26). El trigger también
+llamaba a `fn_sync_stock_costos`, que mandaba *la diferencia* contra el
+último número que Costeos recordaba (`costos_stock_sync.ultimo_valor`) en vez
+de registrar un movimiento. Es el modelo del que salieron casi todos los bugs
+caros de inventario del motor original —entradas contadas dos veces, cientos
+de insumos fantasma, una pestaña vieja que deshacía ventas— y que su propia
+guía marca como «no lo tomes así».
+
+Aquí se cortó **antes de que disparara**: la tabla ya tenía 50 renglones
+sembrados y 0 movimientos generados. Ahora la existencia solo cambia por
+`inventario_movimientos` (Admin → Inventario: contar, merma, «llegó
+mercancía»), que es un dueño y no dos. De la pantalla de Costeos se quitó el
+botón «Aplicar conteo a existencias» por la misma razón: dejarlo habría sido
+peor que quitarlo — se toca, no pasa nada, y nadie se entera.
 
 Consecuencias que hay que respetar:
 
@@ -500,7 +515,7 @@ empaquetador y se desvían solas:
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
-| Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia |
+| Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia. **Es el único lugar donde se fijan existencias**: la pestaña Inventario de Costeos sirve para contar e imprimir la hoja, no para fijarlas |
 | Apuntar lo que llegó del proveedor | Admin → **Inventario** → **Llegó mercancía** |
 | Saber qué hay que comprar | Admin → **Inventario** → **Qué hay que comprar** (sale lo que bajó de su mínimo) |
 | Apuntar lo que se tiró | Admin → **Inventario** → el `⋯` del renglón |
@@ -581,6 +596,15 @@ empaquetador y se desvían solas:
   correcta en plpgsql es la asignación, que evalúa una sola vez:
   `v_fila := fn_crear_orden(...)`. Lo encontró **contar filas antes y
   después** en la prueba de punta a punta, no leer el código.
+
+- **Una tabla temporal con `drop` dentro de una función que corre desde la
+  app es una bomba.** `fn_sync_app_data` crea y tira `_prod`/`_stk`, y eso
+  **cuelga el MCP de Supabase igual que un `DROP`**: no se puede disparar el
+  guardado de Costeos desde aquí para probarlo. En el motor original la misma
+  forma dejó la tienda 50 minutos sin cobrar, porque Supabase bloquea
+  `DELETE` sin `WHERE` para los roles de la API mientras que con la conexión
+  de administrador el mismo código pasa sin chistar. Consecuencia práctica:
+  lo que toque ese camino se prueba **en la tienda**, no desde aquí.
 
 - **El estado final no es la migración.** Si falta un archivo de migración, no
   se deduce mirando cómo quedó la base: eso da el destino, no el camino. Dos
