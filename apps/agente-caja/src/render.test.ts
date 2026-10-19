@@ -92,3 +92,42 @@ describe('construirDocumento', () => {
     expect(esPayloadDeTicket({ folio: 1, metodoPago: 'x' })).toBe(false) // sin items
   })
 })
+
+/**
+ * El paquete que se copia a la PC de la tienda.
+ *
+ * `dist/agente-caja.mjs` está VERSIONADO a propósito, y eso es una decisión
+ * incómoda: el código generado que se guarda se queda viejo en silencio. Va
+ * versionado porque el instalador baja un zip del repo y en la PC de la
+ * tienda no hay monorepo ni empaquetador — y este agente importa
+ * `@lily/ui/papel`, que no existe en el registro público.
+ *
+ * El guardián es esta prueba: vuelve a empaquetar y compara. Si alguien tocó
+ * el agente o `@lily/ui` y no corrió `pnpm --filter @lily/agente-caja
+ * empaquetar`, aquí revienta — en vez de que lo descubra la tienda cuando el
+ * ticket salga con el formato de la semana pasada.
+ */
+describe('el paquete de la tienda', () => {
+  it('dist/ está al día con el código', async () => {
+    const { execFileSync } = await import('node:child_process')
+    const { readFileSync, existsSync } = await import('node:fs')
+    const { fileURLToPath } = await import('node:url')
+    const { dirname, join } = await import('node:path')
+
+    const raiz = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const bundle = join(raiz, 'dist/agente-caja.mjs')
+    expect(
+      existsSync(bundle),
+      'Falta dist/. Corre: pnpm --filter @lily/agente-caja empaquetar',
+    ).toBe(true)
+
+    const antes = readFileSync(bundle, 'utf8')
+    execFileSync('node', [join(raiz, 'empaquetar.mjs')], { cwd: raiz, stdio: 'pipe' })
+    const despues = readFileSync(bundle, 'utf8')
+
+    expect(
+      despues,
+      'dist/ quedó viejo. Corre: pnpm --filter @lily/agente-caja empaquetar — y commitéalo.',
+    ).toBe(antes)
+  }, 30_000)
+})

@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **202 migraciones aplicadas en orden, y 202
+`fzkdgqqvfkogmxdgqsxj` tiene **203 migraciones aplicadas en orden, y 203
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -417,6 +417,16 @@ entrega el bloque correcto según el rol — darle el JSON al de caja es la
 forma de que alguien configure el archivo equivocado y el síntoma sea «pongo
 el token y no imprime».
 
+**El agente de tickets se EMPAQUETA para la tienda.** Importa
+`@lily/ui/papel` —a propósito, ver abajo— y eso es un paquete del monorepo:
+un `npm install` en la PC de la tienda no lo encuentra y el agente no
+arranca. `apps/agente-caja/empaquetar.mjs` lo mete adentro con esbuild y deja
+`dist/` con un solo `.mjs` (16 kB) y un `package.json` con las dos
+dependencias que sí viven en npm. **`dist/` va versionado** —excepción
+explícita en `.gitignore`— porque el instalador baja un zip del repo y ahí no
+hay empaquetador; lo mantiene al día una prueba que vuelve a empaquetar y
+compara.
+
 **Las líneas del papel las arma `@lily/ui`, no el agente** — el mismo módulo
 que pinta el ticket en pantalla. Por eso el agente vive en `apps/` y no junto
 al de etiquetas: si cada uno tuviera su propio formateador, la vista previa
@@ -435,6 +445,26 @@ Dos consecuencias que hay que respetar:
   papel se va a un PDF o a la láser de la oficina. Es el mismo modo de fallo
   silencioso que la etiquetadora que no es TSPL.
 
+- **Instalar la PC exige un código de gerencia.** `fn_instalador_impresoras`
+  y `fn_instalador_token` son las únicas dos puertas abiertas a `anon`, y lo
+  que las protege no es el rol sino el código: Admin → Impresoras →
+  **«Conectar la PC de la tienda»**. Vive 30 minutos, se recorta a 20 más al
+  estrenarlo y generar uno nuevo revoca el anterior. Antes esto se resolvía
+  dejando `fn_rotar_token_impresora` abierta a cualquiera con la llave
+  publicable — que es pública por diseño.
+
+  **«Un solo uso» quiere decir UNA INSTALACIÓN, no una llamada**: instalar
+  son varias (listar, y un token por impresora). Lo que se acota es la
+  ventana, y el tope de 40 llamadas.
+
+  Y **actualizar NO es instalar**: el arranque de cada mañana corre el mismo
+  `.ps1` con **`-SoloActualizar`**, que cambia el código de los dos agentes
+  y no toca configuración ni tokens. Sin esa separación la actualización
+  diaria pediría un código que a las 7 de la mañana no hay quién teclee — y
+  antes, además, rotaba el token de todas las impresoras para nada.
+- **El instalador no dice LISTO hasta que el servidor ve el latido.** Un
+  instalador que felicita y se va deja PCs «configuradas» que nunca se
+  reportaron, y eso no se descubre hasta la primera comanda perdida.
 - Reclama trabajos con `fn_imprimir_reclamar_trabajos` y late con
   `fn_imprimir_latido`, que ahora **reporta su versión** — visible en
   Admin → En vivo junto a cada impresora. Si dice ámbar, falta actualizar.

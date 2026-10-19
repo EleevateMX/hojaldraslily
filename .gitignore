@@ -1,5 +1,11 @@
 node_modules/
 dist/
+# ...menos el paquete del agente de tickets. Va versionado porque el
+# instalador baja un zip del repo y en la PC de la tienda no hay monorepo ni
+# empaquetador, y ese agente importa `@lily/ui/papel` (que no existe en npm).
+# Lo mantiene al dia una prueba: apps/agente-caja/src/render.test.ts.
+!apps/agente-caja/dist/
+!apps/agente-caja/dist/**
 build/
 *.local
 

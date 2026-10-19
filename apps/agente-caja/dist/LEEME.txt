@@ -1,0 +1,60 @@
+================================================================
+  HOJALDRAS LILY - AGENTE DE TICKETS DE CAJA
+================================================================
+
+Imprime los TICKETS DE VENTA en la impresora termica de caja,
+por red (ESC/POS, puerto 9100).
+
+Es un programa APARTE del agente de comandas (el de las
+etiquetadoras). Los dos pueden correr en la misma PC al mismo
+tiempo sin estorbarse: si uno se cae, el otro sigue imprimiendo.
+Esa separacion es intencional - una etiquetadora atorada no puede
+dejar al mostrador sin tickets, ni al reves.
+
+----------------------------------------------------------------
+QUE RESUELVE
+----------------------------------------------------------------
+
+Hoy el ticket va de Chrome a la impresora PREDETERMINADA de
+Windows. Eso funciona, pero si la predeterminada es la
+equivocada NO HAY NINGUN ERROR: la venta queda bien cobrada y el
+papel se va a un PDF o a la laser de la oficina.
+
+Con este agente el ticket es un trabajo de la cola, con su
+confirmacion: si no salio, se ve en Admin.
+
+----------------------------------------------------------------
+INSTALACION
+----------------------------------------------------------------
+
+  1. Copia .env.example a .env y llenalo:
+       - SUPABASE_ANON_KEY  (la llave publica)
+       - IMPRESORA_TOKEN    (Admin -> Impresoras, la de caja)
+       - IMPRESORA_HOST     (la IP FIJA de la termica)
+  2. npm install
+  3. Doble clic en iniciar.bat
+
+La impresora necesita IP FIJA RESERVADA EN EL ROUTER. Si el
+router le cambia la IP, el agente deja de imprimir y el aviso
+sale en esta ventana.
+
+----------------------------------------------------------------
+COMO SABER SI ESTA BIEN
+----------------------------------------------------------------
+
+  - Al arrancar dice "la impresora responde".
+  - En Admin -> Impresoras debe verse EN LINEA en menos de un
+    minuto, con su version.
+  - Cada ticket impreso se apunta en esta ventana.
+
+Si dice que la impresora NO responde: revisa que este encendida,
+conectada a la red y con su IP fija. El agente sigue intentando
+solo, no hay que reiniciarlo.
+
+----------------------------------------------------------------
+PENDIENTE (importante)
+----------------------------------------------------------------
+
+Hoy NADIE encola tickets todavia: la caja los sigue imprimiendo
+por el navegador. Este agente esta listo y probado, pero sin
+trabajo que hacer hasta que se encienda el encolado.

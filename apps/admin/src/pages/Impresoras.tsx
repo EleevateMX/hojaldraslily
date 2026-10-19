@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   listarImpresoras, crearImpresora, actualizarImpresora, activarImpresora, rotarTokenImpresora, listarCocinasParaImpresoras,
-  mandarPruebaDeImpresion,
+  mandarPruebaDeImpresion, crearCodigoDeInstalacion,
   listarTrabajosImpresion, suscribirTrabajosImpresion, reimprimirTrabajo,
   listarAlmacenes, type ImpresoraAdmin, type RolImpresora,
 } from '@lily/supabase'
@@ -105,6 +105,10 @@ export default function Impresoras() {
   } | null>(null)
   const [filtroEstado, setFiltroEstado] = useState<EstadoTrabajoImpresion | 'todos'>('todos')
   const [sucursalId, setSucursalId] = useState<string | null>(null)
+  // El codigo con el que la PC de la tienda se conecta. Se enseña una vez y
+  // vive 30 minutos: es lo que reemplaza a tener las funciones del token
+  // abiertas a cualquiera con la llave publicable.
+  const [codigo, setCodigo] = useState<{ codigo: string; expira_en: string } | null>(null)
 
   async function cargar() {
     try {
@@ -251,6 +255,15 @@ export default function Impresoras() {
     }
   }
 
+  async function conectarUnaPc() {
+    setError(null); setOk(null)
+    try {
+      setCodigo(await crearCodigoDeInstalacion(sb))
+    } catch (e) {
+      setError(mensajeDeError(e))
+    }
+  }
+
   async function reimprimir(trabajo: TrabajoImpresion) {
     setError(null); setOk(null)
     const motivo = window.prompt('Motivo de la reimpresión (opcional):') ?? undefined
@@ -387,6 +400,47 @@ export default function Impresoras() {
           de <code className="px-1 bg-sa-cream-soft rounded">agente-caja</code>, que es otro
           programa (ver docs/instalacion-agente-impresion.md y docs/hardware-caja.md).
         </p>
+      </Panel>
+
+      {/* Conectar una PC. Va ARRIBA de la lista porque es lo primero que se
+          hace el dia de la instalacion, y porque quien lo busca no sabe
+          todavia como se llaman sus impresoras. */}
+      <Panel title="Conectar la PC de la tienda" className="mb-6">
+        <p className={`text-sm mb-3 ${cx.muted}`}>
+          El instalador de la PC pide un código. Genéralo aquí, tecléalo allá y
+          listo — las impresoras quedan conectadas solas. El código vive{' '}
+          <b>30 minutos</b> y generar uno nuevo cancela el anterior.
+        </p>
+        {codigo ? (
+          <div className="bg-sa-cream border-2 border-sa-green-deep rounded-sa p-5">
+            <p className="font-mono text-xs uppercase tracking-widest text-sa-green-ink/50 mb-2">
+              Tecléalo en la PC de la tienda
+            </p>
+            <p className="font-mono text-4xl tracking-[0.2em] text-sa-green-deep select-all">
+              {codigo.codigo.replace(/(.{4})(.{4})(.{4})/, '$1-$2-$3')}
+            </p>
+            <p className={`text-xs mt-3 ${cx.muted}`}>
+              Vence a las{' '}
+              {new Date(codigo.expira_en).toLocaleTimeString('es-MX', {
+                timeZone: 'America/Merida', hour: '2-digit', minute: '2-digit',
+              })}
+              . No se vuelve a mostrar: si se pierde, genera otro.
+            </p>
+            <div className="flex gap-2 mt-3">
+              <button
+                className={cx.btnPrimary}
+                onClick={() => void navigator.clipboard.writeText(codigo.codigo)}
+              >
+                Copiar
+              </button>
+              <button className={cx.btnSec} onClick={() => setCodigo(null)}>Ocultar</button>
+            </div>
+          </div>
+        ) : (
+          <button className={cx.btnPrimary} onClick={() => void conectarUnaPc()}>
+            Generar código de instalación
+          </button>
+        )}
       </Panel>
 
       {tokenVisible && (

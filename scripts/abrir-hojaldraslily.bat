@@ -211,7 +211,13 @@ echo   Windows va a pedir permiso una vez. Si no hay nadie, no pasa nada:
 echo   la tienda ya esta abierta y se actualiza manana.
 echo.
 
+REM -SoloActualizar: cambia el codigo de los dos agentes y NO toca ni la
+REM configuracion ni los tokens. Antes esta corrida diaria rotaba el token de
+REM todas las impresoras -para nada, porque luego reescribia el archivo con
+REM los nuevos- y ahora ademas pediria un codigo de instalacion que a las 7
+REM de la manana no hay quien teclee.
 taskkill /f /fi "WINDOWTITLE eq Hojaldras Lily - agente de impresion*" >nul 2>&1
+taskkill /f /fi "WINDOWTITLE eq Hojaldras Lily - agente de tickets*" >nul 2>&1
 
 REM Se escribe un .ps1 temporal en vez de armar un comando gigante con
 REM comillas escapadas: eso ultimo se rompe en cuanto alguien lo edita.
@@ -220,7 +226,7 @@ set "TMPPS=%TEMP%\shake-actualizar.ps1"
 >>"%TMPPS%" echo $i = Join-Path $env:TEMP 'shake-instalador.ps1'
 >>"%TMPPS%" echo Invoke-WebRequest -UseBasicParsing '%CRUDO%/scripts/instalar-agente-impresion.ps1' -OutFile $i
 >>"%TMPPS%" echo Unblock-File $i
->>"%TMPPS%" echo ^& $i -AnonKey '%LLAVE%'
+>>"%TMPPS%" echo ^& $i -AnonKey '%LLAVE%' -SoloActualizar
 
 powershell -NoProfile -Command "Start-Process powershell -Verb RunAs -Wait -ArgumentList '-NoProfile','-ExecutionPolicy','Bypass','-File','%TMPPS%'"
 del "%TMPPS%" >nul 2>&1
@@ -228,5 +234,6 @@ del "%TMPPS%" >nul 2>&1
 REM El agente quedo apagado por el taskkill de arriba: hay que revivirlo o
 REM la tienda se queda sin papel hasta el proximo arranque.
 if exist "%AGENTE%" start "" "%AGENTE%"
+if exist "%AGENTECAJA%" start "" "%AGENTECAJA%"
 echo   [OK] Agente actualizado y corriendo.
 goto :eof

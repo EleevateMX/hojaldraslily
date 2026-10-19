@@ -9,7 +9,16 @@
 #  USO (PowerShell COMO ADMINISTRADOR, en la PC de la sucursal):
 #
 #      powershell -NoProfile -ExecutionPolicy Bypass `
-#        -File .\instalar-agente-impresion.ps1 -AnonKey "sb_publishable_..."
+#        -File .\instalar-agente-impresion.ps1 -AnonKey "sb_publishable_..." `
+#        -Codigo "K7M2-QX94-RT36"
+#
+#  EL CODIGO sale de Admin -> Impresoras -> "Conectar una PC". Vive 30
+#  minutos y lo genera gerencia. Antes no hacia falta, y ese era el
+#  problema: las funciones que entregan el token de una impresora estaban
+#  abiertas a cualquiera con la llave publica -que es publica por diseno-,
+#  asi que cualquiera podia quedarse con el token y tragarse TODAS las
+#  comandas y tickets de la tienda. Ahora la puerta la abre alguien desde
+#  adentro.
 #
 #  El `-ExecutionPolicy Bypass` no es adorno: Windows bloquea por defecto los
 #  .ps1 bajados de internet y contesta "la ejecucion de scripts esta
@@ -24,21 +33,36 @@
 #  dejes escrita en un chat ni la subas al repositorio.
 #
 #  Otros parametros (casi nunca hacen falta):
-#      -Destino  C:\Hojaldras Lily\agente-impresion   donde instalar
-#      -Rama     main                              rama del repo a bajar
+#      -Destino        C:\Hojaldras Lily\agente-impresion   donde instalar
+#      -Rama           main                        rama del repo a bajar
 #      -SoloProbar                                 no instala nada: solo
 #                                                  revisa si las impresoras
 #                                                  responden
+#      -SoloActualizar                             SOLO cambia el codigo de
+#                                                  los agentes. No pide
+#                                                  codigo, no toca la
+#                                                  configuracion y NO rota
+#                                                  tokens.
+#
+#  Lo de -SoloActualizar no es un lujo: el arranque de cada manana usa este
+#  mismo script para actualizar el agente, y ahi no hay nadie que teclee un
+#  codigo. Antes esa corrida diaria rotaba los tokens de todas las
+#  impresoras -para nada, porque despues reescribia la configuracion con los
+#  nuevos-. Actualizar el programa y re-aprovisionar las impresoras son dos
+#  cosas distintas y ahora se piden por separado.
 #
 #  Se puede correr las veces que haga falta: reinstala encima sin romper
-#  nada. Cada corrida genera tokens nuevos y reescribe la configuracion.
+#  nada.
 # ============================================================================
 
 param(
   [string] $AnonKey,
+  [string] $Codigo,
   [string] $Destino = 'C:\Hojaldras Lily\agente-impresion',
+  [string] $DestinoCaja = 'C:\Hojaldras Lily\agente-caja',
   [string] $Rama    = 'main',
-  [switch] $SoloProbar
+  [switch] $SoloProbar,
+  [switch] $SoloActualizar
 )
 
 $ErrorActionPreference = 'Stop'
@@ -119,19 +143,23 @@ function Cabeceras($anonKey) {
   return $h
 }
 
-function Obtener-Impresoras($anonKey) {
-  $r = Invoke-RestMethod -Method Post -Uri "$SupabaseUrl/rest/v1/rpc/fn_admin_impresoras" `
-    -Headers (Cabeceras $anonKey) -ContentType 'application/json' -Body '{}'
+# Las dos de abajo van por el CODIGO de instalacion, no por la llave sola.
+# La llave publica sigue haciendo falta (es la `apikey` de PostgREST), pero
+# ya no alcanza: quien autoriza es el codigo que gerencia genero en Admin.
+function Obtener-Impresoras($anonKey, $codigo) {
+  $r = Invoke-RestMethod -Method Post -Uri "$SupabaseUrl/rest/v1/rpc/fn_instalador_impresoras" `
+    -Headers (Cabeceras $anonKey) -ContentType 'application/json' `
+    -Body (@{ p_codigo = $codigo; p_agente = $env:COMPUTERNAME } | ConvertTo-Json)
   return @($r)
 }
 
 # El token no se puede leer: no viaja nunca en la lista. "Obtenerlo" es
 # generar uno nuevo, y el anterior deja de servir - por eso este instalador
 # reescribe siempre la configuracion completa en vez de conservar la vieja.
-function Obtener-Token($anonKey, $id) {
-  return Invoke-RestMethod -Method Post -Uri "$SupabaseUrl/rest/v1/rpc/fn_rotar_token_impresora" `
+function Obtener-Token($anonKey, $codigo, $id) {
+  return Invoke-RestMethod -Method Post -Uri "$SupabaseUrl/rest/v1/rpc/fn_instalador_token" `
     -Headers (Cabeceras $anonKey) -ContentType 'application/json' `
-    -Body (@{ p_id = $id } | ConvertTo-Json)
+    -Body (@{ p_codigo = $codigo; p_impresora_id = $id; p_agente = $env:COMPUTERNAME } | ConvertTo-Json)
 }
 
 Write-Host ''
@@ -141,18 +169,34 @@ Write-Host '  ---------------------------------'
 if (-not $AnonKey) {
   Malo 'Falta -AnonKey.'
   Write-Host '    Supabase -> Project Settings -> API Keys (sb_publishable_... o eyJ...).'
-  Write-Host '    Ejemplo:  .\instalar-agente-impresion.ps1 -AnonKey "eyJhbGci..."'
+  Write-Host '    Ejemplo:  .\instalar-agente-impresion.ps1 -AnonKey "eyJ..." -Codigo "K7M2-QX94-RT36"'
   exit 1
 }
 
-Paso 'Consultando las impresoras dadas de alta'
-try {
-  $impresoras = Obtener-Impresoras $AnonKey | Where-Object { $_.activa }
-} catch {
-  Malo "No se pudo hablar con Supabase: $($_.Exception.Message)"
-  Write-Host '    Revisa la anon key y que este equipo tenga internet.'
-  exit 1
+if ($SoloActualizar) {
+  Write-Host '  (-SoloActualizar: solo se cambia el codigo de los agentes.' -ForegroundColor DarkGray
+  Write-Host '   No se tocan las impresoras ni sus tokens.)' -ForegroundColor DarkGray
+  $impresoras = @()
+  $vivas = @()
+} else {
+  if (-not $Codigo) {
+    Malo 'Falta -Codigo.'
+    Write-Host '    Admin -> Impresoras -> "Conectar una PC". Vive 30 minutos.'
+    Write-Host '    Sin el, este equipo no puede pedir el token de ninguna impresora.'
+    exit 1
+  }
+
+  Paso 'Consultando las impresoras dadas de alta'
+  try {
+    $impresoras = Obtener-Impresoras $AnonKey $Codigo | Where-Object { $_.nombre }
+  } catch {
+    Malo "No se pudo hablar con Supabase: $($_.Exception.Message)"
+    Write-Host '    Si dice que el codigo no sirve, genera otro en Admin (vive 30 minutos).'
+    Write-Host '    Si no, revisa la anon key y que este equipo tenga internet.'
+    exit 1
+  }
 }
+if (-not $SoloActualizar) {
 if ($impresoras.Count -eq 0) {
   Malo 'No hay impresoras activas dadas de alta.'
   Write-Host '    Admin -> Impresoras -> Nueva impresora.'
@@ -189,6 +233,7 @@ if ($vivas.Count -eq 0) {
   Write-Host '    Arregla la red primero y vuelve a correr esto.'
   exit 1
 }
+}  # fin del bloque que NO corre con -SoloActualizar
 
 # ---------------------------------------------------------------------------
 # 3. Node
@@ -257,13 +302,16 @@ try {
   Malo "No se pudo bajar: $($_.Exception.Message)"
   exit 1
 }
-$origen = Get-ChildItem -Path $temporal -Directory |
-          ForEach-Object { Join-Path $_.FullName 'agente-impresion' } |
-          Where-Object { Test-Path $_ } | Select-Object -First 1
-if (-not $origen) {
+$raizZip = Get-ChildItem -Path $temporal -Directory | Select-Object -First 1
+$origen = if ($raizZip) { Join-Path $raizZip.FullName 'agente-impresion' } else { $null }
+if (-not $origen -or -not (Test-Path $origen)) {
   Malo 'El zip no traia la carpeta agente-impresion.'
   exit 1
 }
+# El agente de TICKETS viene ya empaquetado (`apps/agente-caja/dist`): en la
+# PC de la tienda no hay monorepo ni empaquetador, y ese agente importa
+# `@lily/ui/papel`, que no existe en npm. Ver apps/agente-caja/empaquetar.mjs.
+$origenCaja = if ($raizZip) { Join-Path $raizZip.FullName 'apps\agente-caja\dist' } else { $null }
 
 # El codigo se reemplaza entero, pero la configuracion NO se toca aqui: se
 # reescribe mas abajo con tokens frescos. Si esto se llevara la carpeta
@@ -290,6 +338,38 @@ try {
 }
 
 # ---------------------------------------------------------------------------
+# 5b. El agente de TICKETS (programa aparte, misma PC)
+# ---------------------------------------------------------------------------
+# Son dos programas a proposito: si uno se cae, el otro sigue imprimiendo.
+# Una etiquetadora atorada no puede dejar al mostrador sin tickets.
+$hayCaja = $false
+if ($origenCaja -and (Test-Path $origenCaja)) {
+  Paso 'Instalando el agente de tickets de caja'
+  New-Item -ItemType Directory -Path $DestinoCaja -Force | Out-Null
+  Copy-Item -Path (Join-Path $origenCaja '*') -Destination $DestinoCaja -Recurse -Force -Exclude '.env'
+  Push-Location $DestinoCaja
+  try {
+    & npm install --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) { throw "npm install devolvio $LASTEXITCODE" }
+    $hayCaja = $true
+    Bien $DestinoCaja
+  } catch {
+    Aviso "No se pudo instalar el agente de tickets: $($_.Exception.Message)"
+    Aviso 'El ticket seguira saliendo por el navegador. No es bloqueante.'
+  }
+  Pop-Location
+} else {
+  Aviso 'El zip no traia apps\agente-caja\dist (se corre `pnpm --filter @lily/agente-caja empaquetar` y se commitea).'
+}
+
+if ($SoloActualizar) {
+  Write-Host ''
+  Bien 'Agentes actualizados. La configuracion y los tokens no se tocaron.'
+  Write-Host ''
+  exit 0
+}
+
+# ---------------------------------------------------------------------------
 # 6. Configuracion
 # ---------------------------------------------------------------------------
 Paso 'Generando la configuracion'
@@ -304,9 +384,16 @@ STATUS_HTTP_PUERTO=7777
 "@
 Escribir (Join-Path $Destino '.env') $env_txt
 
+# Las etiquetadoras van a printers.config.json; la TERMICA del mostrador no.
+# Mezclarlas seria el peor de los errores silenciosos: este agente le
+# mandaria TSPL a una ESC/POS, que se traga los datos y no imprime -la
+# comanda se pierde con la cola en verde-.
+$etiquetadoras = @($vivas | Where-Object { $_.rol -ne 'tickets' })
+$termicas      = @($vivas | Where-Object { $_.rol -eq 'tickets' })
+
 $config = @()
-foreach ($imp in $vivas) {
-  $token = Obtener-Token $AnonKey $imp.id
+foreach ($imp in $etiquetadoras) {
+  $token = Obtener-Token $AnonKey $Codigo $imp.id
   $esRed = $imp.tipo_conexion -eq 'red'
   $config += [ordered]@{
     id          = ($imp.nombre.ToLower() -replace '[^a-z0-9]+', '-').Trim('-')
@@ -326,6 +413,36 @@ foreach ($imp in $vivas) {
   Bien "$($imp.nombre) configurada"
 }
 Escribir (Join-Path $Destino 'printers.config.json') (JsonArreglo $config)
+
+# La termica del mostrador: su propio programa, su propio .env.
+if ($termicas.Count -gt 0) {
+  $t = $termicas[0]
+  if ($termicas.Count -gt 1) {
+    Aviso "Hay $($termicas.Count) termicas de tickets activas; se configura '$($t.nombre)'."
+  }
+  $tokenCaja = Obtener-Token $AnonKey $Codigo $t.id
+  $puertoCaja = if ($t.puerto) { $t.puerto } else { 9100 }
+  $anchoCaja  = if ($t.ancho_papel) { "$($t.ancho_papel)" } else { '80mm' }
+  $envCaja = @"
+SUPABASE_URL=$SupabaseUrl
+SUPABASE_ANON_KEY=$AnonKey
+IMPRESORA_TOKEN=$tokenCaja
+IMPRESORA_HOST=$($t.ip)
+IMPRESORA_PUERTO=$puertoCaja
+IMPRESORA_ANCHO=$anchoCaja
+AGENTE_ID=$($env:COMPUTERNAME)-caja
+POLL_INTERVALO_SEGUNDOS=3
+LATIDO_INTERVALO_SEGUNDOS=30
+"@
+  if ($hayCaja) {
+    Escribir (Join-Path $DestinoCaja '.env') $envCaja
+    Bien "$($t.nombre) configurada (agente de tickets)"
+  } else {
+    Aviso "$($t.nombre) quedo sin configurar: el agente de tickets no se instalo."
+  }
+} else {
+  Aviso 'No hay termica de tickets dada de alta: el ticket sale por el navegador.'
+}
 
 # ---------------------------------------------------------------------------
 # 7. Etiqueta de prueba
@@ -368,12 +485,55 @@ Paso 'Arrancando el agente'
 Start-Process -FilePath $bat
 Bien 'corriendo en su propia ventana'
 
+# El de tickets, igual: su ventana, su acceso directo y su arranque.
+if ($hayCaja -and $termicas.Count -gt 0) {
+  $batCaja = Join-Path $DestinoCaja 'iniciar.bat'
+  if (Test-Path $batCaja) {
+    Copy-Item $batCaja (Join-Path $escritorio 'Agente de tickets.bat') -Force -EA SilentlyContinue
+    Copy-Item $batCaja (Join-Path $inicio 'Agente de tickets.bat') -Force -EA SilentlyContinue
+    Start-Process -FilePath $batCaja
+    Bien 'agente de tickets corriendo en su propia ventana'
+  }
+}
+
+# ---------------------------------------------------------------------------
+# 9. No decir LISTO hasta que el SERVIDOR lo vea
+# ---------------------------------------------------------------------------
+# Un instalador que felicita y se va deja PCs "configuradas" que nunca se
+# reportaron, y eso no se descubre hasta la primera comanda perdida. Aqui se
+# espera al latido: el agente late cada 30 s, asi que 90 s alcanzan de sobra.
+Paso 'Esperando a que el servidor vea los agentes'
+$esperadas = $config.Count + $(if ($hayCaja -and $termicas.Count -gt 0) { 1 } else { 0 })
+$vistas = 0
+for ($i = 1; $i -le 18; $i++) {
+  Start-Sleep -Seconds 5
+  try {
+    $estado = Obtener-Impresoras $AnonKey $Codigo
+    $vistas = @($estado | Where-Object { $_.conectada }).Count
+  } catch {
+    # El codigo pudo vencer mientras se instalaba npm. No es motivo para
+    # fallar la instalacion: lo que faltaba ya quedo escrito.
+    Aviso "Ya no se pudo consultar el estado: $($_.Exception.Message)"
+    break
+  }
+  if ($vistas -ge $esperadas) { break }
+  Write-Host "    ...$vistas de $esperadas ($($i * 5)s)" -ForegroundColor DarkGray
+}
+
 Write-Host ''
-Write-Host '  LISTO' -ForegroundColor Green
+if ($vistas -ge $esperadas -and $esperadas -gt 0) {
+  Write-Host '  LISTO' -ForegroundColor Green
+  Bien "el servidor ve $vistas de $esperadas en linea"
+} else {
+  Write-Host '  INSTALADO, PERO EL SERVIDOR TODAVIA NO LOS VE' -ForegroundColor Yellow
+  Write-Host "  ($vistas de $esperadas en linea despues de 90 segundos)"
+  Write-Host ''
+  Write-Host '  Revisa que las ventanas de los agentes sigan abiertas y que esta'
+  Write-Host '  PC tenga internet. En Admin -> Impresoras se ve el estado real.'
+}
 Write-Host "  Instalado en: $Destino"
+if ($hayCaja) { Write-Host "  Tickets en:   $DestinoCaja" }
 Write-Host ''
-Write-Host '  El agente ya quedo corriendo en su propia ventana.'
-Write-Host '  Dejala abierta todo el horario del local - si se cierra, no salen comandas.'
-Write-Host ''
-Write-Host '  En Admin -> Impresoras las dos deben verse "En linea" en menos de un minuto.'
+Write-Host '  Deja las ventanas abiertas todo el horario del local.'
+Write-Host '  Si se cierran, no salen comandas ni tickets.'
 Write-Host ''

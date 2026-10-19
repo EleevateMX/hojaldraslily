@@ -144,6 +144,30 @@ export async function encolarTicketCaja(
   })
 }
 
+/**
+ * El código con el que una PC se conecta a las impresoras.
+ *
+ * El instalador corre en la PC de la tienda, **sin sesión**, y necesita el
+ * token de cada impresora — que es lo único que prueba su identidad ante la
+ * cola. Antes eso se resolvía dejando las funciones abiertas a `anon`, o sea
+ * a cualquiera con la llave publicable: con ella se podía rotar el token de
+ * una impresora y quedarse con todas las comandas y tickets de la tienda.
+ *
+ * Ahora la puerta la abre gerencia desde adentro. El código vive 30 minutos,
+ * se recorta a 20 más al estrenarlo, y generar uno nuevo revoca el anterior:
+ * dos códigos buenos a la vez es uno que alguien anotó y nadie recuerda.
+ */
+export async function crearCodigoDeInstalacion(
+  sb: ClienteLily,
+): Promise<{ codigo: string; expira_en: string }> {
+  const filas = await rpc<{ codigo: string; expira_en: string }[]>(
+    sb,
+    'fn_codigo_instalacion_crear',
+    {},
+  )
+  return filas[0]
+}
+
 /** Rota el token de una impresora (sospecha de compromiso, o se perdió printers.config.json). Devuelve el nuevo token UNA vez. */
 export async function rotarTokenImpresora(sb: ClienteLily, id: string): Promise<string> {
   return rpc<string>(sb, 'fn_rotar_token_impresora', { p_id: id })
