@@ -146,10 +146,20 @@ const FUENTES_MARCA =
  */
 export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DEFAULT): string {
   const fecha = typeof data.fecha === 'string' ? new Date(data.fecha) : data.fecha
+  // La zona va fija en Mérida, no la del navegador.
+  //
+  // La fecha del negocio no es la de quien mira: Admin se abre desde el
+  // teléfono, y una reimpresión hecha en otra zona salía con otra hora que la
+  // original. Y sobre todo, el agente de tickets imprime desde la PC de la
+  // tienda con Mérida fija: sin esto, el papel y la pantalla darían horas
+  // distintas del mismo cobro.
   const fechaTxt = fecha.toLocaleDateString('es-MX', {
+    timeZone: 'America/Merida',
     day: '2-digit', month: 'short', year: 'numeric',
   })
-  const horaTxt = fecha.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  const horaTxt = fecha.toLocaleTimeString('es-MX', {
+    timeZone: 'America/Merida', hour: '2-digit', minute: '2-digit',
+  })
 
   const subtotal = data.items.reduce((a, i) => a + i.cantidad * i.precioUnitario, 0)
   const descuento = data.descuento ?? 0
