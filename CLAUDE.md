@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **205 migraciones aplicadas en orden, y 205
+`fzkdgqqvfkogmxdgqsxj` tiene **206 migraciones aplicadas en orden, y 206
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -594,6 +594,7 @@ empaquetador y se desvían solas:
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
+| Abrir o cerrar el turno contando el cajón | Se teclea **cuántas piezas** hay de cada billete y de cada moneda; el total lo saca el sistema. Billetes y monedas van en columnas separadas porque **el $20 existe como los dos** |
 | Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia. **Es el único lugar donde se fijan existencias**: la pestaña Inventario de Costeos sirve para contar e imprimir la hoja, no para fijarlas |
 | Apuntar lo que llegó del proveedor | Admin → **Inventario** → **Llegó mercancía** |
 | Saber qué hay que comprar | Admin → **Inventario** → **Qué hay que comprar** (sale lo que bajó de su mínimo) |
@@ -768,6 +769,26 @@ empaquetador y se desvían solas:
   «o antes» es para que lo que se pasó de su día siga descontando, porque
   sigue en una bolsa con el nombre de alguien— y lo que no trae fecha cuenta
   hoy.
+
+**Efectivo**
+
+- **El billete de $20 y la moneda de $20 NO son la misma casilla.** El conteo
+  del kiosko nació como `Record<number, number>` con el 20 en las dos listas:
+  tocar «+» en la moneda subía el contador del billete, así que al contar las
+  monedas se borraban los billetes — el total quedaba corto y el desglose
+  mentía. Ahora el conteo vive en `packages/utils/src/efectivo.ts`, separado
+  por especie, con pruebas, y lo comparten la caja y el kiosko. Es la única
+  denominación que choca hoy, pero la forma no depende de eso.
+- **El efectivo contado lo calcula el SERVIDOR**, desde el desglose
+  (`fn_suma_conteo`). Es la regla de `fn_cobrar_orden` aplicada al conteo: si
+  el total viajara desde la pantalla, el desglose y el número podrían no
+  coincidir, y entonces hay dos verdades y ninguna sirve.
+- `fn_abrir_caja` y `fn_cerrar_caja` **exigen sesión**. Antes eran un
+  `insert` y un `update` directos a `caja_cortes` desde el navegador, o sea
+  que cualquiera con la llave publicable podía abrir un turno, cerrarlo o
+  escribir el efectivo contado que se le antojara — **falsear el corte**.
+  Ojo: el permiso de TABLA sigue abierto hasta que el kiosko sostenga su
+  sesión, así que el camino viejo todavía existe.
 
 **Indicadores**
 

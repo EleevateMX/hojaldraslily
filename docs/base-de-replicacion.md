@@ -180,18 +180,30 @@ el catálogo y no aparece en ninguna pantalla de almacén.
 
 | Qué | Cómo está hecho hoy |
 |---|---|
-| Abrir el turno | **`insert` directo** en `caja_cortes` desde el navegador (`abrirCaja`) |
-| Cerrar el turno | **`update` directo** en `caja_cortes` (`cerrarCaja`) |
+| Abrir el turno | `fn_abrir_caja(caja, conteo, fondo)` — **exige sesión** |
+| Cerrar el turno | `fn_cerrar_caja(corte, conteo, notas, efectivo)` — **exige sesión** |
+| Sumar el cajón | `fn_suma_conteo(jsonb)`, en el **servidor** |
 | El corte | `vw_corte_resumen`, **calculado en vivo**, nunca guardado |
 | El desglose del mixto | `vw_pagos_por_metodo`: da las **partes** si las hay, y el pago entero si no |
 
-> **Ojo con las dos primeras**, porque al replicar conviene hacerlas
-> distinto: abrir y cerrar caja son escrituras **directas a la tabla**, no
-> funciones. Hoy funcionan y la base garantiza un solo corte abierto por
-> caja, pero quiere decir que cualquiera con la llave publicable puede abrir
-> un turno, cerrarlo, o escribir el `efectivo_contado` que se le antoje — o
-> sea **falsear el corte**. En la tienda nueva: `fn_abrir_caja` y
-> `fn_cerrar_caja` con sesión, como todo lo demás que toca dinero. Ver §7.
+> **Hasta hoy esas dos eran un `insert` y un `update` directos a la tabla**,
+> así que cualquiera con la llave publicable podía abrir un turno, cerrarlo o
+> escribir el `efectivo_contado` que se le antojara — **falsear el corte**.
+> Ya son funciones con sesión. Queda abierto el permiso de TABLA sobre
+> `caja_cortes`, que se cierra cuando el kiosko sostenga su sesión (§7).
+
+**5. El cajón se cuenta por denominación, y el total lo saca el servidor.**
+«Faltan $340» no le sirve a nadie; «falta un billete de $200 y tres de $50»
+es una frase con la que alguien se acuerda de algo. El desglose viaja y
+`fn_suma_conteo` lo suma: si el total viajara desde la pantalla, el desglose
+y el número podrían no coincidir y habría dos verdades.
+
+**6. El billete de $20 y la moneda de $20 NO son la misma casilla.** Un
+conteo indexado solo por denominación hace que las dos filas escriban el
+mismo contador: al teclear las monedas se borran los billetes. Es la única
+denominación que choca en México hoy, y le pasó a las dos tiendas. El conteo
+va `{"billetes": {...}, "monedas": {...}}`, en `@lily/utils`, con pruebas, y
+lo comparten la caja y el kiosko.
 
 ### Lo que hay que respetar
 
@@ -379,6 +391,7 @@ Tres cosas que hay que saber para leer el resultado:
 | Inventario | Insumos por movimientos, conteo físico, merma con motivo, mínimos, lista de compra |
 | Inventario | Producción por moldes de 48 y 24, separados; el camino C→P→H→E |
 | Caja | Turno, corte en vivo, el mixto llegando al corte |
+| Caja | **Conteo por denominación** al abrir y al cerrar, con el total calculado en el servidor y el $20 separado por especie |
 | Impresiones | Cola con token, latido con versión, prueba desde Admin, reimpresión auditada |
 | Impresiones | **El ticket encolado a la térmica**, con el mismo módulo que la pantalla |
 | Impresiones | Código de instalación, instalador que espera el latido, los dos agentes |
@@ -398,30 +411,24 @@ vinculación de cuentas, que eran escalada de privilegios directa—, pero
 quedan las de catálogo, extras, observaciones y clientes. Ninguna es
 escalada; varias permiten ensuciar el catálogo.
 
-**3. Abrir y cerrar caja se escriben directo a la tabla.** `caja_cortes` es
-una de las tres que el kiosko y las estaciones escriben sin sesión (las otras
-son `pedidos_cocina` y `cocina_items`). Con la llave publicable se puede
-abrir un turno, cerrarlo o poner el `efectivo_contado` que sea, que es
-**falsear el corte**. Se arregla junto con el punto 1 —haciendo que esas
-pantallas abran sesión real— y pasándolas a funciones.
+**3. `caja_cortes` sigue escribible por `anon` a nivel de TABLA.** Abrir y
+cerrar ya son funciones con sesión, pero mientras el permiso de tabla siga
+abierto el camino viejo también existe — y con él, falsear el corte. Es una
+de las tres tablas que el kiosko y las estaciones escriben sin sesión (las
+otras son `pedidos_cocina` y `cocina_items`). Se cierra junto con el punto 1.
 
-**4. Caja: falta contar por denominación.** Hoy el corte recibe **un número**
-de efectivo contado. Separar billetes y monedas al abrir y al cerrar es lo
-que convierte «faltan $340» en «falta un billete de $200 y tres de $50 que
-alguien recuerda». Ojo con el $20: existe como billete y como moneda.
-
-**5. Caja: el corte no se imprime solo.** Debería salir en la térmica al
+**4. Caja: el corte no se imprime solo.** Debería salir en la térmica al
 cerrar, no por el diálogo del navegador de quien esté mirando Admin.
 
-**6. Los datos del negocio del ticket están en el código** (`NEGOCIO_DEFAULT`).
+**5. Los datos del negocio del ticket están en el código** (`NEGOCIO_DEFAULT`).
 Funcionan para una tienda; para replicar hace falta una pantalla en Admin.
 La frase del horario sigue sin existir porque la casa nunca la dio.
 
-**7. `traerTodo()` para paginar.** PostgREST corta en 1 000 filas **y no
+**6. `traerTodo()` para paginar.** PostgREST corta en 1 000 filas **y no
 avisa**. Hoy ninguna tabla de Lily llega, pero el día que llegue el síntoma
 será «faltan movimientos» sin ningún error.
 
-**8. Cosas de la casa, no del código**: costos, recetas y proveedores en
+**7. Cosas de la casa, no del código**: costos, recetas y proveedores en
 Costeos; los mínimos del inventario; los secretos de la terminal; los PIN de
 demostración de la vitrina, que hay que cambiar antes de abrir.
 
@@ -436,6 +443,9 @@ Vale anotarlo para que no se «replique» al revés:
 - **El alta de personal exige gerencia.**
 - **Reimprimir exige sesión**, y quién reimprimió sale de la sesión, no del
   cliente.
+- **El conteo del cajón separa el billete del $20 de la moneda del $20**, con
+  pruebas, y lo comparten la caja y el kiosko. Allá la forma plana dejó diez
+  cortes imposibles de recuperar.
 - **El agente de tickets comparte el formateador con la pantalla**, en vez de
   tener el suyo.
 - **Sin lealtad.** Se quitaron Rewards, cupones, promos y metas: venían de

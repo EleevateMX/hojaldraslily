@@ -5,7 +5,11 @@ import {
 } from '@lily/supabase'
 import type { EmpleadoSesion } from '@lily/supabase'
 import type { Caja, CajaCorte, CorteResumen } from '@lily/types'
-import { mxn, mensajeDeError } from '@lily/utils'
+import {
+  mxn, mensajeDeError,
+  BILLETES, MONEDAS, CONTEO_VACIO, sumaConteo, ponerPiezas, piezasDe,
+  type Conteo, type EspecieEfectivo,
+} from '@lily/utils'
 import { sb } from '@/lib/sb'
 
 interface Props {
@@ -40,13 +44,13 @@ export function PanelDeCorte({ abierto, onCerrar }: Props) {
   const [corte, setCorte] = useState<CajaCorte | null>(null)
   const [resumen, setResumen] = useState<CorteResumen | null>(null)
   const [fondo, setFondo] = useState('')
-  const [conteo, setConteo] = useState<Conteo>({})
+  const [conteo, setConteo] = useState<Conteo>(CONTEO_VACIO)
   const [guardando, setGuardando] = useState(false)
   const [resultado, setResultado] = useState<'abierto' | 'cerrado' | null>(null)
 
   useEffect(() => {
     if (!abierto) return
-    setPin(''); setError(null); setFondo(''); setConteo({})
+    setPin(''); setError(null); setFondo(''); setConteo(CONTEO_VACIO)
     setResultado(null); setResumen(null); setCorte(null)
     setFase('cargando')
     empleadoDeLaSesion(sb)
@@ -126,7 +130,7 @@ export function PanelDeCorte({ abierto, onCerrar }: Props) {
     setGuardando(true)
     setError(null)
     try {
-      await abrirCaja(sb, caja.id, Number(fondo) || 0, empleado?.id)
+      await abrirCaja(sb, caja.id, { fondo: Number(fondo) || 0 })
       setResultado('abierto')
       setFase('listo')
     } catch (e) {
@@ -141,7 +145,10 @@ export function PanelDeCorte({ abierto, onCerrar }: Props) {
     setGuardando(true)
     setError(null)
     try {
-      await cerrarCaja(sb, corte.id, sumaConteo(conteo), empleado?.id)
+      // Viaja el DESGLOSE, no el total: el servidor lo recalcula. Y así el
+      // corte guarda de qué estaba hecho el cajón, que es lo que convierte
+      // «faltan $340» en «falta un billete de $200 y tres de $50».
+      await cerrarCaja(sb, corte.id, { conteo })
       setCorte(null)
       setResultado('cerrado')
       setFase('listo')
@@ -367,16 +374,16 @@ export function PanelDeCorte({ abierto, onCerrar }: Props) {
  *
  * Contando por denominación el total lo hace la máquina, y de paso queda
  * el desglose: si mañana falta un billete de 500, se ve cuántos había.
+ *
+ * **Y el $20 existe como billete Y como moneda.** Esto nació con un
+ * `Record<number, number>` —una casilla por denominación— y con el 20 en las
+ * dos listas: tocar «+» en la moneda de 20 subía el mismo contador que el
+ * billete de 20, así que al teclear las monedas se borraban los billetes. El
+ * total quedaba corto y el desglose mentía. Por eso ahora el conteo vive en
+ * `@lily/utils` separado por especie, lo comparten la caja y el kiosko, y
+ * tiene pruebas. Es la misma lección que la tienda hermana aprendió con diez
+ * cortes ya guardados y sin forma de recuperarlos.
  */
-const BILLETES = [500, 200, 100, 50, 20]
-const MONEDAS = [20, 10, 5, 2, 1]
-
-type Conteo = Record<number, number>
-
-function sumaConteo(c: Conteo): number {
-  return Object.entries(c).reduce((t, [den, n]) => t + Number(den) * (n || 0), 0)
-}
-
 function FilaDenominacion({
   den, cuantos, onCambiar, moneda,
 }: { den: number; cuantos: number; onCambiar: (n: number) => void; moneda?: boolean }) {
@@ -424,7 +431,8 @@ function FilaDenominacion({
 function ConteoDeCaja({
   conteo, onCambiar,
 }: { conteo: Conteo; onCambiar: (c: Conteo) => void }) {
-  const poner = (den: number, n: number) => onCambiar({ ...conteo, [den]: n })
+  const poner = (especie: EspecieEfectivo, den: number, n: number) =>
+    onCambiar(ponerPiezas(conteo, especie, den, n))
   const total = sumaConteo(conteo)
 
   return (
@@ -436,12 +444,23 @@ function ConteoDeCaja({
       <div className="bg-white border border-sa-green-ink/10 rounded-sa p-3 space-y-2">
         <p className="font-mono text-[10px] uppercase tracking-wider text-sa-green-ink/45">Billetes</p>
         {BILLETES.map((d) => (
-          <FilaDenominacion key={d} den={d} cuantos={conteo[d] || 0} onCambiar={(n) => poner(d, n)} />
+          <FilaDenominacion
+            key={d}
+            den={d}
+            cuantos={piezasDe(conteo, 'billetes', d)}
+            onCambiar={(n) => poner('billetes', d, n)}
+          />
         ))}
 
         <p className="font-mono text-[10px] uppercase tracking-wider text-sa-green-ink/45 pt-2">Monedas</p>
         {MONEDAS.map((d) => (
-          <FilaDenominacion key={d} den={d} cuantos={conteo[d] || 0} onCambiar={(n) => poner(d, n)} moneda />
+          <FilaDenominacion
+            key={d}
+            den={d}
+            cuantos={piezasDe(conteo, 'monedas', d)}
+            onCambiar={(n) => poner('monedas', d, n)}
+            moneda
+          />
         ))}
       </div>
 

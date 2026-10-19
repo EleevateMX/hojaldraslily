@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
 import { resumenCorte, cerrarCaja } from '@lily/supabase'
-import { mxn, mensajeDeError } from '@lily/utils'
+import { mxn, mensajeDeError, sumaConteo, hayConteo, type Conteo } from '@lily/utils'
+import { ContarEfectivo, CONTEO_VACIO } from '@/components/pos/ContarEfectivo'
 import type { CorteResumen } from '@lily/types'
 import { useVentasSinInternet } from '../store/sinInternet'
 import { useConexion } from '../lib/conexion'
@@ -13,6 +14,11 @@ export function CorteCaja() {
   const { empleado, corte, setCorte, cerrarSesion, limpiarOrden } = usePosStore()
 
   const [resumen, setResumen] = useState<CorteResumen | null>(null)
+  // Se cuenta el cajon pieza por pieza. El total lo saca el SERVIDOR desde
+  // este desglose: si el numero viajara desde aqui, el desglose y el numero
+  // podrian no coincidir, y entonces hay dos verdades y ninguna sirve.
+  const [conteo, setConteo] = useState<Conteo>(CONTEO_VACIO)
+  const [contando, setContando] = useState(true)
   const [efectivoContado, setEfectivoContado] = useState('')
   const [notas, setNotas] = useState('')
   const [cargando, setCargando] = useState(true)
@@ -55,7 +61,11 @@ export function CorteCaja() {
     setGuardando(true)
     setError(null)
     try {
-      await cerrarCaja(sb, corte.id, Number(efectivoContado) || 0, empleado?.id, notas.trim() || undefined)
+      await cerrarCaja(sb, corte.id, {
+        conteo: contando ? conteo : null,
+        efectivo: contando ? undefined : Number(efectivoContado) || 0,
+        notas: notas.trim() || undefined,
+      })
       setCorte(null)
       limpiarOrden()
       setCortado(true)
@@ -94,7 +104,10 @@ export function CorteCaja() {
     )
   }
 
-  const contado = Number(efectivoContado) || 0
+  // Lo que se pinta mientras se teclea. El que vale es el del servidor, que
+  // recalcula desde el mismo desglose al cerrar.
+  const contado = contando ? sumaConteo(conteo) : Number(efectivoContado) || 0
+  const yaConto = contando ? hayConteo(conteo) : efectivoContado !== ''
   const dif = contado - (resumen?.efectivo_esperado ?? 0)
   const numOrdenes = resumen?.num_ordenes ?? 0
   const totalPagado = resumen?.total_pagado ?? 0
@@ -187,17 +200,39 @@ export function CorteCaja() {
                 <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
                   Efectivo contado en caja
                 </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sa-green-ink/40 text-xl">$</span>
-                  <input
-                    type="number"
-                    value={efectivoContado}
-                    onChange={(e) => setEfectivoContado(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
-                  />
-                </div>
+                {contando ? (
+                  <>
+                    <ContarEfectivo conteo={conteo} onCambio={setConteo} />
+                    <button
+                      type="button"
+                      onClick={() => setContando(false)}
+                      className="mt-3 font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 hover:text-sa-green-ink underline"
+                    >
+                      Teclear solo el total
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sa-green-ink/40 text-xl">$</span>
+                      <input
+                        type="number"
+                        value={efectivoContado}
+                        onChange={(e) => setEfectivoContado(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setContando(true)}
+                      className="mt-3 font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 hover:text-sa-green-ink underline"
+                    >
+                      Contar por denominación
+                    </button>
+                  </>
+                )}
               </div>
-              {efectivoContado !== '' && (
+              {yaConto && (
                 <div
                   className={`flex justify-between items-center rounded-sa px-4 py-3 font-mono text-sm ${
                     dif === 0

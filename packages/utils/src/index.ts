@@ -1,6 +1,7 @@
 export * from './costeo'
 export * from './dia'
 export * from './dinero'
+export * from './efectivo'
 export * from './errores'
 export * from './fotos'
 export * from './moldes'

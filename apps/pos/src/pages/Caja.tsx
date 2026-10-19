@@ -4,11 +4,12 @@ import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
 import { listarAlmacenes, listarCajas, corteAbierto, abrirCaja } from '@lily/supabase'
 import { AvisoDeConexion } from '@/components/pos/AvisoDeConexion'
+import { ContarEfectivo, CONTEO_VACIO } from '@/components/pos/ContarEfectivo'
 import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
 import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
-import { mensajeDeError } from '@lily/utils'
+import { mensajeDeError, sumaConteo, hayConteo, type Conteo } from '@lily/utils'
 import { conRespaldo } from '../lib/respaldo'
 
 export function Caja() {
@@ -29,6 +30,11 @@ export function Caja() {
   const [horaActual, setHoraActual] = useState(new Date())
   const [cargandoCtx, setCargandoCtx] = useState(!corte)
   const [error, setError] = useState<string | null>(null)
+  // El fondo se cuenta pieza por pieza. El numero suelto se queda como
+  // salida de emergencia para el dia que haya prisa, pero el desglose es lo
+  // que convierte «faltan $340» en algo que alguien puede recordar.
+  const [conteo, setConteo] = useState<Conteo>(CONTEO_VACIO)
+  const [contando, setContando] = useState(true)
   const [fondo, setFondo] = useState('0')
   const [abriendo, setAbriendo] = useState(false)
 
@@ -76,7 +82,9 @@ export function Caja() {
     setAbriendo(true)
     setError(null)
     try {
-      const nuevo = await abrirCaja(sb, caja.id, Number(fondo) || 0, empleado?.id)
+      const nuevo = contando
+        ? await abrirCaja(sb, caja.id, { conteo })
+        : await abrirCaja(sb, caja.id, { fondo: Number(fondo) || 0 })
       setCorte(nuevo)
     } catch (e) {
       setError(mensajeDeError(e))
@@ -112,22 +120,48 @@ export function Caja() {
                 <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
                   Fondo inicial en efectivo
                 </label>
-                <div className="relative">
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sa-green-ink/40 text-xl">$</span>
-                  <input
-                    type="number"
-                    value={fondo}
-                    onChange={(e) => setFondo(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 bg-white border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
-                  />
-                </div>
+                {contando ? (
+                  <>
+                    <ContarEfectivo conteo={conteo} onCambio={setConteo} autoFocus />
+                    <button
+                      type="button"
+                      onClick={() => setContando(false)}
+                      className="mt-3 font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 hover:text-sa-green-ink underline"
+                    >
+                      Teclear solo el total
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 font-mono text-sa-green-ink/40 text-xl">$</span>
+                      <input
+                        type="number"
+                        value={fondo}
+                        onChange={(e) => setFondo(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-white border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setContando(true)}
+                      className="mt-3 font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 hover:text-sa-green-ink underline"
+                    >
+                      Contar por denominación
+                    </button>
+                  </>
+                )}
               </div>
               <button
                 onClick={() => void handleAbrir()}
                 disabled={abriendo || !caja}
                 className="w-full mt-5 bg-sa-green disabled:opacity-40 text-sa-cream py-4 rounded-sa-lg font-display text-xl hover:bg-sa-green-deep transition-colors"
               >
-                {abriendo ? 'Abriendo…' : 'Abrir caja'}
+                {abriendo
+                  ? 'Abriendo…'
+                  : contando && hayConteo(conteo)
+                    ? `Abrir caja con ${sumaConteo(conteo).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}`
+                    : 'Abrir caja'}
               </button>
               <button
                 onClick={() => { cerrarSesion(); navigate('/login') }}
