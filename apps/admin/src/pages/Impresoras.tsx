@@ -8,7 +8,7 @@ import {
 } from '@lily/supabase'
 import type { Cocina, TrabajoImpresion, TipoConexionImpresora, AnchoPapel, EstadoTrabajoImpresion } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
-import { mensajeDeError } from '@lily/utils'
+import { mensajeDeError, fechaHoraEnMerida } from '@lily/utils'
 
 interface FormState {
   id: string | null
@@ -515,7 +515,7 @@ export default function Impresoras() {
                     {imp.conectada ? <Chip tone="si">🟢 En línea</Chip> : <Chip tone="no">⚪ Desconectada</Chip>}
                   </td>
                   <td className={cx.td}>
-                    {imp.ultima_impresion ? new Date(imp.ultima_impresion).toLocaleString('es-MX') : <span className={cx.muted}>—</span>}
+                    {imp.ultima_impresion ? fechaHoraEnMerida(imp.ultima_impresion) : <span className={cx.muted}>—</span>}
                   </td>
                   <td className={cx.tdAcciones}>
                     <div className="inline-flex gap-2">
@@ -585,7 +585,7 @@ export default function Impresoras() {
                     <td className={cx.td}>
                       {t.error_ultimo ? <span className="text-sa-strawberry text-xs">{t.error_ultimo}</span> : <span className={cx.muted}>—</span>}
                     </td>
-                    <td className={cx.td}>{new Date(t.created_at).toLocaleString('es-MX')}</td>
+                    <td className={cx.td}>{fechaHoraEnMerida(t.created_at)}</td>
                     <td className={cx.tdNum}>
                       <button className={cx.btnSec} onClick={() => void reimprimir(t)}>Reimprimir</button>
                     </td>

@@ -12,8 +12,10 @@ import { sb } from '@/lib/sb'
  */
 
 function fechaLarga(iso: string): string {
+  // En Mérida y en 12 h aunque el teléfono del cliente esté en otra zona: el
+  // recibo tiene que decir la misma hora que el ticket de papel.
   return new Date(iso).toLocaleString('es-MX', {
-    day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit',
+    timeZone: 'America/Merida', day: 'numeric', month: 'long', hour: 'numeric', minute: '2-digit', hour12: true,
   })
 }
 

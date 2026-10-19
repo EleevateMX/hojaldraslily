@@ -905,9 +905,12 @@ export function faltaPara(listoEstimado: string, ahora = new Date()): {
 
 /** La hora de salida, como se lee en un reloj. */
 export function horaDeSalida(listoEstimado: string): string {
+  // En Mérida y en 12 h, aunque Admin se abra desde un teléfono en otra zona.
   return new Date(listoEstimado).toLocaleTimeString('es-MX', {
-    hour: '2-digit',
+    timeZone: 'America/Merida',
+    hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   })
 }
 

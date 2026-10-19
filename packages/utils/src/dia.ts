@@ -19,6 +19,32 @@ export function hoyEnMerida(cuando: Date = new Date()): string {
 }
 
 /**
+ * La hora como la lee la casa: **12 horas con a.m./p.m., en Mérida**.
+ *
+ * Las dos cosas van fijas y no al gusto del aparato. La PC de la tienda está
+ * en Mérida, pero Admin se abre desde el teléfono en cualquier parte, y un
+ * teléfono configurado en 24 h o con otra zona diría otra hora del mismo
+ * cobro. `hour12` explícito porque `es-MX` en algunos navegadores viejos cae
+ * en 24 h.
+ */
+export function horaEnMerida(cuando: Date | string | null | undefined): string {
+  const d = cuando instanceof Date ? cuando : cuando ? new Date(cuando) : null
+  if (!d || Number.isNaN(d.getTime())) return ''
+  return d.toLocaleTimeString('es-MX', {
+    timeZone: ZONA_MERIDA, hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
+/** Día y hora, como «19 oct, 2:10 p.m.». Para listas de Admin. */
+export function fechaHoraEnMerida(cuando: Date | string | null | undefined): string {
+  const d = cuando instanceof Date ? cuando : cuando ? new Date(cuando) : null
+  if (!d || Number.isNaN(d.getTime())) return ''
+  return d.toLocaleString('es-MX', {
+    timeZone: ZONA_MERIDA, day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+}
+
+/**
  * El folio provisional: `S-01`, `S-02`… La «S» es de «sin internet».
  *
  * Es el número que se le dice al cliente y el que va en el ticket mientras no

@@ -11,13 +11,27 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **210 migraciones aplicadas en orden, y 210
+`fzkdgqqvfkogmxdgqsxj` tiene **211 migraciones aplicadas en orden, y 211
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
 el catálogo semilla de hojaldras está sembrado y las Edge Functions
 desplegadas.
+
+**Y está EN CERO desde el 19/10** (`20261019190000`): la casa pidió arrancar
+limpio. Se borró la historia de las pruebas —órdenes, pagos, cortes,
+encargos, producción, movimientos, cola de impresión— y los folios volvieron
+a 1. Se quedó la configuración: catálogo, 99 insumos con su renglón de
+existencia en cero, empleados, impresoras con su token, cajas, parámetros y
+Costeos. **Lo que se capture a partir de ahora es de verdad**: no volver a
+correr esa migración.
+
+**Todas las horas van en 12 h y en Mérida (UTC−6), fijas**, no al gusto del
+aparato: `horaEnMerida` / `fechaHoraEnMerida` en `@lily/utils` para las
+pantallas, y `timeZone: 'America/Merida'` + `hour12: true` en los
+formateadores del papel y del recibo. La PC de la tienda ya está en Mérida,
+pero Admin se abre desde el teléfono en cualquier parte.
 
 Lo que falta para abrir, todo fuera del código:
 
@@ -1005,6 +1019,16 @@ empaquetador y se desvían solas:
 
   El archivo de la migración se queda con el `'dr' || 'op'` a la vista y con
   el porqué: es feo, pero es el registro de lo que de verdad corrió.
+
+  **Y también se cuelga con un `DELETE` o un `UPDATE` sin `WHERE`** escritos
+  tal cual, venga en `execute_sql` o en `apply_migration`. Comprobado el
+  19/10 con el arranque en cero: el bloque entero se colgó; partido, el DO
+  con `'del' || 'ete'` pasó, los `alter sequence` pasaron y los dos
+  `update … set …` a secas se colgaron hasta que llevaron un `where` que no
+  quita nada. Cuando `apply_migration` se cuelga, **no aplicó nada y no
+  registró la migración**: se corre por partes con `execute_sql` y la fila
+  de `supabase_migrations.schema_migrations` se inserta a mano con las
+  mismas sentencias, para que el conteo siga cuadrando.
 
 ---
 

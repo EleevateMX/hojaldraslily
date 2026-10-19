@@ -9,7 +9,7 @@ import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
 import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
-import { mensajeDeError, sumaConteo, hayConteo, type Conteo } from '@lily/utils'
+import { mensajeDeError, sumaConteo, hayConteo, horaEnMerida, type Conteo } from '@lily/utils'
 import { conRespaldo } from '../lib/respaldo'
 
 export function Caja() {
@@ -93,7 +93,7 @@ export function Caja() {
     }
   }
 
-  const hora = horaActual.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  const hora = horaEnMerida(horaActual)
 
   // --- Apertura de caja (sin corte abierto) ---
   if (!corte) {

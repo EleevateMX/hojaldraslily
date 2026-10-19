@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { sb } from './lib/sb'
 import { listarPedidosActivos, suscribirPedidosCocina } from '@lily/supabase'
 import type { PedidoConItems } from '@lily/supabase'
-import { mensajeDeError } from '@lily/utils'
+import { mensajeDeError, horaEnMerida } from '@lily/utils'
 
 interface FolioAgrupado {
   folio: number
@@ -79,7 +79,7 @@ export default function App() {
     )
   }
 
-  const hora = reloj.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  const hora = horaEnMerida(reloj)
 
   return (
     <div className="h-screen w-full bg-sa-green-deep text-sa-cream flex flex-col overflow-hidden relative">
