@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   armarTicket,
+  armarCorte,
   subtotalDe,
   totalDe,
   COLUMNAS_80MM,
@@ -159,5 +160,39 @@ describe('el papel y la pantalla dicen lo mismo', () => {
       style: 'currency', currency: 'MXN',
     }).format(subtotalDe(data.items))
     expect(ticketHTML(data, NEGOCIO_DEFAULT)).toContain(esperado)
+  })
+})
+
+describe('armarCorte (el papel del cierre)', () => {
+  const corte = {
+    tipo: 'corte' as const, corte_id: 'c1', caja: 'Caja 1',
+    abierto_en: '2026-10-19T13:00:00Z', cerrado_en: '2026-10-20T02:00:00Z',
+    fondo_inicial: 500, num_ordenes: 42, total_efectivo: 3100, total_tarjeta: 1800,
+    total_pagado: 4900, efectivo_esperado: 3600, efectivo_contado: 3400, diferencia: -200,
+    conteo_cierre: { billetes: { 500: 4, 200: 7 }, monedas: { 20: 3 } },
+    abrio: 'Rosa', cerro: 'Rosa',
+  }
+
+  it('ninguna línea se pasa del papel', () => {
+    const l = texto(armarCorte(corte, NEGOCIO_DEFAULT))
+    expect(l.filter((x) => x.length > COLUMNAS_80MM)).toEqual([])
+  })
+
+  it('dice con una palabra si cuadró, y el signo va con el número', () => {
+    expect(texto(armarCorte(corte, NEGOCIO_DEFAULT)).some((x) => x.startsWith('FALTANTE') && x.endsWith('-$200.00'))).toBe(true)
+    expect(texto(armarCorte({ ...corte, diferencia: 0 }, NEGOCIO_DEFAULT)).some((x) => x.startsWith('CUADRA'))).toBe(true)
+    expect(texto(armarCorte({ ...corte, diferencia: 50 }, NEGOCIO_DEFAULT)).some((x) => x.startsWith('SOBRANTE') && x.endsWith('$50.00'))).toBe(true)
+  })
+
+  it('el desglose del cajón va renglón por renglón, y suma lo contado', () => {
+    const l = texto(armarCorte(corte, NEGOCIO_DEFAULT))
+    expect(l.some((x) => x.includes('Billete $500 x 4') && x.endsWith('$2,000.00'))).toBe(true)
+    expect(l.some((x) => x.includes('Moneda $20 x 3') && x.endsWith('$60.00'))).toBe(true)
+  })
+
+  it('un corte sin desglose ni notas no deja renglones huecos', () => {
+    const l = texto(armarCorte({ ...corte, conteo_cierre: null, notas: null }, NEGOCIO_DEFAULT))
+    expect(l.some((x) => x.includes('Billete'))).toBe(false)
+    expect(l.some((x) => x.startsWith('Notas'))).toBe(false)
   })
 })

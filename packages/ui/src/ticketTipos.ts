@@ -110,3 +110,36 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
   mostrarCajero: false,
 }
+
+/**
+ * El corte de caja, como llega del servidor para imprimirse.
+ *
+ * Es `vw_corte_resumen` tal cual (`to_jsonb` de la fila) más lo que la vista
+ * no trae: el desglose del cajón al abrir y al cerrar, quién abrió y quién
+ * cerró, y las notas. Lo arma `fn_cerrar_caja` y lo dibuja `armarCorte`.
+ */
+export interface CorteData {
+  tipo: 'corte'
+  corte_id: string
+  caja?: string | null
+  abierto_en?: string | null
+  cerrado_en?: string | null
+  fondo_inicial?: number | null
+  num_ordenes?: number | null
+  total_efectivo?: number | null
+  total_tarjeta?: number | null
+  total_clip?: number | null
+  total_cortesia?: number | null
+  total_otro?: number | null
+  total_pagado?: number | null
+  efectivo_esperado?: number | null
+  efectivo_contado?: number | null
+  diferencia?: number | null
+  conteo_apertura?: unknown
+  conteo_cierre?: unknown
+  abrio?: string | null
+  cerro?: string | null
+  notas?: string | null
+  /** Los datos del negocio, si Admin los puso. Si no, el agente usa los suyos. */
+  negocio?: Partial<TicketNegocio> | null
+}

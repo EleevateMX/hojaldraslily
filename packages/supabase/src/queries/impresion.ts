@@ -1,4 +1,4 @@
-import type { Impresora, TrabajoImpresion, Cocina, TipoConexionImpresora, AnchoPapel } from '@lily/types'
+import type { Impresora, TrabajoImpresion, Cocina, TipoConexionImpresora, AnchoPapel, Json } from '@lily/types'
 import type { ClienteLily } from '../client'
 
 // El generador de tipos de Supabase no distingue "parámetro nullable" de
@@ -282,4 +282,50 @@ export function suscribirTrabajosImpresion(sb: ClienteLily, onCambio: () => void
     if (reintento) clearTimeout(reintento)
     if (canal) void sb.removeChannel(canal)
   }
+}
+
+// ----------------------- los datos del ticket ------------------------
+
+/**
+ * Lo que va impreso en la cabecera y el pie del ticket y del corte.
+ *
+ * Vive en `parametros.ticket` y **viaja dentro de cada trabajo** de
+ * impresión: `fn_imprimir_ticket_caja` y `fn_cerrar_caja` lo pegan al
+ * encolar. El agente de la PC no consulta nada — sigue siendo un programa
+ * tonto que imprime lo que le dan—, así que un cambio aquí sale en el
+ * siguiente ticket sin reinstalar nada, y una reimpresión de mañana saca el
+ * ticket con el teléfono de hoy, porque está guardado en el trabajo.
+ *
+ * `null` = el agente usa lo que trae en el código (`NEGOCIO_DEFAULT`).
+ */
+export interface DatosDelTicket {
+  nombre?: string
+  sucursal?: string
+  direccion?: string
+  telefono?: string
+  rfc?: string
+  leyenda?: string
+  pieSecundario?: string
+  avisos?: string[]
+  mostrarCajero?: boolean
+}
+
+export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {
+  const { data, error } = await sb.from('parametros').select('ticket').eq('id', 'default').maybeSingle()
+  if (error) throw error
+  const t = data?.ticket
+  return t && typeof t === 'object' && !Array.isArray(t) ? (t as DatosDelTicket) : null
+}
+
+export async function guardarDatosDelTicket(sb: ClienteLily, datos: DatosDelTicket): Promise<void> {
+  // Se guarda limpio: sin cadenas vacías, que en el papel se imprimirían
+  // como renglones en blanco. Un campo vacío es «no se imprime».
+  const limpio: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(datos)) {
+    if (typeof v === 'string') { if (v.trim()) limpio[k] = v.trim() }
+    else if (Array.isArray(v)) { const a = v.map((x) => String(x).trim()).filter(Boolean); if (a.length) limpio[k] = a }
+    else if (v !== undefined && v !== null) limpio[k] = v
+  }
+  const { error } = await sb.from('parametros').update({ ticket: limpio as Json }).eq('id', 'default')
+  if (error) throw error
 }

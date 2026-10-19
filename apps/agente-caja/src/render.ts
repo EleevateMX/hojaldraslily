@@ -15,11 +15,37 @@
 // arrastra los componentes de React y el `imprimirTicket` que toca
 // `document`, y aquí no hay navegador. `tsc` lo caza aunque el import sea
 // solo de tipos.
-import { armarTicket, COLUMNAS_80MM } from '@lily/ui/papel'
-import type { TicketData, TicketNegocio } from '@lily/ui/tipos'
+import { armarTicket, armarCorte, COLUMNAS_80MM } from '@lily/ui/papel'
+import type { TicketData, TicketNegocio, CorteData } from '@lily/ui/tipos'
 import { ConstructorEscPos, type LogoRaster } from './escpos.js'
 
 export type TipoDocumento = 'ticket' | 'comanda' | 'corte'
+
+/** El corte de caja: lo arma `fn_cerrar_caja` al cerrar el turno. */
+export function esPayloadDeCorte(p: unknown): p is CorteData {
+  return !!p && typeof p === 'object'
+    && (p as { tipo?: unknown }).tipo === 'corte'
+    && typeof (p as { corte_id?: unknown }).corte_id === 'string'
+}
+
+/**
+ * Los datos del negocio que van en el papel.
+ *
+ * Si el trabajo trae `negocio` —lo pega `fn_imprimir_ticket_caja` desde
+ * `parametros.ticket`, que se edita en Admin— manda eso; lo que no traiga lo
+ * completa el `NEGOCIO_DEFAULT` del código. Así un cambio de teléfono en
+ * Admin sale en el siguiente ticket sin reinstalar nada en la PC, y una
+ * reimpresión de mañana saca el ticket con los datos de hoy, porque viajan
+ * dentro del trabajo.
+ */
+export function negocioDelTrabajo(payload: unknown, porOmision: TicketNegocio): TicketNegocio {
+  const n = (payload as { negocio?: unknown } | null)?.negocio
+  if (!n || typeof n !== 'object') return porOmision
+  const limpio = Object.fromEntries(
+    Object.entries(n as Record<string, unknown>).filter(([, v]) => v !== null && v !== undefined),
+  )
+  return { ...porOmision, ...limpio } as TicketNegocio
+}
 
 export interface TrabajoCaja {
   id: string
@@ -93,6 +119,16 @@ export function construirDocumento(
 ): Buffer {
   if (esPayloadDePrueba(trabajo.payload)) return construirPrueba(trabajo.payload, ancho)
 
+  const neg = negocioDelTrabajo(trabajo.payload, negocio)
+
+  if (esPayloadDeCorte(trabajo.payload)) {
+    const b = new ConstructorEscPos().inicializar().alinear(0)
+    for (const l of armarCorte(trabajo.payload, neg, ancho)) {
+      if (typeof l === 'string') b.linea(l)
+    }
+    return b.cortar().construir()
+  }
+
   if (!esPayloadDeTicket(trabajo.payload)) {
     throw new Error(
       `El trabajo ${trabajo.id} no trae un ticket que se pueda imprimir ` +
@@ -104,7 +140,7 @@ export function construirDocumento(
   if (logo) b.alinear(1).logo(logo).linea()
 
   b.alinear(0)
-  for (const l of armarTicket(trabajo.payload, negocio, ancho)) {
+  for (const l of armarTicket(trabajo.payload, neg, ancho)) {
     if (typeof l === 'string') { b.linea(l); continue }
     // Marca de QR: la impresora lo genera nativamente, así no hay que
     // rasterizarlo de este lado y mandarlo por un buffer chico.

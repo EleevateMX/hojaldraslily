@@ -55,11 +55,11 @@ set "IMPRIME=--kiosk-printing"
 
 echo.
 echo   Abriendo CAJA (POS)...
-start "" "%NAV%" %COMUNES% %IMPRIME% --user-data-dir="%LOCALAPPDATA%\shake-pos" --window-position=160,160 --window-size=980,1500 https://caja.hojaldraslily.com
+start "" "%NAV%" %COMUNES% %IMPRIME% --user-data-dir="%LOCALAPPDATA%\lily-caja" --window-position=160,160 --window-size=980,1500 https://caja.hojaldraslily.com
 timeout /t 3 /nobreak >nul
 
 echo   Abriendo ADMIN...
-start "" "%NAV%" %COMUNES% --user-data-dir="%LOCALAPPDATA%\shake-admin" --window-position=100,100 --window-size=980,1500 https://admin.hojaldraslily.com
+start "" "%NAV%" %COMUNES% --user-data-dir="%LOCALAPPDATA%\lily-admin" --window-position=100,100 --window-size=980,1500 https://admin.hojaldraslily.com
 
 echo.
 echo   Listo. Alt+Tab para alternar entre ventanas.

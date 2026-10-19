@@ -173,6 +173,72 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   }
   return L;
 }
+function hora(iso) {
+  if (!iso) return "";
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
+  return f.toLocaleString("es-MX", {
+    timeZone: "America/Merida",
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+function renglonesDeConteo(raw) {
+  if (!raw || typeof raw !== "object") return [];
+  const o = raw;
+  const out = [];
+  const lado = (v, nombre) => {
+    if (!v || typeof v !== "object") return;
+    Object.entries(v).map(([den, n]) => [Number(den), Math.max(0, Math.trunc(Number(n) || 0))]).filter(([den, n]) => Number.isFinite(den) && den > 0 && n > 0).sort((a, b) => b[0] - a[0]).forEach(([den, n]) => out.push({ etiqueta: `${nombre} $${den}`, piezas: n, subtotal: den * n }));
+  };
+  lado(o.billetes, "Billete");
+  lado(o.monedas, "Moneda");
+  return out;
+}
+function armarCorte(c, negocio, ancho = COLUMNAS_80MM) {
+  const { centrar, parear, regla, envolver } = formato(ancho);
+  const L = [];
+  const n = (v) => Number(v ?? 0);
+  L.push(centrar(negocio.nombre.toUpperCase()));
+  if (negocio.sucursal) L.push(centrar(negocio.sucursal));
+  L.push("");
+  L.push(centrar("CORTE DE CAJA"));
+  if (c.caja) L.push(centrar(c.caja));
+  L.push(regla("="));
+  L.push(parear("Abri\xF3", `${hora(c.abierto_en)}${c.abrio ? " \xB7 " + c.abrio : ""}`));
+  L.push(parear("Cerr\xF3", `${hora(c.cerrado_en)}${c.cerro ? " \xB7 " + c.cerro : ""}`));
+  L.push(regla());
+  L.push(parear(`\xD3rdenes: ${n(c.num_ordenes)}`, ""));
+  L.push(parear("Efectivo", pesos(n(c.total_efectivo))));
+  if (n(c.total_tarjeta) > 0) L.push(parear("Terminal", pesos(n(c.total_tarjeta))));
+  if (n(c.total_clip) > 0) L.push(parear("Clip", pesos(n(c.total_clip))));
+  if (n(c.total_cortesia) > 0) L.push(parear("Cortes\xEDa", pesos(n(c.total_cortesia))));
+  if (n(c.total_otro) > 0) L.push(parear("Otro", pesos(n(c.total_otro))));
+  L.push(parear("TOTAL VENDIDO", pesos(n(c.total_pagado))));
+  L.push(regla());
+  L.push(parear("Fondo inicial", pesos(n(c.fondo_inicial))));
+  L.push(parear("+ Efectivo vendido", pesos(n(c.total_efectivo))));
+  L.push(parear("= Deb\xEDa haber", pesos(n(c.efectivo_esperado))));
+  L.push(parear("Se cont\xF3", pesos(n(c.efectivo_contado))));
+  const cierre = renglonesDeConteo(c.conteo_cierre);
+  for (const r of cierre) {
+    L.push(parear(`  ${r.etiqueta} x ${r.piezas}`, pesos(r.subtotal)));
+  }
+  L.push(regla("="));
+  const dif = n(c.diferencia);
+  const palabra = dif === 0 ? "CUADRA" : dif > 0 ? "SOBRANTE" : "FALTANTE";
+  L.push(parear(palabra, (dif < 0 ? "-" : "") + pesos(Math.abs(dif))));
+  L.push("");
+  if (c.notas) {
+    for (const l of envolver(`Notas: ${c.notas}`)) L.push(l);
+    L.push("");
+  }
+  L.push(centrar("Firma: ____________________"));
+  L.push("");
+  return L;
+}
 
 // src/escpos.ts
 var ESC = 27;
@@ -259,6 +325,17 @@ var ConstructorEscPos = class {
 };
 
 // src/render.ts
+function esPayloadDeCorte(p) {
+  return !!p && typeof p === "object" && p.tipo === "corte" && typeof p.corte_id === "string";
+}
+function negocioDelTrabajo(payload, porOmision) {
+  const n = payload?.negocio;
+  if (!n || typeof n !== "object") return porOmision;
+  const limpio = Object.fromEntries(
+    Object.entries(n).filter(([, v]) => v !== null && v !== void 0)
+  );
+  return { ...porOmision, ...limpio };
+}
 function esPayloadDeTicket(p) {
   if (!p || typeof p !== "object") return false;
   const d = p;
@@ -285,6 +362,14 @@ function construirPrueba(p, ancho) {
 }
 function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   if (esPayloadDePrueba(trabajo.payload)) return construirPrueba(trabajo.payload, ancho);
+  const neg = negocioDelTrabajo(trabajo.payload, negocio);
+  if (esPayloadDeCorte(trabajo.payload)) {
+    const b2 = new ConstructorEscPos().inicializar().alinear(0);
+    for (const l of armarCorte(trabajo.payload, neg, ancho)) {
+      if (typeof l === "string") b2.linea(l);
+    }
+    return b2.cortar().construir();
+  }
   if (!esPayloadDeTicket(trabajo.payload)) {
     throw new Error(
       `El trabajo ${trabajo.id} no trae un ticket que se pueda imprimir (falta folio, items o metodoPago).`
@@ -293,7 +378,7 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   const b = new ConstructorEscPos().inicializar();
   if (logo) b.alinear(1).logo(logo).linea();
   b.alinear(0);
-  for (const l of armarTicket(trabajo.payload, negocio, ancho)) {
+  for (const l of armarTicket(trabajo.payload, neg, ancho)) {
     if (typeof l === "string") {
       b.linea(l);
       continue;
@@ -382,10 +467,10 @@ var AGENTE_ID = process.env.AGENTE_ID?.trim() || "agente-caja-01";
 var POLL_MS = Number(process.env.POLL_INTERVALO_SEGUNDOS || 3) * 1e3;
 var LATIDO_MS = Number(process.env.LATIDO_INTERVALO_SEGUNDOS || 30) * 1e3;
 var sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: false } });
-var hora = () => (/* @__PURE__ */ new Date()).toLocaleTimeString("es-MX", { timeZone: "America/Merida" });
+var hora2 = () => (/* @__PURE__ */ new Date()).toLocaleTimeString("es-MX", { timeZone: "America/Merida" });
 var log = {
-  info: (m) => console.log(`[${hora()}] ${m}`),
-  error: (m) => console.error(`[${hora()}] ERROR  ${m}`)
+  info: (m) => console.log(`[${hora2()}] ${m}`),
+  error: (m) => console.error(`[${hora2()}] ERROR  ${m}`)
 };
 function datosDelNegocio() {
   return NEGOCIO_DEFAULT;

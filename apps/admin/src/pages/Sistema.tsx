@@ -3,10 +3,11 @@ import { sb } from '../lib/sb'
 import {
   obtenerSaludSistema, listarConfiguracionesKiosko, actualizarConfiguracionKiosko,
   reconciliarPagos, expirarOrdenesKiosko,
-  type SaludSistema, type ResultadoReconciliacion,
+  datosDelTicket, guardarDatosDelTicket,
+  type SaludSistema, type ResultadoReconciliacion, type DatosDelTicket,
 } from '@lily/supabase'
 import type { ConfiguracionKiosko, ModoPagoKiosko } from '@lily/types'
-import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, cx, Chip } from '../ui'
+import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
 import { BotonActualizarPantallas } from '../BotonActualizarPantallas'
 import { mensajeDeError } from '@lily/utils'
 
@@ -167,7 +168,14 @@ export default function Sistema() {
         ))}
       </div>
 
-      <Panel title="Modo de pago del kiosko" className="mb-8">
+      <DatosDelTicketPanel />
+
+      <Panel title="Modo de pago del kiosko (para después)" className="mb-8">
+        <p className={`text-sm mb-4 ${cx.muted}`}>
+          Hoy se vende desde la <b>caja</b>: el cajero arma el ticket y cobra. El kiosko de
+          autoservicio queda para más adelante, y cuando vuelva tendrá que entrar con sesión
+          como las demás pantallas. Esto sigue aquí para ese día.
+        </p>
         {configs.length === 0 ? (
           <p className={cx.muted}>Sin configuración todavía — se sembró "pagar_en_caja" (seguro) al aplicar la migración.</p>
         ) : (
@@ -233,5 +241,111 @@ export default function Sistema() {
         </Panel>
       )}
     </div>
+  )
+}
+
+
+/**
+ * Lo que va impreso en la cabecera y el pie del ticket y del corte.
+ *
+ * Antes vivía en el código (`NEGOCIO_DEFAULT`), y cambiar un teléfono
+ * obligaba a recompilar y reinstalar el agente en la PC. Ahora se guarda en
+ * la base y viaja dentro de cada trabajo de impresión: el siguiente ticket
+ * ya sale con lo que se escriba aquí.
+ *
+ * Los avisos van uno por renglón porque cada uno tiene que poder leerse
+ * solo en el papel: «Por higiene no se hacen cambios» metido en un párrafo
+ * no lo lee nadie.
+ */
+function DatosDelTicketPanel() {
+  const [datos, setDatos] = useState<DatosDelTicket | null>(null)
+  const [avisos, setAvisos] = useState('')
+  const [cargando, setCargando] = useState(true)
+  const [guardando, setGuardando] = useState(false)
+  const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
+
+  useEffect(() => {
+    datosDelTicket(sb)
+      .then((d) => { setDatos(d ?? {}); setAvisos((d?.avisos ?? []).join('\n')) })
+      .catch((e) => setMsg({ error: mensajeDeError(e) }))
+      .finally(() => setCargando(false))
+  }, [])
+
+  const campo = (k: keyof DatosDelTicket, label: string, placeholder: string, multilinea = false) => (
+    <Field label={label}>
+      {multilinea ? (
+        <textarea
+          className={`${cx.input} min-h-[72px]`}
+          value={String(datos?.[k] ?? '')}
+          placeholder={placeholder}
+          onChange={(e) => setDatos({ ...datos, [k]: e.target.value })}
+        />
+      ) : (
+        <input
+          className={cx.input}
+          value={String(datos?.[k] ?? '')}
+          placeholder={placeholder}
+          onChange={(e) => setDatos({ ...datos, [k]: e.target.value })}
+        />
+      )}
+    </Field>
+  )
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault()
+    setGuardando(true); setMsg({})
+    try {
+      await guardarDatosDelTicket(sb, { ...datos, avisos: avisos.split('\n') })
+      setMsg({ ok: 'Guardado. El siguiente ticket ya sale con esto.' })
+    } catch (err) {
+      setMsg({ error: mensajeDeError(err) })
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  return (
+    <Panel title="Lo que dice el ticket" className="mb-8">
+      <p className={`text-sm mb-4 ${cx.muted}`}>
+        Cabecera y pie del ticket del cliente y del corte de caja. Lo que se deje vacío no se
+        imprime. Cambia aquí y el <b>siguiente</b> ticket ya sale así — no hay que tocar la PC.
+      </p>
+      {msg.error && <ErrorMsg>{msg.error}</ErrorMsg>}
+      {msg.ok && <OkMsg>{msg.ok}</OkMsg>}
+      {cargando ? (
+        <p className={cx.muted}>Cargando…</p>
+      ) : (
+        <form onSubmit={guardar} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {campo('nombre', 'Nombre', 'Hojaldras Lily')}
+          {campo('sucursal', 'Sucursal', 'Miguel Alemán')}
+          {campo('direccion', 'Dirección (un renglón por línea)', 'Calle 29-A #183 por Av. 22', true)}
+          {campo('telefono', 'Teléfono', '999 926 71 51')}
+          {campo('rfc', 'RFC (solo si van a facturar)', '')}
+          {campo('leyenda', 'Agradecimiento del pie', '¡Gracias por su compra!')}
+          {campo('pieSecundario', 'Segunda línea del pie', 'Encargos al 999 926 71 51')}
+          <Field label="Avisos del pie (uno por línea: horario, facturación, políticas)">
+            <textarea
+              className={`${cx.input} min-h-[72px]`}
+              value={avisos}
+              placeholder={'Solicita tu factura el mismo día\nPor higiene no se hacen cambios de pan'}
+              onChange={(e) => setAvisos(e.target.value)}
+            />
+          </Field>
+          <label className="flex items-center gap-2 text-sm text-sa-green-ink sm:col-span-2">
+            <input
+              type="checkbox"
+              checked={datos?.mostrarCajero ?? false}
+              onChange={(e) => setDatos({ ...datos, mostrarCajero: e.target.checked })}
+            />
+            Imprimir el nombre de quien cobró
+          </label>
+          <div className="sm:col-span-2">
+            <button className={cx.btnPrimary} disabled={guardando} type="submit">
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      )}
+    </Panel>
   )
 }

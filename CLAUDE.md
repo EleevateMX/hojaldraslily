@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **206 migraciones aplicadas en orden, y 206
+`fzkdgqqvfkogmxdgqsxj` tiene **208 migraciones aplicadas en orden, y 208
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -83,8 +83,8 @@ Cloudflare Pages por GitHub Actions al hacer push a `main`.
 | App | Dominio | Quién la usa |
 |---|---|---|
 | `web` | `hojaldraslily.com` | El público (menú vivo, encargos) |
-| `kiosko` | `kiosko.hojaldraslily.com` | Cliente y cajero en la barra |
-| `pos` | `caja.hojaldraslily.com` | **C** — la caja: turno, cobros y encargos |
+| `pos` | `caja.hojaldraslily.com` | **C** — la caja: **aquí se vende**. Turno, cobros, encargos |
+| `kiosko` | `kiosko.hojaldraslily.com` | Autoservicio del cliente — **para después** (ver abajo) |
 | `produccion` | `produccion.hojaldraslily.com` | **P** — los panaderos (arman los moldes) |
 | `horno` | `horno.hojaldraslily.com` | **H** — quien hornea (mete, vigila y saca) |
 | `empaque` | `empaque.hojaldraslily.com` | **E** — quien empaca y entrega los encargos |
@@ -105,6 +105,36 @@ propósito hasta entonces.
 ---
 
 ## 2. Las cinco cosas que hay que entender
+
+### 2.-1 Se vende desde la CAJA; el kiosko queda para después
+
+La casa lo decidió el 19/10: el cajero arma el ticket y cobra en `pos`
+(`caja.hojaldraslily.com`), que entra con PIN y tiene sesión real. El kiosko
+de autoservicio no se usa por ahora.
+
+Eso cambió dos cosas que no son de pantalla:
+
+- **El cobro exige sesión.** `fn_crear_orden`, `fn_cobrar_orden` y unas
+  cuarenta funciones más estaban abiertas a `anon` *porque el kiosko cobraba
+  sin sesión*. Ya no hay nadie que cobre sin sesión, así que se cerraron
+  (`20261019150000`), y con ellas las políticas `using (true)` de
+  `caja_cortes`, `ordenes`, `pagos`, `pedidos_cocina` y `cocina_items`. Lo que
+  sigue abierto a `anon` es exactamente lo que no tiene sesión y no toca
+  dinero: entrar (`fn_login_cajero`), el recibo del QR, Costeos por token,
+  el instalador por código y los agentes por token. **Cuando el kiosko
+  vuelva, tiene que entrar con sesión como las demás pantallas** — no se
+  reabre nada.
+- **La caja es la pantalla principal de la PC.** `pantallas.ps1` le da el
+  monitor grande a `caja` (con `--kiosk-printing`) y el kiosko ya no se abre
+  al arrancar. Para abrir/cerrar turno se usa la propia caja, no los cinco
+  toques del kiosko.
+
+Y **Admin se usa desde el teléfono**: en pantallas angostas la barra lateral
+se vuelve una cabecera con la sección actual y un botón que abre la lista
+completa. Antes era una tira con scroll que enseñaba tres secciones de
+catorce. Se mira con `apps/admin/mirar/tamanos.html#impresoras`, que pone un
+teléfono y una tableta lado a lado con viewports de verdad (Chromium sin
+cabeza no baja de 500 px de ventana; un iframe sí).
 
 ### 2.0 Hay DOS inventarios, y no son lo mismo
 
@@ -572,7 +602,8 @@ empaquetador y se desvían solas:
 | Situación | Qué hacer |
 |---|---|
 | Abrir la tienda | Nada: la PC arranca todo sola |
-| Abrir/cerrar caja o cambiar turno | **5 toques a la hojaldra** en el kiosko → PIN |
+| Abrir/cerrar caja o cambiar turno | En la **caja**: entrar con PIN → «Abrir caja» contando el cajón; «Corte de caja» para cerrar. Al cerrar, el corte **sale solo en la térmica** si hay una dada de alta |
+| Cambiar el teléfono, la dirección o los avisos del ticket | Admin → **Sistema** → «Lo que dice el ticket». El siguiente ticket ya sale así; no se toca la PC |
 | Cambiar precios o productos | Costeos → **Guardar**, y cuando esté listo → **"Mostrar en el kiosko"** (enseña qué va a cambiar antes de confirmar) |
 | Guardar una pieza para después (cambio de temporada) | Admin → **Menús del día** → **Ver las piezas** → **Guardar para después**. No le quita el precio ni la receta: en enero se guarda el Pan de Muerto y se saca la Rosca de Reyes |
 | Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto —mostrador y Rappi—; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
@@ -1127,11 +1158,12 @@ explican por qué una pantalla tiene la forma que tiene.
   `productos.precio`**, así que alterar la tabla bastaba para que el
   servidor cobrara $1 y todo cuadrara. La garantía valía un piso más abajo
   de donde se creía.
-  **Sigue abierto**: `pedidos_cocina`, `cocina_items` y `caja_cortes`, que
-  el kiosko y las estaciones escriben **sin sesión**. Se cierran haciendo
-  que esas pantallas abran sesión real (ya existe `staff-login`), no
-  quitándoles el permiso: eso deja la tienda sin marcar comandas ni abrir
-  caja.
+  **Cerrado el 19/10** (`20261019150000`): desde que se vende solo desde la
+  caja, ya no hay pantalla que escriba sin sesión, y `pedidos_cocina`,
+  `cocina_items`, `caja_cortes`, `ordenes` y `pagos` perdieron sus políticas
+  `using (true)`. Las escrituras pasan todas por funciones `definer`; lo que
+  la TV de folios lee (`pedidos_cocina`, `cocina_items`, `ordenes` pagadas)
+  se quedó legible.
   Y ojo con la **puerta de atrás**: cerrar `productos` no bastaba, porque
   `app_data` seguía abierta a `anon` y su trigger (DEFINER) reescribe el
   catálogo — se podían mover los precios dando el rodeo por Costeos. Cerrado
@@ -1172,11 +1204,13 @@ explican por qué una pantalla tiene la forma que tiene.
   `fn_produccion_mandar_a_hacer`…) seguían abiertas a `anon`. Cerradas en
   `20261019081500`, después de comprobar que solo las llaman Admin y la caja
   —las dos con sesión real por PIN— y que el kiosko no toca ninguna.
-  **Ojo: aquí no se puede barrer en masa.** El kiosko y las estaciones
-  escriben sin sesión a propósito, así que quitarle `anon` a `fn_crear_orden`
-  o `fn_cobrar_orden` deja a la tienda sin poder vender. Antes de cerrar una,
-  hay que ver **quién la llama**; los advisors de Supabase listan las
-  candidatas, no la respuesta.
+  **El barrido grande se hizo el 19/10**, cuando la casa decidió vender solo
+  desde la caja: ~40 funciones pasaron a `authenticated` de una vez, con una
+  lista explícita de lo que se queda abierto y por qué (en la migración
+  `20261019150000`). Se verificó con **`set local role anon`** —el rol de
+  verdad, no claims fingidos—: la web lee el menú, la TV lee pedidos, la
+  caja cobra, y anon ya no abre turnos ni cobra ni ve pagos. Antes de cerrar
+  algo más, sigue valiendo: ver **quién la llama**, en TODO el repo.
   **Y pasó una tercera vez, peor, con las impresoras.** Cinco funciones
   (`fn_crear_impresora`, `fn_actualizar_impresora`, `fn_activar_impresora`,
   `fn_rotar_token_impresora`, `fn_admin_impresoras`) eran `security definer`,

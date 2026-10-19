@@ -49,7 +49,7 @@ echo   Esperando internet...
 set "HAYRED="
 for /l %%i in (1,1,10) do (
   if not defined HAYRED (
-    powershell -NoProfile -Command "try{[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;$r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 'https://kiosko.hojaldraslily.com/';if($r.StatusCode -eq 200){exit 0}}catch{};exit 1" >nul 2>&1
+    powershell -NoProfile -Command "try{[Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12;$r=Invoke-WebRequest -UseBasicParsing -TimeoutSec 5 'https://caja.hojaldraslily.com/';if($r.StatusCode -eq 200){exit 0}}catch{};exit 1" >nul 2>&1
     if not errorlevel 1 set "HAYRED=1"
     if not defined HAYRED ping -n 4 127.0.0.1 >nul
   )
@@ -139,7 +139,8 @@ echo   LISTO. Buen turno.
 echo.
 echo   * Cambios de precios o productos: NO hace falta reabrir nada.
 echo     Admin - En vivo - boton "Actualizar pantallas".
-echo   * Caja y Admin: icono "Caja y Admin" en el escritorio.
+echo   * La caja ya quedo abierta en el monitor grande. Admin: icono
+echo     "Caja y Admin" en el escritorio, o desde el telefono.
 echo   * Si algo abrio en el monitor equivocado, el detalle esta en
 echo     %BASE%\ultimo-arranque.log
 echo   ----------------------------------------------------------------
@@ -160,8 +161,8 @@ if not exist "%NAV%" (
   echo   [X] No hay Chrome ni Edge en esta PC.
   goto :eof
 )
-REM  El orden es el del camino del pan: produccion, horno, empaque; el kiosko
-REM  al final para que quede encima, que es el que ve el cliente.
+REM  El orden es el del camino del pan: produccion, horno, empaque; la caja
+REM  al final para que quede encima, que es donde se cobra.
 set "F=--noerrdialogs --disable-infobars --no-first-run --disable-session-crashed-bubble"
 start "" "%NAV%" --app=https://produccion.hojaldraslily.com %F% --user-data-dir="%LOCALAPPDATA%\lily-produccion"
 timeout /t 3 /nobreak >nul
@@ -169,7 +170,7 @@ start "" "%NAV%" --app=https://horno.hojaldraslily.com      %F% --user-data-dir=
 timeout /t 3 /nobreak >nul
 start "" "%NAV%" --app=https://empaque.hojaldraslily.com    %F% --user-data-dir="%LOCALAPPDATA%\lily-empaque"
 timeout /t 3 /nobreak >nul
-start "" "%NAV%" --app=https://kiosko.hojaldraslily.com     %F% --user-data-dir="%LOCALAPPDATA%\lily-kiosko"
+start "" "%NAV%" --app=https://caja.hojaldraslily.com       %F% --kiosk-printing --user-data-dir="%LOCALAPPDATA%\lily-caja"
 goto :eof
 
 REM ===========================================================================

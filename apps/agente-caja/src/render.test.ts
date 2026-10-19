@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { construirDocumento, esPayloadDeTicket, type TrabajoCaja } from './render'
+import { construirDocumento, esPayloadDeTicket, negocioDelTrabajo, type TrabajoCaja } from './render'
 import { NEGOCIO_DEFAULT, type TicketData } from '@lily/ui/tipos'
 
 const venta: TicketData = {
@@ -83,6 +83,37 @@ describe('construirDocumento', () => {
     // y del final.
     const largas = texto.split('\n').slice(1, -1).filter((l) => l.replace(/[\x00-\x1f]/g, '').length > 32)
     expect(largas).toEqual([])
+  })
+
+  // El corte lo arma fn_cerrar_caja y sale solo al cerrar el turno. Si el
+  // agente no lo supiera dibujar, el trabajo fallaria y el corte no saldria
+  // nunca -con la cola marcando un error que nadie mira a las 9 de la noche-.
+  it('el corte de caja sale, y dice si cuadro', () => {
+    const b = construirDocumento(trabajo({
+      tipo: 'corte', corte_id: 'c1', caja: 'Caja 1',
+      abierto_en: '2026-10-19T13:00:00Z', cerrado_en: '2026-10-20T02:00:00Z',
+      fondo_inicial: 500, num_ordenes: 42, total_efectivo: 3100, total_tarjeta: 1800,
+      total_pagado: 4900, efectivo_esperado: 3600, efectivo_contado: 3400, diferencia: -200,
+      conteo_cierre: { billetes: { 500: 4, 200: 7 }, monedas: {} },
+      abrio: 'Rosa', cerro: 'Rosa',
+    }), NEGOCIO_DEFAULT, null)
+    const t = b.toString('latin1')
+    expect(t).toContain('CORTE DE CAJA')
+    expect(t).toContain('FALTANTE')
+    expect(t).toContain('-$200.00')
+    expect(t).toContain('Billete $500 x 4')
+    expect(hex(b).endsWith('1b6406' + '1d5601')).toBe(true)
+  })
+
+  // Los datos del negocio viajan DENTRO del trabajo (los pega el servidor
+  // desde Admin). Lo que falte lo completa el codigo; lo que venga, manda.
+  it('el telefono de Admin le gana al del codigo, y lo que falta se completa', () => {
+    const n = negocioDelTrabajo({ ...venta, negocio: { telefono: '999 000 00 00', rfc: null } }, NEGOCIO_DEFAULT)
+    expect(n.telefono).toBe('999 000 00 00')
+    expect(n.nombre).toBe(NEGOCIO_DEFAULT.nombre)
+    expect(n.rfc).toBe(NEGOCIO_DEFAULT.rfc)
+    const b = construirDocumento(trabajo({ ...venta, negocio: { telefono: '999 000 00 00' } }), NEGOCIO_DEFAULT, null)
+    expect(b.toString('latin1')).toContain('999 000 00 00')
   })
 
   it('esPayloadDeTicket distingue lo imprimible', () => {

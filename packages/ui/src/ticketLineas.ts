@@ -33,7 +33,7 @@
  * cabe, y si no cabe se envuelve.
  */
 
-import type { TicketData, TicketNegocio, TicketItem } from './ticketTipos'
+import type { TicketData, TicketNegocio, TicketItem, CorteData } from './ticketTipos'
 
 /** FontA en papel de 80 mm. Es el que usa la casa. */
 export const COLUMNAS_80MM = 48
@@ -285,5 +285,95 @@ export function armarTicket(
     for (const a of avisos) for (const l of envolver(a)) L.push(centrar(l.trim()))
   }
 
+  return L
+}
+
+function hora(iso: string | null | undefined): string {
+  if (!iso) return ''
+  const f = new Date(iso)
+  if (Number.isNaN(f.getTime())) return ''
+  return f.toLocaleString('es-MX', {
+    timeZone: 'America/Merida', day: '2-digit', month: '2-digit',
+    hour: '2-digit', minute: '2-digit',
+  })
+}
+
+/** Un desglose `{billetes:{}, monedas:{}}` en renglones, sin depender de `@lily/utils`. */
+function renglonesDeConteo(raw: unknown): { etiqueta: string; piezas: number; subtotal: number }[] {
+  if (!raw || typeof raw !== 'object') return []
+  const o = raw as { billetes?: Record<string, unknown>; monedas?: Record<string, unknown> }
+  const out: { etiqueta: string; piezas: number; subtotal: number }[] = []
+  const lado = (v: Record<string, unknown> | undefined, nombre: string) => {
+    if (!v || typeof v !== 'object') return
+    Object.entries(v)
+      .map(([den, n]) => [Number(den), Math.max(0, Math.trunc(Number(n) || 0))] as const)
+      .filter(([den, n]) => Number.isFinite(den) && den > 0 && n > 0)
+      .sort((a, b) => b[0] - a[0])
+      .forEach(([den, n]) => out.push({ etiqueta: `${nombre} $${den}`, piezas: n, subtotal: den * n }))
+  }
+  lado(o.billetes, 'Billete')
+  lado(o.monedas, 'Moneda')
+  return out
+}
+
+/**
+ * El corte de caja en líneas para la térmica.
+ *
+ * Sale solo al cerrar el turno, en la impresora del mostrador: es el papel
+ * que se engrapa con el efectivo. Lo que importa a un metro es si **cuadró**,
+ * así que la diferencia va al final, grande y con su palabra (sobrante /
+ * faltante). El desglose del cajón va porque es lo que convierte «faltan
+ * $340» en «falta un billete de $200 y tres de $50».
+ */
+export function armarCorte(
+  c: CorteData,
+  negocio: TicketNegocio,
+  ancho: number = COLUMNAS_80MM,
+): LineaTicket[] {
+  const { centrar, parear, regla, envolver } = formato(ancho)
+  const L: LineaTicket[] = []
+  const n = (v: number | null | undefined) => Number(v ?? 0)
+
+  L.push(centrar(negocio.nombre.toUpperCase()))
+  if (negocio.sucursal) L.push(centrar(negocio.sucursal))
+  L.push('')
+  L.push(centrar('CORTE DE CAJA'))
+  if (c.caja) L.push(centrar(c.caja))
+  L.push(regla('='))
+  L.push(parear('Abrió', `${hora(c.abierto_en)}${c.abrio ? ' · ' + c.abrio : ''}`))
+  L.push(parear('Cerró', `${hora(c.cerrado_en)}${c.cerro ? ' · ' + c.cerro : ''}`))
+  L.push(regla())
+
+  // ---- Ventas ----
+  L.push(parear(`Órdenes: ${n(c.num_ordenes)}`, ''))
+  L.push(parear('Efectivo', pesos(n(c.total_efectivo))))
+  if (n(c.total_tarjeta) > 0) L.push(parear('Terminal', pesos(n(c.total_tarjeta))))
+  if (n(c.total_clip) > 0) L.push(parear('Clip', pesos(n(c.total_clip))))
+  if (n(c.total_cortesia) > 0) L.push(parear('Cortesía', pesos(n(c.total_cortesia))))
+  if (n(c.total_otro) > 0) L.push(parear('Otro', pesos(n(c.total_otro))))
+  L.push(parear('TOTAL VENDIDO', pesos(n(c.total_pagado))))
+  L.push(regla())
+
+  // ---- El cajón ----
+  L.push(parear('Fondo inicial', pesos(n(c.fondo_inicial))))
+  L.push(parear('+ Efectivo vendido', pesos(n(c.total_efectivo))))
+  L.push(parear('= Debía haber', pesos(n(c.efectivo_esperado))))
+  L.push(parear('Se contó', pesos(n(c.efectivo_contado))))
+  const cierre = renglonesDeConteo(c.conteo_cierre)
+  for (const r of cierre) {
+    L.push(parear(`  ${r.etiqueta} x ${r.piezas}`, pesos(r.subtotal)))
+  }
+  L.push(regla('='))
+  const dif = n(c.diferencia)
+  const palabra = dif === 0 ? 'CUADRA' : dif > 0 ? 'SOBRANTE' : 'FALTANTE'
+  L.push(parear(palabra, (dif < 0 ? '-' : '') + pesos(Math.abs(dif))))
+  L.push('')
+
+  if (c.notas) {
+    for (const l of envolver(`Notas: ${c.notas}`)) L.push(l)
+    L.push('')
+  }
+  L.push(centrar('Firma: ____________________'))
+  L.push('')
   return L
 }

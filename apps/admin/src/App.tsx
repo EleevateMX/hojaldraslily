@@ -1,6 +1,6 @@
 // El logotipo va sobre carmin pleno (barra lateral): version en negativo.
 import logo from '@lily/brand/logo-negativo.png'
-import { useState, type ReactElement } from 'react'
+import { useEffect, useState, type ReactElement } from 'react'
 import Dashboard from './pages/Dashboard'
 import EnVivo from './pages/EnVivo'
 import Diagnostico from './pages/Diagnostico'
@@ -124,22 +124,64 @@ const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
   { id: 'sistema', label: 'Sistema', Icon: IconSistema },
 ]
 
+const TABS = new Set<Tab>(navItems.map((n) => n.id))
+
+/** La pestaña que pide la URL (`#impresoras`), si existe. */
+function tabDeLaUrl(): Tab | null {
+  const h = window.location.hash.replace(/^#/, '') as Tab
+  return TABS.has(h) ? h : null
+}
+
 export default function App() {
-  const [tab, setTab] = useState<Tab>('dashboard')
+  // La pestaña va también en el hash de la URL. Sirve para dos cosas: mandar
+  // por WhatsApp «mira admin.hojaldraslily.com/#impresoras» y que abra ahí,
+  // y para poder MIRAR cada pantalla en un arnés sin hacer clic en la barra.
+  // Es un hash y no una ruta porque Admin no usa router y no lo necesita.
+  const [tab, setTabEstado] = useState<Tab>(() => tabDeLaUrl() ?? 'dashboard')
+  const setTab = (t: Tab) => {
+    setTabEstado(t)
+    window.history.replaceState(null, '', `#${t}`)
+  }
+  useEffect(() => {
+    const alCambiar = () => { const t = tabDeLaUrl(); if (t) setTabEstado(t) }
+    window.addEventListener('hashchange', alCambiar)
+    return () => window.removeEventListener('hashchange', alCambiar)
+  }, [])
+
+  // En el teléfono la barra lateral no cabe, y la primera versión la
+  // convertía en una tira horizontal con scroll: se veían TRES secciones de
+  // catorce y nada decía que había más a la derecha. Impresoras, Empleados y
+  // Sistema quedaban escondidas para quien no supiera deslizar. Ahora el
+  // teléfono lleva una cabecera con la sección actual y un botón que abre la
+  // lista completa — se ve todo y se toca lo que se busca.
+  const [menuAbierto, setMenuAbierto] = useState(false)
+  const actual = navItems.find((n) => n.id === tab)
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-sa-cream-paper">
-      {/* Sidebar (barra superior en móvil, lateral en escritorio) */}
-      <aside className="w-full md:w-60 shrink-0 bg-sa-green-deep text-sa-cream flex flex-col">
-        <div className="px-5 md:px-6 pt-5 md:pt-7 pb-4 md:pb-6">
-          <img src={logo} alt="Hojaldras Lily" className="w-[112px] md:w-[140px] h-auto select-none" draggable={false} />
+      {/* Sidebar (cabecera con menú en el teléfono, lateral en tableta y PC) */}
+      <aside className="w-full md:w-60 shrink-0 bg-sa-green-deep text-sa-cream flex flex-col md:sticky md:top-0 md:h-screen">
+        <div className="flex items-center justify-between px-4 md:px-6 pt-4 md:pt-7 pb-3 md:pb-6">
+          <img src={logo} alt="Hojaldras Lily" className="w-[96px] md:w-[140px] h-auto select-none" draggable={false} />
+          <button
+            type="button"
+            onClick={() => setMenuAbierto((v) => !v)}
+            aria-expanded={menuAbierto}
+            className="md:hidden flex items-center gap-2 bg-sa-cream text-sa-green-ink font-semibold text-sm px-3.5 py-2 rounded-sa-lg shadow-sa-sm"
+          >
+            {actual && <actual.Icon />}
+            <span>{actual?.label ?? 'Secciones'}</span>
+            <span aria-hidden className="text-xs">{menuAbierto ? '▲' : '▼'}</span>
+          </button>
         </div>
-        <nav className="flex md:flex-col gap-1 px-3 pb-3 md:pb-0 md:flex-1 overflow-x-auto">
+        <nav
+          className={`${menuAbierto ? 'grid' : 'hidden'} md:flex grid-cols-2 gap-1 px-3 pb-3 md:pb-0 md:flex-col md:flex-1 md:overflow-y-auto`}
+        >
           {navItems.map(({ id, label, Icon }) => (
             <button
               key={id}
-              onClick={() => setTab(id)}
-              className={`shrink-0 md:w-full flex items-center gap-2 md:gap-3 px-4 py-2.5 md:py-3 rounded-sa-lg text-sm whitespace-nowrap transition-colors ${
+              onClick={() => { setTab(id); setMenuAbierto(false) }}
+              className={`md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-sa-lg text-sm whitespace-nowrap transition-colors ${
                 tab === id
                   ? 'bg-sa-cream text-sa-green-ink font-semibold shadow-sa-sm'
                   : 'text-sa-cream/80 hover:text-sa-cream hover:bg-white/5 font-medium'

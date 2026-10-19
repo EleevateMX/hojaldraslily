@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8"><title>Admin en telefono y tableta</title>
+<style>
+  body { margin: 0; background: #ddd; font-family: system-ui; }
+  .fila { display: flex; gap: 20px; padding: 16px; align-items: flex-start; }
+  .marco { background: #fff; }
+  .marco p { margin: 0 0 6px; font: 12px/1 monospace; color: #444; }
+  iframe { border: 0; display: block; background: #fff; }
+</style></head>
+<body>
+<!--
+  Dos viewports DE VERDAD en una sola captura. Chromium sin cabeza no deja la
+  ventana por debajo de ~500 px, asi que una captura a 390 recorta la imagen
+  pero no encoge el viewport: la pagina sigue creyendo que mide 500 y los
+  media queries de Tailwind (sm:, md:) no cambian. Un iframe si tiene su
+  propio viewport, y adentro los breakpoints responden a SU ancho.
+  Uso:  tamanos.html#impresoras
+-->
+<div class="fila">
+  <div class="marco"><p>Teléfono · 390 px</p><iframe id="tel" width="390" height="1300"></iframe></div>
+  <div class="marco"><p>Tableta · 820 px</p><iframe id="tab" width="820" height="1300"></iframe></div>
+</div>
+<script>
+  const h = location.hash || '#dashboard'
+  document.getElementById('tel').src = 'admin.html' + h
+  document.getElementById('tab').src = 'admin.html' + h
+</script>
+</body></html>

@@ -27,7 +27,7 @@
 #  a la izquierda). El log de cada arranque dice que numero le toco a cada
 #  monitor.
 #
-#      kiosko=1
+#      caja=1
 #      produccion=2
 #      horno=3
 #      empaque=4
@@ -98,14 +98,19 @@ $APPS = @(
   [pscustomobject]@{ clave = 'produccion'; titulo = 'Produccion'; url = 'https://produccion.hojaldraslily.com'; perfil = 'lily-produccion' }
   [pscustomobject]@{ clave = 'horno';      titulo = 'Horno';      url = 'https://horno.hojaldraslily.com';      perfil = 'lily-horno'      }
   [pscustomobject]@{ clave = 'empaque';    titulo = 'Empaque';    url = 'https://empaque.hojaldraslily.com';    perfil = 'lily-empaque'    }
-  [pscustomobject]@{ clave = 'kiosko';     titulo = 'Kiosko';     url = 'https://kiosko.hojaldraslily.com';     perfil = 'lily-kiosko'     }
+  [pscustomobject]@{ clave = 'caja';       titulo = 'Caja';       url = 'https://caja.hojaldraslily.com';       perfil = 'lily-caja'       }
 )
-# El kiosko va al FINAL a proposito: es la ventana que debe quedar al frente
+# La CAJA va al FINAL a proposito: es la ventana que debe quedar al frente
 # cuando termine todo, con el PIN listo para que el cajero entre.
+#
+# Por que la caja y no el kiosko: la casa decidio que se vende desde la caja
+# (el cajero arma el ticket y cobra) y el kiosko de autoservicio queda para
+# despues. Cuando vuelva, se agrega aqui con su perfil y se le da un monitor
+# en pantallas.txt; no hay que tocar nada mas.
 
 # Las estaciones tactiles, EN EL ORDEN EN QUE ESTAN PUESTAS de izquierda a
 # derecha, que es el camino del pan: produccion arma, el horno hornea, empaque
-# empaca. El kiosko no va aqui: ese siempre se lleva el monitor grande.
+# empaca. La caja no va aqui: esa siempre se lleva el monitor grande.
 $ESTACIONES = @('produccion', 'horno', 'empaque')
 
 # -----------------------------------------------------------------------------
@@ -133,7 +138,7 @@ function Reparte-Monitores {
   # tactiles chicos y se reparten como estan puestas en la mesa, de izquierda
   # a derecha: produccion, horno, empaque -- que es el camino del pan.
   $grande = $pantallas | Sort-Object { - ($_.Bounds.Width * $_.Bounds.Height) } | Select-Object -First 1
-  $mapa['kiosko'] = $grande
+  $mapa['caja'] = $grande
 
   # Los chicos, ordenados por donde estan fisicamente. Se toman TODOS los que
   # no son el grande: si manana cuelgan un cuarto monitor, cada estacion se
@@ -165,7 +170,7 @@ function Reparte-Monitores {
   if (Test-Path $cfg) {
     Apunta 'Hay pantallas.txt: se respeta lo que diga ese archivo.'
     foreach ($linea in (Get-Content $cfg)) {
-      if ($linea -match '^\s*(kiosko|produccion|horno|empaque)\s*=\s*(\d+)\s*$') {
+      if ($linea -match '^\s*(caja|kiosko|produccion|horno|empaque)\s*=\s*(\d+)\s*$') {
         $clave = $Matches[1]; $n = [int]$Matches[2]
         if ($n -ge 1 -and $n -le $pantallas.Count) {
           $mapa[$clave] = $pantallas[$n - 1]
@@ -267,7 +272,7 @@ function Espera-Red([int]$segundos) {
   while ((Get-Date) -lt $fin) {
     $intento++
     try {
-      $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 6 -Uri 'https://kiosko.hojaldraslily.com/'
+      $r = Invoke-WebRequest -UseBasicParsing -TimeoutSec 6 -Uri 'https://caja.hojaldraslily.com/'
       if ($r.StatusCode -eq 200) {
         Apunta ("Internet listo (intento $intento).")
         return $true
@@ -299,6 +304,11 @@ function Abre-App($app, $pantalla) {
     '--disable-session-crashed-bubble',
     '--disable-features=TranslateUI'
   )
+  # La caja imprime el ticket por el navegador cuando no hay termica: sin
+  # --kiosk-printing cada cobro saca el dialogo de Chrome y el cajero tiene
+  # que darle "Imprimir" con el cliente enfrente. Con prisa se cierra sin
+  # imprimir. (Esta en docs/hardware-caja.md.)
+  if ($app.clave -eq 'caja') { $argumentos += '--kiosk-printing' }
 
   $p = Start-Process -FilePath $NAV -ArgumentList $argumentos -PassThru
   if (-not $p) { Apunta ('[X] No arranco ' + $app.titulo); return }
@@ -375,7 +385,7 @@ function Abre-App($app, $pantalla) {
 Apunta '--- Abriendo las pantallas de Hojaldras Lily ---'
 
 $mapa = Reparte-Monitores
-Abre-Splash $mapa['kiosko'].Bounds
+Abre-Splash $mapa['caja'].Bounds
 
 Di-Splash 'Conectando...'
 [void](Espera-Red $EsperaRedSegundos)
@@ -384,7 +394,7 @@ Di-Splash 'Conectando...'
 # se van amontonando ventanas y nadie sabe cual esta viva.
 try {
   $viejos = Get-CimInstance Win32_Process -Filter "Name='chrome.exe' OR Name='msedge.exe'" -ErrorAction Stop |
-            Where-Object { $_.CommandLine -match 'shake-(kiosko|produccion|alimentos)' }
+            Where-Object { $_.CommandLine -match 'lily-(caja|kiosko|produccion|horno|empaque)' }
   if ($viejos) {
     Apunta ('Cerrando ' + @($viejos).Count + ' ventana(s) de un arranque anterior.')
     foreach ($v in $viejos) { Stop-Process -Id $v.ProcessId -Force -ErrorAction SilentlyContinue }

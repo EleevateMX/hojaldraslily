@@ -125,6 +125,8 @@ export type Database = {
         Row: {
           abierto_en: string
           caja_id: string
+          conteo_apertura: Json | null
+          conteo_cierre: Json | null
           cerrado_en: string | null
           efectivo_contado: number | null
           empleado_apertura_id: string | null
@@ -137,6 +139,8 @@ export type Database = {
         Insert: {
           abierto_en?: string
           caja_id: string
+          conteo_apertura?: Json | null
+          conteo_cierre?: Json | null
           cerrado_en?: string | null
           efectivo_contado?: number | null
           empleado_apertura_id?: string | null
@@ -149,6 +153,8 @@ export type Database = {
         Update: {
           abierto_en?: string
           caja_id?: string
+          conteo_apertura?: Json | null
+          conteo_cierre?: Json | null
           cerrado_en?: string | null
           efectivo_contado?: number | null
           empleado_apertura_id?: string | null
@@ -2165,6 +2171,7 @@ export type Database = {
           mano_obra: number
           merma_default: number
           minutos_horneado_default: number
+          ticket: Json | null
           updated_at: string
         }
         Insert: {
@@ -2177,6 +2184,7 @@ export type Database = {
           mano_obra?: number
           merma_default?: number
           minutos_horneado_default?: number
+          ticket?: Json | null
           updated_at?: string
         }
         Update: {
@@ -2189,6 +2197,7 @@ export type Database = {
           mano_obra?: number
           merma_default?: number
           minutos_horneado_default?: number
+          ticket?: Json | null
           updated_at?: string
         }
         Relationships: []
@@ -5031,7 +5040,7 @@ export type Database = {
       tipo_almacen: "bodega" | "kiosko"
       tipo_conexion_impresora: "usb" | "red"
       tipo_cupon: "mancuernas" | "cumpleanos" | "bienvenida"
-      tipo_documento_impresion: "comanda" | "ticket"
+      tipo_documento_impresion: "comanda" | "ticket" | "corte"
       tipo_insumo:
         | "proteina"
         | "shake"

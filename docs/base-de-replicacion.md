@@ -181,7 +181,7 @@ el catálogo y no aparece en ninguna pantalla de almacén.
 | Qué | Cómo está hecho hoy |
 |---|---|
 | Abrir el turno | `fn_abrir_caja(caja, conteo, fondo)` — **exige sesión** |
-| Cerrar el turno | `fn_cerrar_caja(corte, conteo, notas, efectivo)` — **exige sesión** |
+| Cerrar el turno | `fn_cerrar_caja(corte, conteo, notas, efectivo)` — **exige sesión**, y encola el corte a la térmica en un bloque que se traga sus errores |
 | Sumar el cajón | `fn_suma_conteo(jsonb)`, en el **servidor** |
 | El corte | `vw_corte_resumen`, **calculado en vivo**, nunca guardado |
 | El desglose del mixto | `vw_pagos_por_metodo`: da las **partes** si las hay, y el pago entero si no |
@@ -189,8 +189,8 @@ el catálogo y no aparece en ninguna pantalla de almacén.
 > **Hasta hoy esas dos eran un `insert` y un `update` directos a la tabla**,
 > así que cualquiera con la llave publicable podía abrir un turno, cerrarlo o
 > escribir el `efectivo_contado` que se le antojara — **falsear el corte**.
-> Ya son funciones con sesión. Queda abierto el permiso de TABLA sobre
-> `caja_cortes`, que se cierra cuando el kiosko sostenga su sesión (§7).
+> Ya son funciones con sesión, y las políticas públicas de la tabla se
+> fueron con el cierre del 19/10.
 
 **5. El cajón se cuenta por denominación, y el total lo saca el servidor.**
 «Faltan $340» no le sirve a nadie; «falta un billete de $200 y tres de $50»
@@ -395,40 +395,28 @@ Tres cosas que hay que saber para leer el resultado:
 | Impresiones | Cola con token, latido con versión, prueba desde Admin, reimpresión auditada |
 | Impresiones | **El ticket encolado a la térmica**, con el mismo módulo que la pantalla |
 | Impresiones | Código de instalación, instalador que espera el latido, los dos agentes |
+| Impresiones | **El corte sale solo en la térmica al cerrar**, y los datos del ticket se editan en Admin y viajan dentro de cada trabajo |
+| Seguridad | **El cobro exige sesión**: ~40 funciones y cinco políticas `using (true)` cerradas cuando la casa decidió vender solo desde la caja; verificado con `set role anon` |
 
 ### Lo que falta, por orden de lo que duele
 
-**1. Las funciones del cobro siguen abiertas a `anon`.** `fn_crear_orden`,
-`fn_cobrar_orden` y `fn_crear_orden_kiosko_caja` las llaman el kiosko y las
-estaciones, que escriben **sin sesión**. No se cierran quitándoles el
-permiso —eso deja a la tienda sin vender— sino **haciendo que esas pantallas
-abran sesión real**, que ya existe (`staff-login`). Es el trabajo pendiente
-más grande y el motor original tampoco lo hizo.
+**1. La terminal.** Clip está escrito y probado; faltan sus tres secretos.
+Si es Banorte, el camino es otro (`docs/terminal-banorte.md`). Es lo único
+que queda fuera del código.
 
-**2. Queda una lista larga de funciones sin candado** reachable por `anon`
-(§6 las lista). Las peores ya se cerraron hoy —alta de personal y
-vinculación de cuentas, que eran escalada de privilegios directa—, pero
-quedan las de catálogo, extras, observaciones y clientes. Ninguna es
-escalada; varias permiten ensuciar el catálogo.
+**2. El kiosko, cuando vuelva, tiene que entrar con sesión.** Hoy no se usa
+y por eso se pudo cerrar todo a `authenticated`. Reabrirle `anon` a
+`fn_crear_orden` sería volver al punto de partida.
 
-**3. `caja_cortes` sigue escribible por `anon` a nivel de TABLA.** Abrir y
-cerrar ya son funciones con sesión, pero mientras el permiso de tabla siga
-abierto el camino viejo también existe — y con él, falsear el corte. Es una
-de las tres tablas que el kiosko y las estaciones escriben sin sesión (las
-otras son `pedidos_cocina` y `cocina_items`). Se cierra junto con el punto 1.
+**3. La frase del horario en el ticket** sigue sin existir porque la casa
+nunca la dio. El campo ya está en Admin → Sistema.
 
-**4. Caja: el corte no se imprime solo.** Debería salir en la térmica al
-cerrar, no por el diálogo del navegador de quien esté mirando Admin.
+**4. Paginación.** PostgREST corta en 1 000 filas sin avisar. Se revisó: las
+tres listas que podían crecer (`ordenes_produccion`, `encargos` ×2) ya traen
+`limit` explícito, así que no hace falta un `traerTodo()` hoy. El día que
+una pantalla pida «todo» sin límite, ahí sí.
 
-**5. Los datos del negocio del ticket están en el código** (`NEGOCIO_DEFAULT`).
-Funcionan para una tienda; para replicar hace falta una pantalla en Admin.
-La frase del horario sigue sin existir porque la casa nunca la dio.
-
-**6. `traerTodo()` para paginar.** PostgREST corta en 1 000 filas **y no
-avisa**. Hoy ninguna tabla de Lily llega, pero el día que llegue el síntoma
-será «faltan movimientos» sin ningún error.
-
-**7. Cosas de la casa, no del código**: costos, recetas y proveedores en
+**5. Cosas de la casa, no del código**: costos, recetas y proveedores en
 Costeos; los mínimos del inventario; los secretos de la terminal; los PIN de
 demostración de la vitrina, que hay que cambiar antes de abrir.
 
