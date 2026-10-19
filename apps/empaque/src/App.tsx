@@ -205,6 +205,15 @@ function Tarjeta({
             Encargo #{e.folio}
             {e.telefono ? ` · ${e.telefono}` : ''}
           </p>
+          {/* VA DE VIAJE cambia cómo se arma la caja, así que se grita antes
+              de empacar y no se esconde en una esquina. En carmín profundo:
+              el rosa salmón de la marca es un acento y a un metro se ve
+              despintado -- justo lo que no le puede pasar a esto. */}
+          {e.para_viaje && (
+            <p className="inline-block mt-2 font-display text-xl text-sa-cream bg-sa-green-deep rounded-full px-4 py-1">
+              Va de viaje · sellado, sin glass
+            </p>
+          )}
         </div>
         <div
           className={[

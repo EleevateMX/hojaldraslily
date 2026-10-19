@@ -792,6 +792,7 @@ export type Database = {
           hora_entrega: string | null
           id: string
           nota: string | null
+          para_viaje: boolean
           orden_id: string | null
           telefono: string | null
           updated_at: string
@@ -809,6 +810,7 @@ export type Database = {
           hora_entrega?: string | null
           id?: string
           nota?: string | null
+          para_viaje?: boolean
           orden_id?: string | null
           telefono?: string | null
           updated_at?: string
@@ -826,6 +828,7 @@ export type Database = {
           hora_entrega?: string | null
           id?: string
           nota?: string | null
+          para_viaje?: boolean
           orden_id?: string | null
           telefono?: string | null
           updated_at?: string
@@ -1689,6 +1692,7 @@ export type Database = {
           cuadros_por_molde: number
           horno_entro_en: string | null
           id: string
+          masas_restantes: number | null
           moldes: number | null
           moldes_armados: number
           moldes_en_horno: number
@@ -1704,6 +1708,7 @@ export type Database = {
           cuadros_por_molde: number
           horno_entro_en?: string | null
           id?: string
+          masas_restantes?: number | null
           moldes?: number | null
           moldes_armados?: number
           moldes_en_horno?: number
@@ -1719,6 +1724,7 @@ export type Database = {
           cuadros_por_molde?: number
           horno_entro_en?: string | null
           id?: string
+          masas_restantes?: number | null
           moldes?: number | null
           moldes_armados?: number
           moldes_en_horno?: number
@@ -4059,9 +4065,22 @@ export type Database = {
         }
         Returns: number
       }
+      fn_encargo_cliente_por_telefono: {
+        Args: { p_telefono: string }
+        Returns: {
+          cliente: string
+          encargos: number
+          telefono: string
+          ultimo: string
+        }[]
+      }
       fn_encargo_cobrar: {
         Args: { p_encargo_id: string; p_metodo?: string }
         Returns: number
+      }
+      fn_encargo_marcar_viaje: {
+        Args: { p_encargo_id: string; p_para_viaje?: boolean }
+        Returns: boolean
       }
       fn_encargo_crear: {
         Args: {
@@ -4751,6 +4770,10 @@ export type Database = {
             }
             Returns: number
           }
+      fn_produccion_masas: {
+        Args: { p_item_id: string; p_masas: number }
+        Returns: number
+      }
       fn_produccion_armar: {
         Args: { p_item_id: string; p_moldes: number }
         Returns: Json

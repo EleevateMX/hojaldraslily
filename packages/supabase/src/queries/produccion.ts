@@ -200,6 +200,7 @@ export interface Encargo {
   hora_entrega: string | null
   estado: 'apartado' | 'pagado' | 'entregado' | 'cancelado'
   anticipo: number
+  para_viaje: boolean
   nota: string | null
   creado_por: string | null
   created_at: string
@@ -227,6 +228,7 @@ interface FilaEncargo {
   hora_entrega: string | null
   estado: Encargo['estado']
   anticipo: number
+  para_viaje: boolean
   nota: string | null
   creado_por: string | null
   created_at: string
@@ -253,7 +255,7 @@ export async function listarEncargos(
   let q = sb
     .from('encargos')
     .select(
-      'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo,' +
+      'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo, para_viaje,' +
         ' nota, creado_por, created_at, empacado_at, empacado_por,' +
         ' encargo_items(id, producto_id, cantidad, precio_unitario,' +
         ' productos(nombre, imagen_url))',
@@ -298,6 +300,7 @@ function armarEncargos(data: unknown): Encargo[] {
       hora_entrega: e.hora_entrega,
       estado: e.estado,
       anticipo: Number(e.anticipo),
+      para_viaje: Boolean(e.para_viaje),
       nota: e.nota,
       creado_por: e.creado_por,
       created_at: e.created_at,
@@ -467,6 +470,58 @@ export function loQueHayQueEmpacar(encargos: Encargo[]): PorEmpacar[] {
  * había dejado anticipo, eso ya entró al corte el día que lo dejó y aquí solo
  * se cobra lo que falta. Es el número que hay que pedirle en el mostrador.
  */
+/**
+ * Marca (o desmarca) que el encargo **va de viaje**.
+ *
+ * No es un adorno: cambia cómo se empaca —va sellado y sin glass encima— así
+ * que empaque tiene que verlo **antes** de armarlo, no al entregarlo.
+ */
+export async function marcarEncargoDeViaje(
+  sb: ClienteLily,
+  encargoId: string,
+  paraViaje = true,
+): Promise<boolean> {
+  const { data, error } = await sb.rpc('fn_encargo_marcar_viaje', {
+    p_encargo_id: encargoId,
+    p_para_viaje: paraViaje,
+  })
+  if (error) throw error
+  return Boolean(data)
+}
+
+/** Lo que se sabe de un cliente al teclear su teléfono. */
+export interface ClienteConocido {
+  cliente: string
+  telefono: string | null
+  encargos: number
+  ultimo: string | null
+}
+
+/**
+ * Busca al cliente por su teléfono para no volver a teclearle los datos.
+ *
+ * El historial de encargos **es** el directorio: ya guardan nombre y
+ * teléfono, así que una tabla aparte solo sería algo más que mantener
+ * sincronizado. Compara solo los dígitos, de modo que «999 123 45 67»
+ * encuentra al que alguien guardó como `9991234567`.
+ *
+ * Devuelve `null` cuando no hay nadie, que es lo normal con un cliente nuevo
+ * y no un error que haya que enseñar en rojo.
+ */
+export async function clientePorTelefono(
+  sb: ClienteLily,
+  telefono: string,
+): Promise<ClienteConocido | null> {
+  const digitos = telefono.replace(/\D/g, '')
+  if (digitos.length < 7) return null
+  const { data, error } = await sb.rpc('fn_encargo_cliente_por_telefono', {
+    p_telefono: digitos,
+  })
+  if (error) throw error
+  const fila = (data as ClienteConocido[] | null)?.[0]
+  return fila ?? null
+}
+
 /**
  * Recibe un anticipo de un encargo y **lo mete al corte**.
  *
@@ -871,7 +926,7 @@ export async function historialDeEncargos(
   const { data, error } = await sb
     .from('encargos')
     .select(
-      'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo,' +
+      'id, folio, cliente, telefono, fecha_entrega, hora_entrega, estado, anticipo, para_viaje,' +
         ' nota, creado_por, created_at, empacado_at, empacado_por,' +
         ' encargo_items(id, producto_id, cantidad, precio_unitario,' +
         ' productos(nombre, imagen_url))',

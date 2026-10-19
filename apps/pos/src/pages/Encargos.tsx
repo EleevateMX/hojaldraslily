@@ -8,6 +8,8 @@ import {
   crearEncargo,
   cobrarEncargo,
   registrarAnticipo,
+  marcarEncargoDeViaje,
+  clientePorTelefono,
   cancelarEncargo,
   listarProductosDelDia,
   listarOrdenesConTiempo,
@@ -177,6 +179,8 @@ export function Encargos() {
   const [nuevo, setNuevo] = useState(false)
   const [cliente, setCliente] = useState('')
   const [telefono, setTelefono] = useState('')
+  const [paraViaje, setParaViaje] = useState(false)
+  const [conocido, setConocido] = useState<string | null>(null)
   const [fecha, setFecha] = useState('')
   const [hora, setHora] = useState('')
   const [nota, setNota] = useState('')
@@ -241,7 +245,21 @@ export function Encargos() {
 
   function limpiar() {
     setCliente(''); setTelefono(''); setFecha(''); setHora(''); setNota('')
+    setParaViaje(false); setConocido(null)
     setPiezas({}); setBusca(''); setNuevo(false)
+  }
+
+  async function buscarCliente() {
+    if (cliente.trim().length > 0) return // ya lo escribieron, no se pisa
+    try {
+      const c = await clientePorTelefono(sb, telefono)
+      if (!c) return
+      setCliente(c.cliente)
+      setConocido(`${c.cliente} · ${c.encargos} encargo${c.encargos === 1 ? '' : 's'}`)
+    } catch {
+      // Un teléfono que no encuentra a nadie es lo normal con un cliente
+      // nuevo, no un error que haya que enseñar en rojo. Se sigue a mano.
+    }
   }
 
   async function apartar() {
@@ -251,7 +269,7 @@ export function Encargos() {
     if (items.length === 0 || cliente.trim().length < 2) return
     setGuardando(true)
     try {
-      await crearEncargo(sb, {
+      const id = await crearEncargo(sb, {
         cliente: cliente.trim(),
         items,
         telefono: telefono.trim() || undefined,
@@ -259,7 +277,13 @@ export function Encargos() {
         hora_entrega: hora.trim() || undefined,
         nota: nota.trim() || undefined,
       })
-      setAviso(`Apartado para ${cliente.trim()}: ${cuantas} pieza${cuantas === 1 ? '' : 's'}.`)
+      // El viaje va aparte y no como parámetro de crearEncargo: así se puede
+      // marcar después, que es lo que pasa cuando el cliente lo dice al final.
+      if (paraViaje) await marcarEncargoDeViaje(sb, id, true)
+      setAviso(
+        `Apartado para ${cliente.trim()}: ${cuantas} pieza${cuantas === 1 ? '' : 's'}` +
+          (paraViaje ? ' · va de viaje, empaque ya lo sabe.' : '.'),
+      )
       limpiar()
       await cargar(false)
       setError(null)
@@ -423,7 +447,14 @@ export function Encargos() {
                 placeholder="Teléfono"
                 inputMode="tel"
                 value={telefono}
-                onChange={(e) => setTelefono(e.target.value)}
+                onChange={(e) => {
+                  setTelefono(e.target.value)
+                  setConocido(null)
+                }}
+                // Se busca al SALIR del campo, no en cada tecla: una consulta
+                // por dígito son diez viajes a la base para una sola captura,
+                // y el nombre parpadearía mientras el cajero todavía teclea.
+                onBlur={() => void buscarCliente()}
               />
               <input
                 type="date"
@@ -438,6 +469,28 @@ export function Encargos() {
                 onChange={(e) => setHora(e.target.value)}
               />
             </div>
+
+            {conocido && (
+              <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-deep">
+                Ya lo conocemos · {conocido}
+              </p>
+            )}
+
+            {/* Va de viaje: cambia CÓMO se empaca, así que empaque tiene que
+                verlo antes de armarlo. Por eso se captura aquí y no al
+                entregar, cuando ya sería tarde. */}
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={paraViaje}
+                onChange={(e) => setParaViaje(e.target.checked)}
+                className="w-5 h-5 accent-[color:var(--sa-green-deep)]"
+              />
+              <span className="font-body text-sm text-sa-green-ink">
+                Va de viaje
+                <span className="text-sa-green-ink/55"> · se empaca sellado</span>
+              </span>
+            </label>
 
             <input
               className="w-full px-3 py-2.5 border border-sa-green-ink/15 rounded-sa text-sm"
