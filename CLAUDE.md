@@ -653,7 +653,8 @@ empaquetador y se desvían solas:
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén**. La cantidad **se teclea**: para 13 pastelitos se escribe 13, no se toca «+» trece veces |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
 | Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
-| Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |
+| Cobrar | En el cobro hay **tres botones iguales: Efectivo, Terminal, Mixto**. En efectivo salen atajos con los billetes que de verdad entregan ($650, $700, $800, $1,000 para un ticket de $625) |
+| Cobrar una parte en efectivo y otra con tarjeta | **Mixto**. Se teclea solo el efectivo; el resto se calcula y se cobra en la terminal |
 | Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
 | Si el ticket del cliente no sale | Si ya hay térmica dada de alta, el trabajo **se ve en Admin → Impresoras**: ahí dice si salió o falló. Si todavía no la hay, el ticket va por el navegador y entonces es **otra** impresora: se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |
 | Dar de alta la térmica del mostrador | Admin → **Impresoras** → «Para qué sirve» = **Tickets del cliente**. Lo que sale al guardar es el `.env` del agente de caja, no el JSON de las etiquetadoras |

@@ -50,6 +50,22 @@ function IconoMetodo({ tipo }: { tipo: 'efectivo' | 'terminal' }) {
   )
 }
 
+/** Mixto: un billete y una terminal, juntos. */
+function IconoMixto() {
+  return (
+    <svg viewBox="0 0 40 28" className="h-8 w-12" aria-hidden="true">
+      <rect x="1" y="6" width="24" height="15" rx="2.5" fill="currentColor" opacity=".16" />
+      <rect x="1.5" y="6.5" width="23" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="13" cy="13.5" r="3.4" fill="none" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="24" y="1" width="14" height="24" rx="2.5" fill="#FDF6E3" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="27" y="4" width="8" height="5" rx="1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <circle cx="28.5" cy="13.5" r="1.1" fill="currentColor" /><circle cx="31" cy="13.5" r="1.1" fill="currentColor" />
+      <circle cx="33.5" cy="13.5" r="1.1" fill="currentColor" /><circle cx="28.5" cy="17" r="1.1" fill="currentColor" />
+      <circle cx="31" cy="17" r="1.1" fill="currentColor" /><circle cx="33.5" cy="17" r="1.1" fill="currentColor" />
+    </svg>
+  )
+}
+
 /**
  * Los atajos de «recibido»: lo que el cliente de verdad entrega.
  *
@@ -378,7 +394,12 @@ export function Cobro() {
       <div className="flex-1 flex overflow-hidden">
         {/* Izquierda: método de pago */}
         <div className="flex-1 p-6 overflow-y-auto">
-          <div className="grid grid-cols-2 gap-4 mb-3">
+          {/* Tres botones iguales: Efectivo, Terminal y Mixto. La casa lo
+              pidió así —«que solo diga efectivo, terminal o mixto»— y tiene
+              razón: la pregunta del mostrador es UNA, «¿cómo paga?», y las
+              tres respuestas tienen que verse como tres respuestas, no como
+              dos grandes y una chica escondida abajo. */}
+          <div className="grid grid-cols-3 gap-4 mb-5">
             {METODOS.map((m) => (
               <button
                 key={m.key}
@@ -386,7 +407,7 @@ export function Cobro() {
                 aria-pressed={!mixto && metodo === m.key}
                 className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
                   !mixto && metodo === m.key
-                    ? 'bg-sa-green text-white shadow-sa'
+                    ? 'bg-sa-green text-sa-cream shadow-sa'
                     : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
                 }`}
               >
@@ -394,22 +415,22 @@ export function Cobro() {
                 <span className="font-display text-lg">{m.label}</span>
               </button>
             ))}
+            <button
+              onClick={() => { setMixto(true); setParteEfectivo('') }}
+              aria-pressed={mixto}
+              className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
+                mixto
+                  ? 'bg-sa-green text-sa-cream shadow-sa'
+                  : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
+              }`}
+            >
+              <IconoMixto />
+              <span className="font-display text-lg">Mixto</span>
+              <span className="font-mono text-[10px] uppercase tracking-wide opacity-70 -mt-1">
+                una parte y otra parte
+              </span>
+            </button>
           </div>
-
-          {/* Mixto. Va como una tercera opción chica y no como un tercer botón
-              grande a propósito: pasa seguido, pero no tanto como los otros
-              dos, y ocupando lo mismo le robaría el dedo a lo de siempre. */}
-          <button
-            onClick={() => { setMixto((v) => !v); setParteEfectivo('') }}
-            aria-pressed={mixto}
-            className={`w-full mb-5 py-3 rounded-sa font-display text-lg transition-all ${
-              mixto
-                ? 'bg-sa-green text-white shadow-sa'
-                : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
-            }`}
-          >
-            Una parte y otra parte
-          </button>
 
           {/* Se captura SOLO el efectivo; el resto se calcula. Pedir los dos
               números deja teclear dos que no sumen el total, y eso lo rechaza
