@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
 import { listarAlmacenes, listarCajas, corteAbierto, abrirCaja } from '@lily/supabase'
+import { AvisoDeConexion } from '@/components/pos/AvisoDeConexion'
 import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
 import { OrdenPanel } from '@/components/pos/OrdenPanel'
 import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
 import { mensajeDeError } from '@lily/utils'
+import { conRespaldo } from '../lib/respaldo'
 
 export function Caja() {
   const navigate = useNavigate()
@@ -44,13 +46,17 @@ export function Caja() {
     let vivo = true
     ;(async () => {
       try {
-        const almacenes = await listarAlmacenes(sb)
+        // Con respaldo: sin internet, la caja abre con el almacen, la caja y
+        // el turno que tenia la ultima vez. El corte es el que mas importa —
+        // sin el, esta pantalla manda a «abrir caja» y la cajera abriria un
+        // segundo turno sobre el que ya estaba abierto.
+        const almacenes = await conRespaldo('almacenes', () => listarAlmacenes(sb))
         const kiosko = almacenes.find((a) => a.tipo === 'kiosko') ?? almacenes[0]
         if (!kiosko) throw new Error('No hay almacenes configurados.')
-        const cajas = await listarCajas(sb)
+        const cajas = await conRespaldo('cajas', () => listarCajas(sb))
         const c = cajas.find((x) => x.sucursal_id === kiosko.sucursal_id) ?? cajas[0]
         if (!c) throw new Error('No hay cajas configuradas.')
-        const abierto = await corteAbierto(sb, c.id)
+        const abierto = await conRespaldo(`corte_${c.id}`, () => corteAbierto(sb, c.id))
         if (!vivo) return
         setContexto({ almacen: kiosko, caja: c, corte: abierto })
       } catch (e) {
@@ -139,6 +145,7 @@ export function Caja() {
   // --- Venta (corte abierto) ---
   return (
     <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
+      <AvisoDeConexion />
       <header className="flex items-center justify-between px-5 py-2.5 bg-sa-green-deep text-sa-cream flex-shrink-0 border-b border-sa-cream/10">
         <div className="flex items-center gap-3">
           <img src={`${import.meta.env.BASE_URL}logo-negativo.png`} alt="Hojaldras Lily" className="h-[110px] w-auto -my-6" />

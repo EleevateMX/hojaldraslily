@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { diagnosticoSistema, type Diagnostico as TipoDiagnostico, type HallazgoDiagnostico } from '@lily/supabase'
-import { mensajeDeError } from '@lily/utils'
-import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
+import {
+  diagnosticoSistema, ventasSinInternet,
+  type Diagnostico as TipoDiagnostico, type HallazgoDiagnostico,
+  type VentaSinInternetRevisar,
+} from '@lily/supabase'
+import { mxn, mensajeDeError } from '@lily/utils'
+import { PageHeader, Loading, ErrorMsg, Panel, Chip, cx } from '../ui'
 
 const SEVERIDAD: Record<string, { etiqueta: string; caja: string; punto: string }> = {
   alta: {
@@ -47,13 +51,16 @@ const ORDEN: Record<string, number> = { alta: 0, media: 1, baja: 2 }
  */
 export default function Diagnostico() {
   const [dx, setDx] = useState<TipoDiagnostico | null>(null)
+  const [sinInternet, setSinInternet] = useState<VentaSinInternetRevisar[]>([])
   const [error, setError] = useState<string | null>(null)
   const [revisando, setRevisando] = useState(false)
 
   async function revisar() {
     setRevisando(true)
     try {
-      setDx(await diagnosticoSistema(sb))
+      const [d, v] = await Promise.all([diagnosticoSistema(sb), ventasSinInternet(sb, 7)])
+      setDx(d)
+      setSinInternet(v)
       setError(null)
     } catch (e) {
       setError(mensajeDeError(e))
@@ -120,7 +127,86 @@ export default function Diagnostico() {
           </div>
         </>
       )}
+
+      <VentasSinInternet ventas={sinInternet} />
     </div>
+  )
+}
+
+/**
+ * Lo que se cobró a oscuras, ya registrado.
+ *
+ * Solo sale si hubo algo en los últimos 7 días: una tabla vacía permanente
+ * es ruido, y la ventana de tiempo es lo que le permite **volver a verde**.
+ *
+ * Lo que de verdad hay que mirar es la columna de la derecha. Si el precio
+ * de la pantalla no coincidió con el del servidor, la venta se cobró al del
+ * servidor —esa regla no se afloja— y la diferencia quedó anotada. Es un
+ * dato que no se puede corregir solo: hay que decidir si se le devuelve algo
+ * al cliente o se deja así.
+ */
+function VentasSinInternet({ ventas }: { ventas: VentaSinInternetRevisar[] }) {
+  if (ventas.length === 0) return null
+  const aRevisar = ventas.filter((v) => v.estado === 'revisar').length
+  const fmt = (iso: string) =>
+    new Date(iso).toLocaleString('es-MX', {
+      timeZone: 'America/Merida', day: '2-digit', month: '2-digit',
+      hour: '2-digit', minute: '2-digit',
+    })
+
+  return (
+    <Panel title="Ventas cobradas sin internet (últimos 7 días)" className="mt-8">
+      <p className={`text-sm mb-4 ${cx.muted}`}>
+        {aRevisar > 0 ? (
+          <>
+            <b className="text-sa-green-deep">
+              {aRevisar} {aRevisar === 1 ? 'tiene' : 'tienen'} diferencia de precio
+            </b>{' '}
+            — se cobró el precio del servidor, que es el bueno, pero la pantalla decía otro.
+            Revisa si hay que devolverle algo al cliente.
+          </>
+        ) : (
+          <>Las {ventas.length} entraron al precio correcto. No hay nada que hacer.</>
+        )}
+      </p>
+      <div className={cx.tableWrap}>
+        <table className={cx.table}>
+          <thead>
+            <tr className={cx.thead}>
+              <th className={cx.th}>Folio</th>
+              <th className={cx.th}>Se vendió</th>
+              <th className={cx.th}>Se registró</th>
+              <th className={cx.th}>Cajero</th>
+              <th className={cx.th}>Se cobró</th>
+              <th className={cx.th}>Diferencia</th>
+            </tr>
+          </thead>
+          <tbody className={cx.tbody}>
+            {ventas.map((v) => (
+              <tr key={v.id} className={cx.tr}>
+                <td className={cx.td}>
+                  <span className="font-mono">{v.folio_local ?? '—'}</span>
+                  {v.folio != null && (
+                    <span className={`font-mono text-xs ml-2 ${cx.muted}`}>→ #{v.folio}</span>
+                  )}
+                </td>
+                <td className={cx.td}>{fmt(v.vendida_en)}</td>
+                <td className={cx.td}>{fmt(v.recibida_en)}</td>
+                <td className={cx.td}>{v.cajero ?? <span className={cx.muted}>—</span>}</td>
+                <td className={cx.td}>{mxn(Number(v.total_servidor ?? 0))}</td>
+                <td className={cx.td}>
+                  {v.estado === 'revisar' ? (
+                    <Chip tone="no">{mxn(Number(v.diferencia ?? 0))}</Chip>
+                  ) : (
+                    <span className={cx.muted}>—</span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
   )
 }
 

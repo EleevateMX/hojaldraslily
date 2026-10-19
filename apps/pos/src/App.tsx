@@ -8,6 +8,8 @@ import { PedidosPendientes } from './pages/PedidosPendientes'
 import { Encargos } from './pages/Encargos'
 import { usePosStore } from './store/posStore'
 import { registrarPwa } from '@lily/pwa/registrar'
+import { vigilarConexion } from './lib/conexion'
+import { useVentasSinInternet, vigilarVentasSinInternet } from './store/sinInternet'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const empleado = usePosStore((s) => s.empleado)
@@ -27,8 +29,20 @@ export default function App() {
   useEffect(() => {
     const esSeguro = () =>
       usePosStore.getState().items.length === 0 &&
-      !window.location.pathname.endsWith('/cobro')
+      !window.location.pathname.endsWith('/cobro') &&
+      // Y nada cobrado esperando registro: una recarga no las pierde —viven
+      // en localStorage— pero sí corta la vuelta a medias, y la vuelta es lo
+      // que convierte un cajon lleno de efectivo en ventas de verdad.
+      useVentasSinInternet.getState().pendientes.length === 0
     return registrarPwa({ activarCuando: esSeguro })
+  }, [])
+
+  // Saber si hay internet, y mandar lo cobrado a oscuras en cuanto vuelva.
+  // Van en la app y no en una pantalla porque tienen que seguir corriendo
+  // aunque el cajero se mueva entre la caja, los encargos y el corte.
+  useEffect(() => {
+    vigilarConexion()
+    vigilarVentasSinInternet()
   }, [])
 
   return (

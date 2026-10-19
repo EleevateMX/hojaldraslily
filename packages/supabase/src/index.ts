@@ -1,4 +1,4 @@
-export { getSupabase, type ClienteLily } from './client'
+export { getSupabase, urlBackend, type ClienteLily } from './client'
 export * from './queries/catalogo'
 export * from './queries/produccion'
 export * from './queries/costeo'

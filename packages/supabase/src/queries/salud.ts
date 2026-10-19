@@ -66,3 +66,39 @@ export async function diagnosticoSistema(sb: ClienteLily): Promise<Diagnostico> 
   if (error) throw error
   return data as Diagnostico
 }
+
+// ----------------------- ventas sin internet --------------------------
+
+export interface VentaSinInternetRevisar {
+  id: string
+  folio_local: string | null
+  folio: number | null
+  vendida_en: string
+  recibida_en: string
+  metodo: string
+  total_pantalla: number
+  total_servidor: number | null
+  diferencia: number | null
+  estado: 'ok' | 'revisar'
+  comanda_suprimida: boolean
+  cajero: string | null
+}
+
+/**
+ * Las ventas que se cobraron sin internet, de los últimos días.
+ *
+ * Existe por la lección de los indicadores: una diferencia de precio que se
+ * guarda y nadie puede ver es exactamente un número que no sirve. Lleva
+ * ventana de tiempo (7 días por omisión) para que el renglón pueda **volver
+ * a verde** — un contador histórico que nunca baja deja de leerse.
+ */
+export async function ventasSinInternet(
+  sb: ClienteLily,
+  dias = 7,
+): Promise<VentaSinInternetRevisar[]> {
+  const { data, error } = await (sb.rpc as unknown as
+    (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>
+  )('fn_ventas_sin_internet_revisar', { p_dias: dias })
+  if (error) throw error
+  return (data as VentaSinInternetRevisar[] | null) ?? []
+}

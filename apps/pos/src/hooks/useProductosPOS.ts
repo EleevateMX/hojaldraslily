@@ -7,6 +7,7 @@ import {
 import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
 import { mensajeDeError } from '@lily/utils'
 import { usePosStore } from '../store/posStore'
+import { conRespaldo } from '../lib/respaldo'
 
 /** Categoría derivada del catálogo (con su cocina/estación) para los filtros. */
 export interface CategoriaPOS {
@@ -32,11 +33,16 @@ export function useProductosPOS() {
     // poder MOSTRAR el precio de Rappi desde que se arma el ticket, no solo
     // al cobrar. Si la pantalla dijera $160 y el servidor calculara $190, el
     // cobro se rechazaria por no cuadrar el importe.
+    // `conRespaldo`: la red va primero y la respuesta buena queda guardada en
+    // este navegador. Sin internet —o con una conexion que tarda mas de ocho
+    // segundos en contestar— se usa la ultima buena y el mostrador sigue
+    // teniendo menu. Un menu vacio no es «no hay internet»: parece una tienda
+    // sin nada que vender.
     Promise.all([
-      listarProductosParaVenta(sb),
-      listarProductosExtra(sb),
-      listarExtras(sb),
-      listarPreciosDeCanal(sb),
+      conRespaldo('productos', () => listarProductosParaVenta(sb)),
+      conRespaldo('productos_extra', () => listarProductosExtra(sb)),
+      conRespaldo('extras', () => listarExtras(sb)),
+      conRespaldo('precios_canal', () => listarPreciosDeCanal(sb)),
     ])
       .then(([prods, prodsExtra, exs, precios]) => {
         setTodos(prods)

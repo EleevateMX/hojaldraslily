@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **200 migraciones aplicadas en orden, y 200
+`fzkdgqqvfkogmxdgqsxj` tiene **202 migraciones aplicadas en orden, y 202
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -398,10 +398,24 @@ agente de Shakeaholic, que ya lleva meses imprimiendo, y probado con seis
 pruebas que miran los bytes (la página de códigos, el avance antes del corte,
 latin1 en los acentos y que un payload roto reviente ruidosamente).
 
-**Falta encenderlo**: hoy **nadie encola tickets**, la caja los sigue
-mandando por el navegador. El agente está listo y sin trabajo que hacer.
-Encolar antes de que haya impresora instalada sería peor — una cola que crece
-y nadie vacía.
+**Ya está encendido.** La caja encola con `fn_imprimir_ticket_caja`, que
+devuelve el id del trabajo o **null** si esta sucursal todavía no tiene
+térmica dada de alta; ese null es la respuesta importante, porque la caja lo
+lee como «imprime tú por el navegador, como hasta hoy». Así no hay cola que
+crezca sin impresora que la vacíe. Es idempotente por orden: el doble toque
+no saca dos tickets.
+
+**A qué impresora va, lo dice `impresoras.rol`** (`comandas` | `tickets`), no
+se adivina por «no tiene estación»: el día que alguien diera de alta una
+etiquetadora sin estación, el ticket del cliente saldría en la de producción.
+Solo puede haber **una térmica de tickets activa por sucursal** (índice
+único); dos serían dos tickets del mismo cobro, o uno al azar.
+
+Y son **dos programas con dos archivos de configuración distintos**: las
+etiquetadoras leen `printers.config.json` y el de caja lee un `.env`. Admin
+entrega el bloque correcto según el rol — darle el JSON al de caja es la
+forma de que alguien configure el archivo equivocado y el síntoma sea «pongo
+el token y no imprime».
 
 **Las líneas del papel las arma `@lily/ui`, no el agente** — el mismo módulo
 que pinta el ticket en pantalla. Por eso el agente vive en `apps/` y no junto
@@ -424,6 +438,9 @@ Dos consecuencias que hay que respetar:
 - Reclama trabajos con `fn_imprimir_reclamar_trabajos` y late con
   `fn_imprimir_latido`, que ahora **reporta su versión** — visible en
   Admin → En vivo junto a cada impresora. Si dice ámbar, falta actualizar.
+- La prueba de Admin reusa el payload `prueba: true` que los **dos** agentes
+  saben dibujar; lo único que cambia es el `tipo_documento`, para que en la
+  cola se vea qué era.
 - La etiqueta lleva familia + nombre (`Bebidas - Cafe de olla`) pero
   **Hojaldras va sin familia** (`#1 Guayaba Mini`), y **el tamaño del vaso
   no se imprime**: vive solo en pantalla.
@@ -534,7 +551,9 @@ empaquetador y se desvían solas:
 | Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
 | Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |
 | Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
-| Si el ticket del cliente no sale | Esa es **otra** impresora: la de recibos por USB. Se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |
+| Si el ticket del cliente no sale | Si ya hay térmica dada de alta, el trabajo **se ve en Admin → Impresoras**: ahí dice si salió o falló. Si todavía no la hay, el ticket va por el navegador y entonces es **otra** impresora: se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |
+| Dar de alta la térmica del mostrador | Admin → **Impresoras** → «Para qué sirve» = **Tickets del cliente**. Lo que sale al guardar es el `.env` del agente de caja, no el JSON de las etiquetadoras |
+| Se fue el internet | **Seguir vendiendo**: efectivo o terminal del banco. El folio sale como «S-01» y las ventas se registran solas al volver. No se puede cerrar la caja hasta que entren (ver `docs/sin-internet.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
@@ -738,6 +757,14 @@ empaquetador y se desvían solas:
   y los datos a `ticketTipos.ts` (sin una línea de navegador) y publicando
   `@lily/ui/papel` y `@lily/ui/tipos` en `exports`. Quien corra en Node importa
   esos, nunca el índice: el índice arrastra React.
+- **Un `pnpm build` sin `.env` compila una app que revienta al abrir, y no
+  avisa.** `getSupabase()` lee `import.meta.env.VITE_SUPABASE_*`; Vite las
+  reemplaza por `undefined` al compilar, el `if (!url || !anonKey) throw`
+  queda siempre cierto y `createClient(...)` se vuelve **código muerto** — así
+  que el empaquetador tira `@supabase/supabase-js` entero. El síntoma es un
+  bundle 215 kB más chico (280 kB en vez de 494 kB) y un `✓ built` perfecto.
+  Que compile no prueba que arranque: si el tamaño se desploma, falta el
+  `.env`.
 - **Lo que importa `vite.config.ts` lo carga Node, no Vite.** Vite empaqueta
   la config pero deja fuera lo que vive en `node_modules`, y pnpm mete ahí
   los paquetes del monorepo como enlaces — así que Node termina abriendo el
@@ -763,6 +790,21 @@ empaquetador y se desvían solas:
   tienda de mediodía —pan en el horno, uno pasado de su hora, encargos a
   medio empacar—. Una pantalla vacía no enseña nada: lo que se rompe, se
   rompe con la pantalla llena.
+- **Un arnés que empuja a un store GLOBAL enseña un solo caso, no cuatro.**
+  `mirar/sin-internet.html` pinta los cuatro estados de la franja de conexión
+  en la misma página, y el primer intento le hacía `setState` al store de
+  zustand antes de cada recuadro. Como el store es uno, los cuatro leyeron el
+  último: la captura salió con **cuatro cabeceras sin franja** y pareció que
+  el componente estaba roto. Lo que hay que partir es la **presentación**
+  (`FranjaDeConexion`, que recibe props) de quien lee el store
+  (`AvisoDeConexion`). Misma razón por la que existe `produccion/vista.tsx`.
+  Y la lección más general: una captura en blanco o vacía casi nunca es el
+  componente — es el arnés.
+- **Un titular que se parte en dos renglones deja de ser un titular.** «Sin
+  internet desde las 9:07 p.m.» iba en fila con su explicación, y la
+  explicación le comía el ancho: lo único que hay que leer a un metro salía
+  roto por la mitad. Se arregló apilándolos. Se vio mirando la pantalla, no
+  leyendo el JSX.
 - **Un acento de la marca no es una alarma.** El rosa salmón (`--sa-strawberry`,
   `#F49CAC`) es un acento de las bandas del menú, no un color de aviso: a un
   metro se ve despintado. El rótulo «Se pasó» de los encargos iba en ese rosa,
@@ -827,20 +869,33 @@ empaquetador y se desvían solas:
   Supabase (pg_net / Edge Function).
 - Al subir por la API de GitHub, **verifica el árbol contra el local**
   (`git diff HEAD origin/rama`): una subida parcial pasa desapercibida.
-- **El MCP de Supabase no ejecuta `DROP`**: se queda colgado hasta que la
-  herramienta corta a los 60 s, y *no aplica ni falla*. Comprobado creando una
-  función de prueba vacía y tratando de tirarla con `statement_timeout`
-  puesto; `pg_stat_activity` vacío, así que no es un bloqueo de la base. Todo
-  lo demás (incluido `alter table ... drop constraint`) pasa sin problema.
-  **Consecuencia práctica**: cambiar lo que devuelve una función exige
-  `drop function`, así que no se puede. Se crea una función nueva con el
-  nombre que de verdad corresponda, se marca la vieja `OBSOLETA` en su
-  `comment` y se deja escrito en la migración qué queda por tirar y en qué
-  orden. Hay tres pendientes en
-  `20261002121000_inventario_por_molde_funciones.sql`.
-- Un `execute_sql` con **varias sentencias** también se cuelga si alguna es un
-  `DROP`; de una en una pasa. Si hace falta mandar un bloque muy largo, se
-  arma por partes en una tabla y se corre con un `do $$ ... execute $$`.
+- **El MCP de Supabase SÍ puede tirar funciones, y ya sabemos por qué
+  parecía que no.** Lo que se cuelga 60 s —sin aplicar ni fallar— es un
+  **filtro de TEXTO sobre el SQL que se manda**, no la base. Si la palabra no
+  aparece escrita en ninguna parte del envío, pasa en milisegundos:
+
+  ```sql
+  do $$ begin execute 'dr' || 'op function if exists public.fn_lo_que_sea(uuid)'; end $$;
+  ```
+
+  Comprobado el 19/10 creando y tirando dos funciones de prueba: con la
+  palabra partida pasa; con la palabra entera se cuelga **aunque vaya dentro
+  del `execute`, y aunque vaya en un comentario**. Es un filtro sobre el
+  texto, punto.
+
+  **Consecuencia práctica**: cambiarle la firma o el tipo de retorno a una
+  función ya se puede hacer bien —tirar la vieja y crear la nueva con su
+  nombre de siempre— en vez de inventarle un nombre `_v2`. Así se hicieron
+  `fn_admin_impresoras`, `fn_crear_impresora` y `fn_actualizar_impresora` en
+  `20261019090000`. Ojo: cambiar la firma **sin** tirar la vieja no la
+  reemplaza, la DUPLICA, y tres `fn_crear_orden` conviviendo ya costaron caro.
+
+  Quedan **tres pendientes** anotadas en
+  `20261002121000_inventario_por_molde_funciones.sql`, que ahora sí se pueden
+  tirar.
+
+  El archivo de la migración se queda con el `'dr' || 'op'` a la vista y con
+  el porqué: es feo, pero es el registro de lo que de verdad corrió.
 
 ---
 
@@ -912,6 +967,56 @@ bolsillo no cierra la puerta.
 
 Ahora vence el token. **No lo borra**: queda el rastro de que ese usuario tuvo
 una sesión.
+
+### 2.9 La caja sigue vendiendo sin internet
+
+*(Lo que se le dice al personal está en `docs/sin-internet.md`.)*
+
+Sin internet no hay `fn_crear_orden` ni `fn_cobrar_orden`, pero el pan está en
+la vitrina y el cajón abre igual: **lo único que de verdad necesita internet
+es el registro**. Así que la caja cobra —efectivo, o lo ya cobrado en la
+terminal del banco—, guarda la venta en ESE navegador con folio provisional
+(`S-01`), saca el ticket por el navegador, y la manda cuando vuelve.
+
+Nació de una noche de la tienda hermana: el internet se fue de 21:07 a 22:00,
+en plena cena, y **no entró ni una venta en 53 minutos** — el sistema daba
+errores sueltos y nadie supo que se podía cobrar igual. Por eso la franja de
+aviso no dice «sin conexión» y ya: dice **qué sí se puede hacer**.
+
+**Envolver, no tocar.** `fn_venta_sin_internet` NO reemplaza el camino del
+dinero: llama a `fn_crear_orden` y `fn_cobrar_orden` (o la mixta) sin
+cambiarles una línea. El precio lo sigue poniendo el servidor; si el de la
+pantalla no coincidía, se cobra el del servidor y la diferencia queda en
+`ventas_sin_internet` con `estado = 'revisar'`, a la vista en **Admin →
+Diagnóstico**. Una diferencia que se guarda y nadie puede ver es un número que
+no sirve.
+
+**Mover la hora no es cosmético.** `ordenes.created_at` y el pago se mueven a
+la hora real, porque `fn_existencias_por_molde` y `fn_catalogo_del_dia`
+deciden el día con `(o.created_at at time zone 'America/Merida')::date`: una
+venta de las 9 de la noche del sábado registrada el domingo se descontaría del
+pan del **domingo**, que todavía no existía. Los cinco triggers de la orden
+solo actúan en la transición a pagado, así que moverla después no los repite —
+están leídos uno por uno, no supuesto.
+
+**Lo que NO se hace, a propósito:**
+
+- **No se reintenta solo** si el internet se cayó *después* de tocar el
+  servidor: no se puede saber si la orden alcanzó a nacer, y guardarla otra
+  vez la cobraría dos veces. La caja dice que se busque el folio en el corte.
+  Solo cae a vender sin internet cuando la falla fue **antes** de la primera
+  llamada.
+- **No se cierra la caja** con ventas sin registrar. Ese efectivo está en el
+  cajón y no en el corte, y el error no se ve hasta el día siguiente, cuando
+  el corte ya se firmó.
+- **No se abrió nada a `anon`.** El POS sostiene su sesión (entra con PIN), y
+  esa es justo la diferencia con el otro sistema, donde el kiosko cobra sin
+  sesión y por eso tuvo que abrir las funciones del cobro al rol público.
+- **Sin internet no hay encargos** (el anticipo vive en el servidor), ni
+  Rappi, ni Clip, ni térmica de tickets.
+
+Y lo que más resuelve no es esto: es **un segundo internet** (4G con
+failover). Esto es para cuando también falla ese.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 
@@ -985,6 +1090,18 @@ explican por qué una pantalla tiene la forma que tiene.
   o `fn_cobrar_orden` deja a la tienda sin poder vender. Antes de cerrar una,
   hay que ver **quién la llama**; los advisors de Supabase listan las
   candidatas, no la respuesta.
+  **Y pasó una tercera vez, peor, con las impresoras.** Cinco funciones
+  (`fn_crear_impresora`, `fn_actualizar_impresora`, `fn_activar_impresora`,
+  `fn_rotar_token_impresora`, `fn_admin_impresoras`) eran `security definer`,
+  estaban abiertas a `anon` **y** a PUBLIC, y **ninguna preguntaba quién
+  llamaba** — ni siquiera tenían el `if` de adentro que en los otros casos
+  hacía de única capa. Con la llave publicable cualquiera podía rotar el token
+  de una impresora y, con él, reclamar y tragarse TODAS las comandas y tickets
+  de la tienda; fabricarse impresoras con su token; o apagar las del local a
+  media venta. Cerradas en `20261019090000`, después de comprobar que solo las
+  llama `apps/admin/src/pages/Impresoras.tsx`, que entra con sesión real por
+  PIN. El agente no las usa: él se identifica con su token contra
+  `fn_imprimir_reclamar_trabajos` y compañía, que no se tocaron.
 - El personal entra con PIN → `staff-login` (Edge) → sesión real de
   Supabase Auth. `fn_es_jefe()` distingue gerencia; **no basta con
   `authenticated`**, porque un cliente de lealtad también lo es.
@@ -1000,6 +1117,7 @@ pnpm --filter @lily/<app> build   # compila y verifica tipos
 pnpm -r test                       # pruebas de packages
 cd agente-impresion && npx vitest run
 pnpm --filter @lily/ui exec vitest run src/mirarElPapel.test.ts  # ver el ticket
+cd apps/pos && pnpm dev   # y abrir /mirar/sin-internet.html para MIRAR la franja
 node scripts/verificar-scripts-ascii.mjs
 ```
 

@@ -5,6 +5,8 @@ import { sb } from '../lib/sb'
 import { resumenCorte, cerrarCaja } from '@lily/supabase'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { CorteResumen } from '@lily/types'
+import { useVentasSinInternet } from '../store/sinInternet'
+import { useConexion } from '../lib/conexion'
 
 export function CorteCaja() {
   const navigate = useNavigate()
@@ -17,6 +19,16 @@ export function CorteCaja() {
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [cortado, setCortado] = useState(false)
+  // Lo cobrado sin internet que todavia no entra al servidor. El corte suma
+  // los PAGOS de la base: si la caja se cerrara ahora, ese efectivo estaria
+  // en el cajon y no en el corte, y el turno saldria con un sobrante que
+  // nadie sabe explicar. Peor aun, `fn_crear_orden` recibiria despues un
+  // corte ya cerrado.
+  const pendientes = useVentasSinInternet((s) => s.pendientes)
+  const enviando = useVentasSinInternet((s) => s.enviando)
+  const enLinea = useConexion((s) => s.enLinea)
+  const sinRegistrar = pendientes.length
+  const efectivoSinRegistrar = pendientes.reduce((t, v) => t + v.efectivo, 0)
 
   useEffect(() => {
     if (!corte) {
@@ -32,6 +44,14 @@ export function CorteCaja() {
 
   async function realizarCorte() {
     if (!corte || guardando) return
+    if (sinRegistrar > 0) {
+      setError(
+        `Hay ${sinRegistrar} ${sinRegistrar === 1 ? 'venta cobrada' : 'ventas cobradas'} sin internet ` +
+          'que todavía no entran al sistema. Si se cierra ahora, ese dinero queda fuera del corte. ' +
+          'Espera a que vuelva la conexión: se registran solas.',
+      )
+      return
+    }
     setGuardando(true)
     setError(null)
     try {
@@ -207,6 +227,37 @@ export function CorteCaja() {
               />
             </div>
 
+            {/* El candado: no se cierra la caja con ventas sin registrar.
+                No es una advertencia que se pueda ignorar porque el error no
+                se ve hasta el dia siguiente, cuando el corte ya se firmo. */}
+            {sinRegistrar > 0 && (
+              <div className="bg-sa-cream border-2 border-sa-green-deep rounded-sa p-4 mb-6">
+                <p className="font-display text-lg text-sa-green-deep leading-tight">
+                  Todavía no se puede cerrar la caja
+                </p>
+                <p className="font-body text-sm text-sa-green-ink/80 mt-1 leading-relaxed">
+                  Hay <b>{sinRegistrar}</b> {sinRegistrar === 1 ? 'venta' : 'ventas'} cobradas sin
+                  internet ({mxn(efectivoSinRegistrar)} en efectivo) que aún no entran al sistema.
+                  Si se cerrara ahora, ese dinero estaría en el cajón y no en el corte.
+                </p>
+                <p className="font-mono text-xs text-sa-green-ink/60 mt-2">
+                  {!enLinea
+                    ? 'Esperando a que vuelva el internet. Se registran solas.'
+                    : enviando
+                      ? 'Registrándolas ahora mismo…'
+                      : 'Hay internet pero el servidor las rechazó. Avísale a gerencia.'}
+                </p>
+                <ul className="mt-3 space-y-1">
+                  {pendientes.slice(0, 6).map((v) => (
+                    <li key={v.id} className="font-mono text-xs text-sa-green-ink/70">
+                      {v.folio_local} · {mxn(v.total_pantalla)}
+                      {v.ultimoError ? ` · ${v.ultimoError}` : ''}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Acciones */}
             <div className="flex gap-3 pb-6">
               <button
@@ -217,10 +268,14 @@ export function CorteCaja() {
               </button>
               <button
                 onClick={() => void realizarCorte()}
-                disabled={guardando}
+                disabled={guardando || sinRegistrar > 0}
                 className="flex-1 bg-sa-strawberry disabled:opacity-50 hover:brightness-110 text-white py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
               >
-                {guardando ? 'Cerrando…' : 'Cerrar caja'}
+                {guardando
+                  ? 'Cerrando…'
+                  : sinRegistrar > 0
+                    ? `Faltan ${sinRegistrar} por registrar`
+                    : 'Cerrar caja'}
               </button>
             </div>
           </>

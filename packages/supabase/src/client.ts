@@ -51,3 +51,19 @@ export function getSupabase(): ClienteLily {
   cliente = createClient<Database>(conDominioPropio(url), anonKey)
   return cliente
 }
+
+/**
+ * La URL a la que de verdad van las consultas.
+ *
+ * La necesita quien quiere **sondear** si hay internet: tiene que preguntarle
+ * al MISMO servidor al que van las ventas, no a google.com. Una PC puede
+ * tener red, resolver DNS y no alcanzar Supabase; eso ya pasó en la otra
+ * tienda y el personal creyó que el sistema se había descompuesto.
+ *
+ * Devuelve cadena vacía si no hay configuración, para que quien sondee
+ * decida qué hacer en vez de reventar.
+ */
+export function urlBackend(): string {
+  const url = import.meta.env.VITE_SUPABASE_URL as string | undefined
+  return url ? conDominioPropio(url) : ''
+}

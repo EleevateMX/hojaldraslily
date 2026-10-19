@@ -12,6 +12,12 @@ import { type TicketData } from '@lily/ui'
 import { sacarTicket } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
+import { useConexion, esErrorDeRed, revisarAhora } from '../lib/conexion'
+import {
+  guardarVentaSinInternet,
+  siguienteFolioLocal,
+  type VentaSinInternet,
+} from '../store/sinInternet'
 
 /* Dos formas de cobro y ya: efectivo o terminal. Cuantas menos opciones,
    menos se equivoca quien cobra con gente esperando.
@@ -65,6 +71,7 @@ export function Cobro() {
   const [recibido, setRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const enLinea = useConexion((s) => s.enLinea)
 
   // Guarda: sin corte o sin ítems no hay nada que cobrar.
   if (!corte || !almacen || items.length === 0) {
@@ -87,11 +94,134 @@ export function Cobro() {
     ? mixtoValido
     : metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
 
+  /** El ticket del papel, con el folio que corresponda. */
+  function armarDatosDelTicket(folio: number | string): TicketData {
+    return {
+      folio,
+      fecha: new Date(),
+      cajero: empleado?.nombre,
+      canal: 'Caja',
+      items: items.map((l) => ({
+        cantidad: l.cantidad,
+        nombre: l.producto.nombre,
+        precioUnitario: precioDe(l.producto),
+      })),
+      descuento: descuentoTotal(),
+      // El anticipo va en su propio renglón del papel, no sumado al
+      // descuento: el cliente pagó ese dinero y el negocio lo cobró. En el
+      // descuento diría que se le regalaron $200 que están en el cajón
+      // desde el lunes.
+      anticipo: encargo?.anticipo || undefined,
+      // El nombre primero: el recuadro del papel ya dice «ENCARGO PARA», y
+      // lo que se lee a un metro en el mostrador es a quién se le entrega.
+      // El folio va detrás, que es con lo que se concilia después.
+      clienteNombre: encargo
+        ? `${encargo.cliente} (encargo #${encargo.folio})`
+        : undefined,
+      metodoPago: mixto
+        ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
+        : metodoSel.label,
+      // En mixto van las dos partes por separado, para que en el papel se
+      // vea que suman el total. La frase de arriba se queda de respaldo.
+      partes: mixto
+        ? [
+            { metodo: 'Efectivo', monto: efectivoMixto },
+            { metodo: 'Terminal', monto: tarjetaMixto },
+          ]
+        : undefined,
+      referenciaPago: referencia.trim() || null,
+      recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
+    }
+  }
+
+  /**
+   * Cobrar sin internet.
+   *
+   * La venta se escribe en ESTE navegador **antes** de imprimir y antes de
+   * cambiar de pantalla, con un folio provisional. Si el navegador no la pudo
+   * guardar, no se da por cobrada: que la cajera la vuelva a teclear es
+   * molesto; tener el dinero en el cajón y la venta en ningún lado es otra
+   * cosa.
+   *
+   * El precio que se le cobra al cliente es el de la pantalla. El servidor
+   * recalculará el suyo al registrarla y, si no coincidieran, la diferencia
+   * queda anotada para revisión — pero no se esconde ni se inventa.
+   */
+  function cobrarSinInternet(): boolean {
+    const folioLocal = siguienteFolioLocal()
+    const venta: VentaSinInternet = {
+      id: crypto.randomUUID(),
+      folio_local: folioLocal,
+      vendida_en: new Date().toISOString(),
+      sucursal_id: almacen!.sucursal_id,
+      almacen_id: almacen!.id,
+      corte_id: corte?.id ?? null,
+      empleado_id: empleado?.id ?? null,
+      nombre_cliente: null,
+      descuento: descuentoTotal(),
+      referencia: referencia.trim() || null,
+      metodo: mixto ? 'mixto' : metodo === 'efectivo' ? 'efectivo' : 'tarjeta',
+      efectivo: mixto ? efectivoMixto : metodo === 'efectivo' ? totalNeto : 0,
+      tarjeta: mixto ? tarjetaMixto : metodo === 'efectivo' ? 0 : totalNeto,
+      total_pantalla: totalNeto,
+      items: items.map((l) => ({
+        producto_id: l.producto.id,
+        cantidad: l.cantidad,
+        personalizacion: l.personalizacion,
+      })),
+      resumen: items.map((l) => ({ nombre: l.producto.nombre, cantidad: l.cantidad })),
+      intentos: 0,
+      ultimoError: null,
+    }
+
+    if (!guardarVentaSinInternet(venta)) {
+      setError(
+        'Este navegador no pudo guardar la venta, así que NO se cobró. ' +
+          'Vuelve a intentar; si sigue igual, apunta la venta en papel y avisa a gerencia.',
+      )
+      return false
+    }
+
+    // El papel sale por el navegador: el agente de tickets habla con la base,
+    // y ahora mismo no hay base.
+    void sacarTicket(null, armarDatosDelTicket(folioLocal))
+    limpiarOrden()
+    navigate('/', { replace: true })
+    return true
+  }
+
   async function confirmarPago() {
     if (procesando) return
     setProcesando(true)
     setError(null)
+    // Si el internet se cae EN MEDIO de esto, importa muchísimo en qué
+    // momento: antes de tocar el servidor se puede cobrar sin internet sin
+    // riesgo; después, no se sabe si la orden alcanzó a nacer, y guardarla
+    // otra vez la cobraría dos veces. Va fuera del `try` para que el `catch`
+    // lo pueda leer.
+    let yaTocamosElServidor = false
     try {
+      // --- Sin internet ---
+      if (!enLinea) {
+        if (encargo) {
+          setError(
+            'Sin internet no se puede cerrar un encargo: el anticipo vive en el servidor ' +
+              'y hay que descontarlo de ahí. Cóbralo cuando vuelva la conexión. ' +
+              'Lo demás sí se puede cobrar aparte.',
+          )
+          return
+        }
+        if (canal !== 'pos') {
+          setError(
+            'Sin internet solo se cobra en Mostrador: los pedidos de Rappi entran por la ' +
+              'plataforma, que también necesita conexión.',
+          )
+          return
+        }
+        cobrarSinInternet()
+        return
+      }
+
       // Cuánto va por cada lado. En mixto son las dos partes; si no, todo el
       // saldo por el método elegido.
       const enEfectivo = mixto ? efectivoMixto : metodo === 'efectivo' ? totalNeto : 0
@@ -112,6 +242,7 @@ export function Cobro() {
          * vendido y como separado. El servidor lo hace todo junto o no hace
          * nada.
          */
+        yaTocamosElServidor = true
         const r = await entregarEncargoConVenta(
           sb,
           encargo.id,
@@ -132,6 +263,7 @@ export function Cobro() {
         folio = r.folio
         ordenId = r.orden_id
       } else {
+        yaTocamosElServidor = true
         const orden = await crearOrden(
           sb,
           {
@@ -171,47 +303,30 @@ export function Cobro() {
         }
       }
 
-      const ticket: TicketData = {
-        folio,
-        fecha: new Date(),
-        cajero: empleado?.nombre,
-        canal: 'Caja',
-        items: items.map((l) => ({
-          cantidad: l.cantidad,
-          nombre: l.producto.nombre,
-          precioUnitario: precioDe(l.producto),
-        })),
-        descuento: descuentoTotal(),
-        // El anticipo va en su propio renglón del papel, no sumado al
-        // descuento: el cliente pagó ese dinero y el negocio lo cobró. En el
-        // descuento diría que se le regalaron $200 que están en el cajón
-        // desde el lunes.
-        anticipo: encargo?.anticipo || undefined,
-        // El nombre primero: el recuadro del papel ya dice «ENCARGO PARA», y
-        // lo que se lee a un metro en el mostrador es a quién se le entrega.
-        // El folio va detrás, que es con lo que se concilia después.
-        clienteNombre: encargo
-          ? `${encargo.cliente} (encargo #${encargo.folio})`
-          : undefined,
-        metodoPago: mixto
-          ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
-          : metodoSel.label,
-        // En mixto van las dos partes por separado, para que en el papel se
-        // vea que suman el total. La frase de arriba se queda de respaldo.
-        partes: mixto
-          ? [
-              { metodo: 'Efectivo', monto: efectivoMixto },
-              { metodo: 'Terminal', monto: tarjetaMixto },
-            ]
-          : undefined,
-        referenciaPago: referencia.trim() || null,
-        recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
-      }
-      await sacarTicket(ordenId, ticket)
+      await sacarTicket(ordenId, armarDatosDelTicket(folio))
 
       limpiarOrden()
       navigate('/', { replace: true })
     } catch (e) {
+      // ¿Se cayó el internet justo ahora?
+      if (esErrorDeRed(e)) {
+        const hay = await revisarAhora()
+        if (!hay && !yaTocamosElServidor && !encargo && canal === 'pos') {
+          // No llegamos a tocar el servidor: la venta se puede cobrar sin
+          // internet tal cual, sin riesgo de duplicarla.
+          if (cobrarSinInternet()) return
+        } else if (!hay) {
+          // Aquí NO se reintenta solo. La orden pudo alcanzar a nacer, y
+          // guardarla otra vez la cobraría dos veces. Que lo decida alguien
+          // mirando el corte.
+          setError(
+            'Se fue el internet a media venta y no se sabe si alcanzó a registrarse. ' +
+              'NO vuelvas a cobrar: busca el folio en el corte cuando regrese la conexión. ' +
+              'Si no está, cóbrala de nuevo.',
+          )
+          return
+        }
+      }
       setError(mensajeDeError(e))
     } finally {
       setProcesando(false)
