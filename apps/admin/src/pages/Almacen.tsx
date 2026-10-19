@@ -527,18 +527,27 @@ export default function Almacen() {
                 </span>
                 <span className="flex-1 border-b border-sa-green-ink/10" />
               </div>
-              <div className="space-y-3">
-                {d.encargos.map((e) => (
-                  <TarjetaEncargo
-                    key={e.id}
-                    e={e}
-                    base={base}
-                    ocupado={ocupado === e.id}
-                    onCobrar={() => void cobrar(e)}
-                    onCancelar={() => void cancelar(e)}
-                  />
-                ))}
-              </div>
+              {/* Y dentro del día, por hora, igual que en la caja. Con un
+                  solo bloque el separador estorba más de lo que ayuda. */}
+              {d.horas.map((h) => (
+                <div key={h.minutos ?? 'sin-hora'} className="space-y-3">
+                  {d.horas.length > 1 && (
+                    <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sa-green">
+                      {h.titulo}
+                    </p>
+                  )}
+                  {h.encargos.map((e) => (
+                    <TarjetaEncargo
+                      key={e.id}
+                      e={e}
+                      base={base}
+                      ocupado={ocupado === e.id}
+                      onCobrar={() => void cobrar(e)}
+                      onCancelar={() => void cancelar(e)}
+                    />
+                  ))}
+                </div>
+              ))}
             </div>
           ))}
         </div>

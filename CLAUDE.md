@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **191 migraciones aplicadas en orden, y 191
+`fzkdgqqvfkogmxdgqsxj` tiene **195 migraciones aplicadas en orden, y 195
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -477,7 +477,7 @@ empaquetador y se desvían solas:
 | Abrir o cerrar un menú completo | Admin → **Menús del día** → el interruptor. Hoy está apagado **Café** (lo pidió la casa). El **Menú de Temporada** está abierto con el Pan de Muerto —mostrador y Rappi—; la Rosca de Reyes vive en esa misma sección, apagada y en cero hasta enero |
 | Vender piezas sueltas de pastelitos o bolitas | Se toca el bocadillo y abajo salen **+1, +2, +3, +4 piezas**. Hasta 4: con 5 ya se toca el paquete, que cuesta lo mismo |
 | Ver un encargo que ya se recogió | Caja → **Encargos** → pestaña **Historial** |
-| Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Se pide en **moldes**, eligiendo **48 o 24**, no en paquetes |
+| Mandar a hacer una hornada | Admin → **Producción**, o Caja → **Encargos** (solo gerencia). Las hojaldras se piden en **moldes**, y **cada renglón elige 48 o 24**; lo que se hornea al pedido —roscas, trenzas, panes, galletas, anís, bocadillos— se pide en **piezas**. Abajo se le puede poner **la hora** a la que tiene que estar lista |
 | Apuntar los moldes que ya se armaron | Pantalla de **Producción**: +1, +2 o **Ya está**. Esto **todavía no** entra al inventario |
 | Meter y sacar del horno | Pantalla del **Horno**. Lo que se **saca** es lo que sube al inventario |
 | Saber qué pasa atrás, desde la caja | El botón **Producción** de la cabecera: horno con su reloj, qué arman los panaderos, encargos de hoy y lo que queda |
@@ -617,6 +617,18 @@ empaquetador y se desvían solas:
 - La merma se apunta **con motivo** o reaparece en el siguiente conteo como un
   faltante sin explicación — y un faltante que nadie puede explicar es lo que
   hace que se deje de creer en el inventario.
+
+- **Un encargo del sábado no se come el pan del martes.** Las tres funciones
+  de existencias contaban TODO lo apartado contra el día que se les
+  preguntaba, con un comentario que lo justificaba: «separar es separar desde
+  que se aparta». Suena razonable y es falso aquí, por algo que no estaba en
+  el código: **el pan se hornea cada día y se vende del día**. El pan del
+  sábado todavía no existe el martes, así que apartarlo contra el martes
+  descuenta de una charola que no es la suya y el mostrador deja de ofrecer lo
+  que sí puede vender. Ahora cuenta lo que se entrega **ese día o antes** —el
+  «o antes» es para que lo que se pasó de su día siga descontando, porque
+  sigue en una bolsa con el nombre de alguien— y lo que no trae fecha cuenta
+  hoy.
 
 **Indicadores**
 

@@ -1939,6 +1939,7 @@ export type Database = {
           estado: string
           fecha: string
           folio: number
+          hora_objetivo: string | null
           id: string
           nota: string | null
           updated_at: string
@@ -1949,6 +1950,7 @@ export type Database = {
           estado?: string
           fecha?: string
           folio?: never
+          hora_objetivo?: string | null
           id?: string
           nota?: string | null
           updated_at?: string
@@ -1959,6 +1961,7 @@ export type Database = {
           estado?: string
           fecha?: string
           folio?: never
+          hora_objetivo?: string | null
           id?: string
           nota?: string | null
           updated_at?: string
@@ -4780,6 +4783,10 @@ export type Database = {
       fn_produccion_armar: {
         Args: { p_item_id: string; p_moldes: number }
         Returns: Json
+      }
+      fn_produccion_fijar_hora: {
+        Args: { p_hora: string; p_orden_id: string }
+        Returns: string
       }
       fn_produccion_avanzar: {
         Args: { p_item_id: string; p_moldes: number }

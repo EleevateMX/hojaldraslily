@@ -36,12 +36,19 @@ const it = (sabor: string, p: Partial<ItemDeProduccion> = {}): ItemDeProduccion 
   ...p,
 })
 
-const orden = (folio: number, fecha: string, items: ItemDeProduccion[], nota?: string): OrdenDeProduccion => ({
+const orden = (
+  folio: number,
+  fecha: string,
+  items: ItemDeProduccion[],
+  nota?: string,
+  hora?: string,
+): OrdenDeProduccion => ({
   id: 'o' + folio,
   folio,
   fecha,
   estado: 'en_proceso',
   nota: nota ?? null,
+  hora_objetivo: hora ?? null,
   creada_por: 'Gerencia',
   created_at: '',
   items,
@@ -53,17 +60,20 @@ const hoy = new Date('2026-10-20T10:30:00')
 const ordenes: OrdenDeProduccion[] = [
   orden(812, '2026-10-19', [
     it('Pasta de Guayaba', { moldes: 3, armados: 1, horneados: 1, masas: 0 }),
-  ], 'Se quedó de ayer'),
+  ], 'Se quedó de ayer', '8:00'),
   orden(815, '2026-10-20', [
     it('Pasta de Guayaba', { moldes: 6, armados: 4, enHorno: 2, horneados: 1, masas: 3 }),
     it('Queso de Bola', { moldes: 2, molde: 24, armados: 2, enHorno: 1, masas: 1 }),
     it('Jamón y Queso', { moldes: 4, armados: 0 }),
     it('Rosca de Queso Philadelphia', { moldes: 20, unidad: 'pieza', molde: null, armados: 8, enHorno: 8, masas: 2 }),
-  ], 'Para el encargo de las 2'),
+  ], 'Para el encargo de las 2', '12:00'),
   orden(816, '2026-10-21', [
     it('Hawaiana', { moldes: 5, molde: 24 }),
     it('Pan de Muerto Tradicional · Grande', { moldes: 12, unidad: 'pieza', molde: null }),
   ]),
+  // Sin hora: va al final de su dia y no pinta pastilla. Es un caso real, no
+  // un hueco — no toda tanda lleva hora.
+  orden(817, '2026-10-20', [it('Jamón y Queso', { moldes: 2 })], 'Cuando se pueda'),
 ]
 
 const dias = ordenesPorDia(ordenes, hoy)
@@ -92,6 +102,7 @@ createRoot(document.getElementById('root')!).render(
             key={o.id}
             orden={o}
             ocupado={null}
+            ahora={hoy}
             onMarcar={() => {}}
             onApuntarMasas={() => {}}
           />

@@ -47,7 +47,17 @@ import { sb } from '../../lib/sb'
  * los de 6— así que contar en cuartos es contar en paquetes vendibles.
  */
 
-const REFRESCO_MS = 30000
+/**
+ * Cada 10 segundos.
+ *
+ * Lo pidió la casa así —«al sacarlo del horno se actualiza como a los 10s»— y
+ * es el ritmo del mostrador: quien saca una charola grita «ya salió la
+ * guayaba» y el cajero mira su pantalla ahí mismo. Con medio minuto, la caja
+ * sigue diciendo que no hay pan mientras el pan está en la mesa, y el cajero
+ * deja de creerle a la pantalla — que es el daño que no se arregla subiendo
+ * el número después.
+ */
+const REFRESCO_MS = 10000
 
 /** ¿Este encargo es de los que se entregan hoy (o ya se pasaron)? */
 function esDeHoy(e: Encargo): boolean {
@@ -192,8 +202,16 @@ export function PanelDeProduccion() {
   useEffect(() => {
     if (!abierto) return
     void cargarSabores()
+    // Se releen mientras el cajón está abierto, no una sola vez al abrirlo.
+    // Era el defecto que reportó la casa: con el cajón abierto en el
+    // mostrador, el horno sacaba una charola y «Lo que queda» se quedaba
+    // congelado en lo que hubiera cuando se abrió.
+    const existencias = setInterval(() => void cargarSabores(), REFRESCO_MS)
     const t = setInterval(() => setAhora(new Date()), 1000)
-    return () => clearInterval(t)
+    return () => {
+      clearInterval(existencias)
+      clearInterval(t)
+    }
   }, [abierto, cargarSabores])
 
   const { deHoy, sinEmpacar, listos } = useMemo(() => {

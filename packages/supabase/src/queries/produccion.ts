@@ -68,6 +68,14 @@ export interface OrdenDeProduccion {
   fecha: string
   estado: 'pendiente' | 'en_proceso' | 'en_horno' | 'terminada' | 'cancelada'
   nota: string | null
+  /**
+   * A qué hora tiene que estar lista: «antes de las 12».
+   *
+   * Texto libre, leído con la tolerancia de `minutosDeHora`. `null` es **sin
+   * hora**, no medianoche: una orden sin hora no es una urgentísima, es una
+   * que no la lleva.
+   */
+  hora_objetivo: string | null
   creada_por: string | null
   created_at: string
   items: ItemDeProduccion[]
@@ -80,6 +88,7 @@ interface FilaOrden {
   fecha: string
   estado: OrdenDeProduccion['estado']
   nota: string | null
+  hora_objetivo: string | null
   creada_por: string | null
   created_at: string
   orden_produccion_items: {
@@ -108,7 +117,7 @@ export async function listarOrdenesDeProduccion(
   let q = sb
     .from('ordenes_produccion')
     .select(
-      'id, folio, fecha, estado, nota, creada_por, created_at,' +
+      'id, folio, fecha, estado, nota, hora_objetivo, creada_por, created_at,' +
         ' orden_produccion_items(id, sabor, moldes, cuadros_por_molde, unidad,' +
         ' moldes_armados, moldes_en_horno, cantidad_hecha, terminado_por,' +
         ' masas_restantes)',
@@ -158,6 +167,7 @@ export async function listarOrdenesDeProduccion(
     fecha: o.fecha,
     estado: o.estado,
     nota: o.nota,
+    hora_objetivo: o.hora_objetivo,
     creada_por: o.creada_por,
     created_at: o.created_at,
     items: (o.orden_produccion_items ?? []).map((i) => ({
@@ -235,6 +245,34 @@ export async function mandarAProducir(
   })
   if (error) throw error
   return data as unknown as string
+}
+
+/**
+ * Pone (o quita) la hora a la que esa orden tiene que estar lista.
+ *
+ * La casa lo pidió así: «diez jamón y queso y cinco fiestas antes de las 12».
+ * Una orden traía qué y cuánto pero no para cuándo, y el único orden posible
+ * en la mesa era el de captura — o sea el orden en que gerencia se acordó de
+ * las cosas.
+ *
+ * Va aparte de `mandarAProducir` y no como un parámetro suyo porque cambiarle
+ * la firma a una función de Postgres **no la reemplaza, la duplica** (§4). Y
+ * de todos modos hacía falta sola: gerencia mueve la hora de una orden ya
+ * mandada.
+ *
+ * Cadena vacía borra la hora.
+ */
+export async function fijarHoraDeProduccion(
+  sb: ClienteLily,
+  ordenId: string,
+  hora: string,
+): Promise<string | null> {
+  const { data, error } = await sb.rpc('fn_produccion_fijar_hora', {
+    p_orden_id: ordenId,
+    p_hora: hora,
+  })
+  if (error) throw error
+  return (data as string | null) ?? null
 }
 
 /**
@@ -1054,6 +1092,69 @@ export interface DiaDeEncargos {
   /** ¿Ya se pasó su día? Lo que lleva días esperando es lo primero que duele. */
   vencido: boolean
   encargos: Encargo[]
+  /**
+   * Los mismos encargos, además agrupados por hora de entrega.
+   *
+   * Va aquí y no en una función aparte para que las dos listas **no se puedan
+   * separar**: si una pantalla pintara los días con un cálculo y las horas con
+   * otro, tarde o temprano dirían cosas distintas del mismo sábado.
+   */
+  horas: HoraDeEncargos[]
+}
+
+/** Una hora de la cola de un día. */
+export interface HoraDeEncargos {
+  /** La hora en punto, en minutos desde medianoche. `null` = sin hora legible. */
+  minutos: number | null
+  /** Lo que se lee en el separador: «10:00 a.m.», «Sin hora». */
+  titulo: string
+  encargos: Encargo[]
+}
+
+/**
+ * Los encargos de un día, partidos por hora de entrega.
+ *
+ * La casa lo pidió —«en los encargos que se despliegue por horas»— y es la
+ * pregunta del mostrador a media mañana: *«¿qué sale a las 12?»*. Una lista
+ * ordenada por hora ya se podía leer, pero hay que ir sumando con el dedo;
+ * con el separador se ve el bloque de un vistazo.
+ *
+ * Se agrupa por la **hora en punto**, no por la hora exacta: las 10:00 y las
+ * 10:30 son el mismo viaje al mostrador, y partirlas en dos bloques de uno
+ * cada uno no agrupa nada.
+ *
+ * Lo que no trae hora legible va al final en su propio bloque. `hora_entrega`
+ * es texto libre —llega «10:00», «6 pm», «6» y «por la tarde»— y a un dato que
+ * no se entiende no se le inventa una hora.
+ */
+export function encargosPorHora(encargos: Encargo[]): HoraDeEncargos[] {
+  const bloques = new Map<number | null, Encargo[]>()
+  for (const e of encargos) {
+    const min = minutosDeHora(e.hora_entrega)
+    const clave = min === null ? null : Math.floor(min / 60) * 60
+    const l = bloques.get(clave) ?? []
+    l.push(e)
+    bloques.set(clave, l)
+  }
+  return [...bloques.entries()]
+    .sort(([a], [b]) => {
+      if (a === b) return 0
+      if (a === null) return 1
+      if (b === null) return -1
+      return a - b
+    })
+    .map(([minutos, lista]) => ({
+      minutos,
+      titulo: minutos === null ? 'Sin hora' : horaEn12h(`${Math.floor(minutos / 60)}:00`),
+      encargos: [...lista].sort((x, y) => {
+        const hx = minutosDeHora(x.hora_entrega)
+        const hy = minutosDeHora(y.hora_entrega)
+        if (hx === hy) return x.folio - y.folio
+        if (hx === null) return 1
+        if (hy === null) return -1
+        return hx - hy
+      }),
+    }))
 }
 
 /**
@@ -1117,17 +1218,16 @@ export function encargosPorDia(encargos: Encargo[], hoy = new Date()): DiaDeEnca
       if (b === '') return -1
       return a < b ? -1 : 1
     })
-    .map(([clave, lista]) => ({
-      fecha: clave || null,
-      titulo: tituloDelDia(clave || null, hoy),
-      vencido: clave !== '' && diasHasta(clave, hoy) < 0,
-      encargos: [...lista].sort((x, y) => {
-        const hx = minutosDeHora(x.hora_entrega)
-        const hy = minutosDeHora(y.hora_entrega)
-        if (hx === hy) return x.folio - y.folio
-        if (hx === null) return 1
-        if (hy === null) return -1
-        return hx - hy
-      }),
-    }))
+    .map(([clave, lista]) => {
+      const horas = encargosPorHora(lista)
+      return {
+        fecha: clave || null,
+        titulo: tituloDelDia(clave || null, hoy),
+        vencido: clave !== '' && diasHasta(clave, hoy) < 0,
+        // La lista plana del día sale de los bloques de hora, no de un
+        // segundo ordenamiento: así las dos no se pueden despegar.
+        encargos: horas.flatMap((h) => h.encargos),
+        horas,
+      }
+    })
 }

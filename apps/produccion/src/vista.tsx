@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { diasHasta, type OrdenDeProduccion, type ItemDeProduccion } from '@lily/supabase'
+import {
+  diasHasta,
+  horaEn12h,
+  minutosDeHora,
+  type OrdenDeProduccion,
+  type ItemDeProduccion,
+} from '@lily/supabase'
 import { urlDeFoto } from '@lily/utils'
 
 /**
@@ -190,11 +196,14 @@ export function Renglon({
 export function Tarjeta({
   orden,
   ocupado,
+  ahora = new Date(),
   onMarcar,
   onApuntarMasas,
 }: {
   orden: OrdenDeProduccion
   ocupado: string | null
+  /** Contra qué reloj se mide la hora objetivo. Inyectable para poder mirarla. */
+  ahora?: Date
   onMarcar: (item: ItemDeProduccion, armados: number) => void
   onApuntarMasas: (item: ItemDeProduccion, masas: number | null) => void
 }) {
@@ -220,10 +229,40 @@ export function Tarjeta({
     .join(' · ')
   const pct = total > 0 ? Math.round((hecho / total) * 100) : 0
 
+  /**
+   * La hora a la que tiene que estar lista, y si ya se pasó.
+   *
+   * Solo se pasa lo que **falta**: una orden terminada a las 12:05 ya no es
+   * un problema, y pintarla en rojo el resto del día enseña a ignorar el
+   * rojo. Es la misma razón por la que las métricas de salud llevan ventana
+   * de tiempo (§4).
+   */
+  const minutos = minutosDeHora(orden.hora_objetivo)
+  const ahoraMin = ahora.getHours() * 60 + ahora.getMinutes()
+  const falta = total - hecho
+  const tarde = minutos !== null && falta > 0 && ahoraMin > minutos && diasHasta(orden.fecha, ahora) <= 0
+
   return (
     <section className="bg-sa-cream-soft rounded-sa-lg p-5 shadow-sa">
       <div className="flex items-baseline justify-between gap-4 mb-1">
         <p className="font-display text-2xl text-sa-green-ink">Orden #{orden.folio}</p>
+        {/* La hora manda sobre el folio: es lo que decide qué se hace
+            primero. Lo que se pasó va en carmín profundo, que es el color de
+            la alarma de la casa — el acento rosa se ve despintado a un metro
+            (§4). */}
+        {orden.hora_objetivo && (
+          <p
+            className={[
+              'font-display text-xl leading-none shrink-0',
+              tarde
+                ? 'text-sa-cream bg-sa-green-deep rounded-full px-3 py-1'
+                : 'text-sa-green-ink',
+            ].join(' ')}
+          >
+            {tarde ? 'Se pasó de las ' : 'Para las '}
+            {horaEn12h(orden.hora_objetivo)}
+          </p>
+        )}
         <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50">
           {resumen}
         </p>
@@ -294,8 +333,17 @@ export function ordenesPorDia(ordenes: OrdenDeProduccion[], hoy = new Date()): D
         titulo: tituloDeFecha(fecha, hoy),
         vencido: d < 0,
         hoy: d === 0,
-        // Dentro del día, por folio: es el orden en que gerencia las pidió.
-        ordenes: [...lista].sort((x, y) => x.folio - y.folio),
+        // Dentro del día, **por hora**, que es lo que decide qué se hace
+        // primero. Lo que no trae hora se va al final y ahí sí manda el
+        // folio: a un dato que no está dicho no se le inventa una hora.
+        ordenes: [...lista].sort((x, y) => {
+          const hx = minutosDeHora(x.hora_objetivo)
+          const hy = minutosDeHora(y.hora_objetivo)
+          if (hx === hy) return x.folio - y.folio
+          if (hx === null) return 1
+          if (hy === null) return -1
+          return hx - hy
+        }),
         faltan: lista.reduce(
           (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.moldes - i.armados), 0),
           0,

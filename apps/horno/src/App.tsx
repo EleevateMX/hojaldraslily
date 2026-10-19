@@ -36,7 +36,17 @@ import { sb } from './lib/sb'
  * más falta hace.
  */
 
-const REFRESCO_MS = 15000
+/**
+ * Cada 10 segundos.
+ *
+ * Lo pidió la casa así —«al sacarlo del horno se actualiza como a los 10s»— y
+ * es el ritmo del mostrador: quien saca una charola grita «ya salió la
+ * guayaba» y el cajero mira su pantalla ahí mismo. Con medio minuto, la caja
+ * sigue diciendo que no hay pan mientras el pan está en la mesa, y el cajero
+ * deja de creerle a la pantalla — que es el daño que no se arregla subiendo
+ * el número después.
+ */
+const REFRESCO_MS = 10000
 
 /** Una tanda dentro del horno, con su reloj. */
 function Adentro({

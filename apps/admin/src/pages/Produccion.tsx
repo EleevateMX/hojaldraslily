@@ -7,6 +7,7 @@ import {
   listarProductosDelDia,
   registrarHorneada,
   mandarAProducir,
+  fijarHoraDeProduccion,
   hornoEnVivo,
   relojDelHorno,
   type ExistenciaPorMolde,
@@ -439,6 +440,17 @@ export default function Produccion() {
    * sale de ningún molde.
    */
   const [pedido, setPedido] = useState<Record<string, RenglonPedido>>({})
+  /**
+   * A qué hora tiene que estar lista la tanda: «antes de las 12».
+   *
+   * Es una decisión POR ENVÍO y no por renglón, al revés que el molde: la
+   * casa lo dijo junto —«diez jamón y queso y cinco fiestas antes de las
+   * 12»—, que es una sola entrega con varias cosas adentro. Lo que necesita
+   * otra hora es otra tanda.
+   *
+   * Vacío es «sin hora» y es válido: no toda tanda lleva una.
+   */
+  const [horaObjetivo, setHoraObjetivo] = useState('')
   const [abrirPedido, setAbrirPedido] = useState(false)
   const [mandando, setMandando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -503,7 +515,14 @@ export default function Produccion() {
     if (items.length === 0) return
     setMandando(true)
     try {
-      await mandarAProducir(sb, items)
+      const orden = await mandarAProducir(sb, items)
+      // La hora va en una segunda llamada porque cambiarle la firma a
+      // `fn_produccion_mandar_a_hacer` la duplicaría (§4). Si esta falla, la
+      // orden ya existe y lo que falta es una etiqueta: se avisa y se sigue,
+      // en vez de hacer creer que no se mandó nada.
+      if (horaObjetivo.trim()) {
+        await fijarHoraDeProduccion(sb, orden, horaObjetivo.trim())
+      }
       // El resumen se dice por unidad, no sumado: «5 moldes y 12 piezas» es
       // lo que de verdad se mandó. Un «17» a secas no es de nada.
       const moldes = items.filter((i) => i.unidad === 'molde').reduce((s, i) => s + i.moldes, 0)
@@ -513,9 +532,12 @@ export default function Produccion() {
         piezas > 0 ? `${piezas} pieza${piezas === 1 ? '' : 's'}` : '',
       ].filter(Boolean)
       setAviso(
-        `Mandado a hacer: ${partes.join(' y ')}. Ya salió en la pantalla de Producción.`,
+        `Mandado a hacer: ${partes.join(' y ')}` +
+          (horaObjetivo.trim() ? ` para las ${horaObjetivo.trim()}` : '') +
+          '. Ya salió en la pantalla de Producción.',
       )
       setPedido({})
+      setHoraObjetivo('')
       setAbrirPedido(false)
       setError(null)
     } catch (e) {
@@ -698,6 +720,30 @@ export default function Produccion() {
                 ))}
               </div>
             ))}
+
+            {/* La hora va abajo, junto al total: es lo último que se
+                decide, con los renglones ya enfrente. */}
+            <div className="flex items-center gap-3 pt-5 flex-wrap">
+              <span className={cx.label}>Para las</span>
+              <input
+                type="time"
+                value={horaObjetivo}
+                onChange={(ev) => setHoraObjetivo(ev.target.value)}
+                className="rounded-sa border border-sa-green-ink/15 px-3 py-2 font-mono text-sm"
+                aria-label="Hora a la que tiene que estar lista"
+              />
+              {horaObjetivo && (
+                <button
+                  onClick={() => setHoraObjetivo('')}
+                  className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50"
+                >
+                  Quitar la hora
+                </button>
+              )}
+              <span className="font-body text-xs text-sa-green-ink/45">
+                Opcional. Sin hora, la mesa la hace en el orden en que llegó.
+              </span>
+            </div>
 
             <div className="flex items-center justify-between gap-4 pt-5">
               <p className="font-body text-sm text-sa-green-ink/70">

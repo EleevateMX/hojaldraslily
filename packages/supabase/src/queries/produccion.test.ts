@@ -7,6 +7,7 @@ import {
   horaEn12h,
   loQueHayQueEmpacar,
   encargosPorDia,
+  encargosPorHora,
   type Encargo,
 } from './produccion'
 
@@ -242,5 +243,45 @@ describe('encargosPorDia', () => {
 
   it('sin encargos no inventa días', () => {
     expect(encargosPorDia([], hoy)).toEqual([])
+  })
+})
+
+describe('encargosPorHora', () => {
+  const e = (folio: number, hora: string | null): Encargo =>
+    ({ folio, hora_entrega: hora }) as Encargo
+
+  it('agrupa por la hora EN PUNTO: 10:00 y 10:30 son el mismo bloque', () => {
+    const h = encargosPorHora([e(1, '10:30'), e(2, '10:00'), e(3, '12:00')])
+    expect(h.map((b) => b.titulo)).toEqual(['10:00 a.m.', '12:00 p.m.'])
+    // Y dentro del bloque, por hora exacta: primero las 10:00.
+    expect(h[0].encargos.map((x) => x.folio)).toEqual([2, 1])
+  })
+
+  it('la tarde va después de la mañana, no por orden alfabético', () => {
+    const h = encargosPorHora([e(1, '6 pm'), e(2, '9:00')])
+    expect(h.map((b) => b.titulo)).toEqual(['9:00 a.m.', '6:00 p.m.'])
+  })
+
+  // `hora_entrega` es texto libre: a lo que no se entiende no se le inventa
+  // una hora, se manda al final en su propio bloque.
+  it('lo ilegible va al final y se llama «Sin hora»', () => {
+    const h = encargosPorHora([e(1, 'por la tarde'), e(2, '8:00'), e(3, null)])
+    expect(h.map((b) => b.titulo)).toEqual(['8:00 a.m.', 'Sin hora'])
+    expect(h[1].encargos.map((x) => x.folio)).toEqual([1, 3])
+  })
+})
+
+describe('encargosPorDia con horas', () => {
+  it('la lista plana del día y sus bloques de hora traen lo mismo', () => {
+    const e = (folio: number, fecha: string, hora: string | null): Encargo =>
+      ({ folio, fecha_entrega: fecha, hora_entrega: hora }) as Encargo
+    const hoy = new Date('2026-10-20T11:00:00')
+    const dias = encargosPorDia(
+      [e(1, '2026-10-20', '6 pm'), e(2, '2026-10-20', '9:00'), e(3, '2026-10-21', '7 am')],
+      hoy,
+    )
+    expect(dias[0].encargos.map((x) => x.folio)).toEqual([2, 1])
+    expect(dias[0].horas.flatMap((h) => h.encargos.map((x) => x.folio))).toEqual([2, 1])
+    expect(dias[0].horas.map((h) => h.titulo)).toEqual(['9:00 a.m.', '6:00 p.m.'])
   })
 })

@@ -690,53 +690,67 @@ export function Encargos() {
                   </span>
                   <span className="flex-1 border-b border-sa-green-ink/10" />
                 </div>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-                  {d.encargos.map((e) => (
-                    <Tarjeta
-                      key={e.id}
-                      e={e}
-                      acciones={
-                        <>
-                          <button
-                            onClick={() => void cancelar(e)}
-                            disabled={ocupado === e.id}
-                            className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                          >
-                            Cancelar
-                          </button>
-                          {/* Anticipo va en gris y los de cobrar en color: el
-                              que cierra la venta es el que la cajera busca con
-                              prisa, y el que solo abona no debe competir con
-                              él. Se esconde cuando ya está todo pagado, para
-                              que nadie cobre de más por error. */}
-                          {e.anticipo < e.total && (
-                            <button
-                              onClick={() => void anticipo(e)}
-                              disabled={ocupado === e.id}
-                              className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                            >
-                              Anticipo
-                            </button>
-                          )}
-                          <button
-                            onClick={() => void cobrar(e, 'efectivo')}
-                            disabled={ocupado === e.id}
-                            className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                          >
-                            {ocupado === e.id ? '…' : 'Efectivo'}
-                          </button>
-                          <button
-                            onClick={() => void cobrar(e, 'tarjeta')}
-                            disabled={ocupado === e.id}
-                            className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                          >
-                            Terminal
-                          </button>
-                        </>
-                      }
-                    />
-                  ))}
-                </div>
+                {/* Y dentro del día, por hora. La pregunta del mostrador a
+                    media mañana es «¿qué sale a las 12?», y sumar con el dedo
+                    una lista ordenada no es verla. Con un solo bloque de hora
+                    el separador estorba más de lo que ayuda, así que no se
+                    pinta. */}
+                {d.horas.map((h) => (
+                  <div key={h.minutos ?? 'sin-hora'} className="space-y-3">
+                    {d.horas.length > 1 && (
+                      <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-sa-green">
+                        {h.titulo}
+                      </p>
+                    )}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                      {h.encargos.map((e) => (
+                        <Tarjeta
+                          key={e.id}
+                          e={e}
+                          acciones={
+                            <>
+                              <button
+                                onClick={() => void cancelar(e)}
+                                disabled={ocupado === e.id}
+                                className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                              >
+                                Cancelar
+                              </button>
+                              {/* Anticipo va en gris y los de cobrar en color: el
+                                  que cierra la venta es el que la cajera busca con
+                                  prisa, y el que solo abona no debe competir con
+                                  él. Se esconde cuando ya está todo pagado, para
+                                  que nadie cobre de más por error. */}
+                              {e.anticipo < e.total && (
+                                <button
+                                  onClick={() => void anticipo(e)}
+                                  disabled={ocupado === e.id}
+                                  className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                                >
+                                  Anticipo
+                                </button>
+                              )}
+                              <button
+                                onClick={() => void cobrar(e, 'efectivo')}
+                                disabled={ocupado === e.id}
+                                className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                              >
+                                {ocupado === e.id ? '…' : 'Efectivo'}
+                              </button>
+                              <button
+                                onClick={() => void cobrar(e, 'tarjeta')}
+                                disabled={ocupado === e.id}
+                                className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                              >
+                                Terminal
+                              </button>
+                            </>
+                          }
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             ))}
           </div>
