@@ -73,6 +73,29 @@ const encargo: TicketData = {
   referenciaPago: 'CLIP-884213',
 }
 
+/**
+ * El caso de «vienen por su encargo y de paso se llevan otra cosa».
+ *
+ * Es el que importa mirar: el papel tiene que dejar claro que el TOTAL de
+ * abajo es lo que se paga HOY, con el anticipo restado en su propio renglón y
+ * no escondido en el descuento.
+ */
+const entrega: TicketData = {
+  folio: 1044,
+  fecha: new Date('2026-10-05T14:44:00'),
+  cajero: 'Rosa M.',
+  canal: 'Caja',
+  clienteNombre: 'Encargo #1043 · María Fernanda Cáceres Pech',
+  items: [
+    { cantidad: 1, nombre: 'Jamón y Queso · Grande · 48 cuadros', precioUnitario: 540 },
+    { cantidad: 2, nombre: 'Galletas de Manteca Dulces', precioUnitario: 95 },
+    { cantidad: 1, nombre: 'Agua embotellada', precioUnitario: 22 },
+  ],
+  anticipo: 200,
+  metodoPago: 'Efectivo',
+  recibido: 600,
+}
+
 const Muestra = ({ t, rotulo }: { t: TicketData; rotulo: string }) => (
   <div>
     <p style={{
@@ -94,6 +117,7 @@ createRoot(document.getElementById('root')!).render(
     <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <Muestra t={mostrador} rotulo="Venta en mostrador · Efectivo" />
       <Muestra t={encargo} rotulo="Encargo · Pago mixto" />
+      <Muestra t={entrega} rotulo="Entrega de encargo · con anticipo y algo más" />
     </div>
   </div>,
 )

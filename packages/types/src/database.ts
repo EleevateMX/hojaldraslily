@@ -4784,6 +4784,23 @@ export type Database = {
         Args: { p_item_id: string; p_moldes: number }
         Returns: Json
       }
+      fn_encargo_entregar_con_venta: {
+        Args: {
+          p_almacen_id: string
+          p_canal: string
+          p_corte_id: string
+          p_descuento?: number
+          p_efectivo?: number
+          p_empleado_id?: string
+          p_encargo_id: string
+          p_idempotency_key?: string
+          p_items: Json
+          p_referencia?: string
+          p_sucursal_id: string
+          p_tarjeta?: number
+        }
+        Returns: Json
+      }
       fn_produccion_fijar_hora: {
         Args: { p_hora: string; p_orden_id: string }
         Returns: string

@@ -64,6 +64,16 @@ export interface TicketData {
    * renglón por parte, cada uno con su importe.
    */
   partes?: { metodo: string; monto: number }[]
+  /**
+   * Lo que ya se había pagado como anticipo de un encargo.
+   *
+   * Baja el TOTAL del papel —que es lo que el cliente paga hoy— pero va en su
+   * propio renglón y **no sumado al descuento**: el cliente pagó ese dinero y
+   * el negocio lo cobró, en el corte del día en que lo recibió. Metido en el
+   * descuento, el papel diría que se le regalaron $200 que están en el cajón
+   * desde el lunes.
+   */
+  anticipo?: number
   referenciaPago?: string | null // voucher/autorización Clip
   recibido?: number // efectivo entregado (para el cambio)
   // Lealtad
@@ -143,7 +153,10 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
 
   const subtotal = data.items.reduce((a, i) => a + i.cantidad * i.precioUnitario, 0)
   const descuento = data.descuento ?? 0
-  const total = Math.max(0, subtotal - descuento)
+  const anticipo = data.anticipo ?? 0
+  // El total del papel es lo que se paga HOY. Lo anticipado ya se pagó otro
+  // día y en otro ticket.
+  const total = Math.max(0, subtotal - descuento - anticipo)
   const cambio = data.recibido != null && data.recibido >= total ? data.recibido - total : null
 
   // Quién cobró va pegado al canal, y solo si la casa lo quiere ver.
@@ -267,6 +280,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   <div class="cuentas">
     <div>Subtotal</div><div style="text-align:right">${money(subtotal)}</div>
     ${descuento ? `<div>Descuento</div><div style="text-align:right">-${money(descuento)}</div>` : ''}
+    ${anticipo ? `<div>Anticipo ya pagado</div><div style="text-align:right">-${money(anticipo)}</div>` : ''}
   </div>
 
   <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;border-top:2px solid #000;margin-top:6px;padding-top:5px">

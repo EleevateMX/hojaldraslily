@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **195 migraciones aplicadas en orden, y 195
+`fzkdgqqvfkogmxdgqsxj` tiene **197 migraciones aplicadas en orden, y 197
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -484,7 +484,7 @@ empaquetador y se desvían solas:
 | Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén**. La cantidad **se teclea**: para 13 pastelitos se escribe 13, no se toca «+» trece veces |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
-| Cobrar un encargo | Caja → **Encargos**, o la pantalla de **Empaque** al entregarlo (es lo único que lo descuenta) |
+| Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
 | Cobrar una parte en efectivo y otra con tarjeta | En el cobro, **"Una parte y otra parte"**. Se teclea solo el efectivo; el resto se calcula |
 | Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
 | Si el ticket del cliente no sale | Esa es **otra** impresora: la de recibos por USB. Se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |
@@ -561,6 +561,18 @@ empaquetador y se desvían solas:
   que ya nadie llama: con la regla en la tabla, esa función vieja **choca**
   en vez de colar pan que nunca se horneó. Es la misma razón por la que lo
   que entra al inventario va en un trigger.
+- **`(f(...)).*` llama a la función UNA VEZ POR COLUMNA.** `fn_crear_orden`
+  devuelve un `ordenes` —un compuesto, no un conjunto— y
+  `select (fn_crear_orden(...)).* into v_fila` expande el `.*` a veintidós
+  columnas, cada una con su propia copia de la llamada: **veintidós órdenes
+  creadas con sus renglones**, veintiuna huérfanas. `fn_encargo_cobrar` lo
+  traía desde agosto y dejó 219 filas de más. No descuadraba el corte —nacen
+  con `pagado = false` y el corte suma pagos, no órdenes— ni se veían en
+  ninguna pantalla, pero gastaban folios y ensuciaban `orden_items`. La forma
+  correcta en plpgsql es la asignación, que evalúa una sola vez:
+  `v_fila := fn_crear_orden(...)`. Lo encontró **contar filas antes y
+  después** en la prueba de punta a punta, no leer el código.
+
 - **El estado final no es la migración.** Si falta un archivo de migración, no
   se deduce mirando cómo quedó la base: eso da el destino, no el camino. Dos
   de tres reconstruidas así salieron mal —les faltaba el relleno de datos

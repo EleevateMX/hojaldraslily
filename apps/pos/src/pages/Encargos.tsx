@@ -12,6 +12,7 @@ import {
   clientePorTelefono,
   cancelarEncargo,
   listarProductosDelDia,
+  listarProductosParaVenta,
   listarOrdenesConTiempo,
   faltaPara,
   horaDeSalida,
@@ -21,6 +22,7 @@ import {
   type ProductoDelDia,
   type OrdenConTiempo,
 } from '@lily/supabase'
+import { usePosStore } from '@/store/posStore'
 import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { sb } from '@/lib/sb'
 
@@ -194,6 +196,11 @@ export function Encargos() {
   // estaba -- y esta pantalla es de ENCARGOS.
   const [horno, setHorno] = useState<OrdenConTiempo[]>([])
 
+  const agregarItem = usePosStore((x) => x.agregarItem)
+  const setEncargoEnCarrito = usePosStore((x) => x.setEncargo)
+  const limpiarOrden = usePosStore((x) => x.limpiarOrden)
+  const itemsEnCarrito = usePosStore((x) => x.items)
+
   const base = import.meta.env.BASE_URL
 
   const cargar = useCallback(async (conSpinner = true) => {
@@ -242,6 +249,57 @@ export function Encargos() {
     (s, f) => s + (piezas[f.producto_id] ?? 0) * Number(f.precio),
     0,
   )
+
+  /**
+   * Se lo lleva al carrito para cobrarlo **junto con lo que se lleve de más**.
+   *
+   * Es lo que pasa todos los días: vienen por su encargo y de paso quieren
+   * unas galletas. Hasta hoy eso eran dos cobros —dos papeles, dos
+   * movimientos en el corte y, con la terminal, dos veces el NIP por la misma
+   * visita—. Ahora sus renglones entran al ticket como líneas normales y el
+   * cobro sale de la pasarela de siempre.
+   *
+   * Si el carrito ya traía algo, se pregunta antes de tirarlo: lo que está
+   * armado es el ticket de otro cliente.
+   */
+  async function llevarAlCarrito(e: Encargo) {
+    if (
+      itemsEnCarrito.length > 0 &&
+      !window.confirm('El ticket de la caja ya trae cosas. ¿Se tiran para cobrar este encargo?')
+    ) {
+      return
+    }
+    setOcupado(e.id)
+    try {
+      // El catálogo de venta completo, porque el carrito necesita el producto
+      // entero (su categoría, su estación, su precio) y lo que esta pantalla
+      // trae es el resumen del día. Se pide aquí y no al cargar la pantalla:
+      // casi ningún encargo se lleva al carrito, y es una consulta pesada.
+      const catalogo = await listarProductosParaVenta(sb)
+      const porId = new Map(catalogo.map((p) => [p.id, p]))
+      const faltantes = e.items.filter((i) => !porId.has(i.producto_id))
+      if (faltantes.length > 0) {
+        throw new Error(
+          `Hay renglones de este encargo que ya no están en el menú: ` +
+            faltantes.map((f) => f.producto).join(', ') +
+            '. Cóbrelo desde aquí con Efectivo o Terminal.',
+        )
+      }
+      limpiarOrden()
+      for (const i of e.items) agregarItem(porId.get(i.producto_id)!, null, i.cantidad)
+      setEncargoEnCarrito({
+        id: e.id,
+        folio: e.folio,
+        cliente: e.cliente,
+        anticipo: e.anticipo,
+      })
+      navigate('/')
+    } catch (err) {
+      setError(mensajeDeError(err))
+    } finally {
+      setOcupado(null)
+    }
+  }
 
   function limpiar() {
     setCliente(''); setTelefono(''); setFecha(''); setHora(''); setNota('')
@@ -730,6 +788,18 @@ export function Encargos() {
                                   Anticipo
                                 </button>
                               )}
+                              {/* Para cuando vienen por su encargo y de paso
+                                  se llevan otra cosa. Va junto a los de
+                                  cobrar porque es lo mismo —cerrar la
+                                  visita— solo que con más cosas. */}
+                              <button
+                                onClick={() => void llevarAlCarrito(e)}
+                                disabled={ocupado === e.id}
+                                className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                                title="Lo pasa al ticket de la caja para cobrarlo junto con lo que se lleven de más"
+                              >
+                                Y algo más
+                              </button>
                               <button
                                 onClick={() => void cobrar(e, 'efectivo')}
                                 disabled={ocupado === e.id}

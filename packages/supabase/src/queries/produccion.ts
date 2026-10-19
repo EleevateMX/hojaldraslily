@@ -667,6 +667,73 @@ export async function registrarAnticipo(
   return Number(data ?? 0)
 }
 
+/**
+ * Entrega el encargo **y** cobra en el mismo ticket lo que el cliente se lleve
+ * de más.
+ *
+ * Pasa todos los días y hasta hoy había que hacerlo en dos cobros: «vienen por
+ * su encargo y de paso se llevan unas galletas». Dos cobros son dos papeles,
+ * dos movimientos en el corte y, con la terminal, dos veces que el cliente
+ * teclea su NIP por la misma visita.
+ *
+ * Es UNA orden con todos los renglones —los del encargo y los de más—, un solo
+ * pago y un solo ticket. El anticipo ya recibido se descuenta del total, y el
+ * encargo queda cerrado contra esa orden.
+ *
+ * Los importes van partidos en `efectivo` y `tarjeta` para que el pago mixto
+ * funcione igual que en una venta normal; con uno de los dos en cero se cobra
+ * del otro. El servidor valida que sumen el total que él calculó: el navegador
+ * no manda precios.
+ */
+export async function entregarEncargoConVenta(
+  sb: ClienteLily,
+  encargoId: string,
+  venta: {
+    sucursal_id: string
+    almacen_id: string
+    canal: CanalDeVenta
+    corte_id: string
+    empleado_id?: string | null
+    descuento?: number
+    efectivo?: number
+    tarjeta?: number
+    referencia?: string | null
+    idempotencyKey?: string
+  },
+  items: { producto_id: string; cantidad: number }[],
+): Promise<{
+  orden_id: string
+  folio: number
+  encargo: number
+  total: number
+  anticipo: number
+  cobrado: number
+}> {
+  const { data, error } = await sb.rpc('fn_encargo_entregar_con_venta', {
+    p_encargo_id: encargoId,
+    p_sucursal_id: venta.sucursal_id,
+    p_almacen_id: venta.almacen_id,
+    p_canal: venta.canal,
+    p_items: items,
+    p_corte_id: venta.corte_id,
+    p_empleado_id: venta.empleado_id ?? undefined,
+    p_descuento: venta.descuento ?? 0,
+    p_efectivo: venta.efectivo ?? 0,
+    p_tarjeta: venta.tarjeta ?? 0,
+    p_referencia: venta.referencia ?? undefined,
+    p_idempotency_key: venta.idempotencyKey ?? undefined,
+  })
+  if (error) throw error
+  return data as unknown as {
+    orden_id: string
+    folio: number
+    encargo: number
+    total: number
+    anticipo: number
+    cobrado: number
+  }
+}
+
 export async function cobrarEncargo(
   sb: ClienteLily,
   encargoId: string,

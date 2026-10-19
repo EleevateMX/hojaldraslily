@@ -2,7 +2,12 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
-import { crearOrden, cobrarOrden, cobrarOrdenMixto } from '@lily/supabase'
+import {
+  crearOrden,
+  cobrarOrden,
+  cobrarOrdenMixto,
+  entregarEncargoConVenta,
+} from '@lily/supabase'
 import { imprimirTicket, type TicketData } from '@lily/ui'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
@@ -44,8 +49,8 @@ export function Cobro() {
   const navigate = useNavigate()
   const {
     empleado, almacen, corte,
-    items,
-    subtotal, descuentoTotal, neto, limpiarOrden,
+    items, encargo,
+    subtotal, descuentoTotal, neto, aCobrar, limpiarOrden,
     canal, precioDe,
   } = usePosStore()
 
@@ -66,7 +71,11 @@ export function Cobro() {
     return null
   }
 
-  const totalNeto = neto()
+  // Lo que se teclea y lo que se valida es el SALDO: el neto menos lo que ya
+  // dejó de anticipo. El servidor hace la misma resta leyéndola de la base,
+  // así que si las dos no coincidieran el cobro se rechaza — que es
+  // exactamente lo que tiene que pasar.
+  const totalNeto = aCobrar()
   const metodoSel = METODOS.find((m) => m.key === metodo)!
   const recibidoNum = parseFloat(recibido) || 0
   const cambio = recibidoNum - totalNeto
@@ -82,44 +91,82 @@ export function Cobro() {
     setProcesando(true)
     setError(null)
     try {
-      const orden = await crearOrden(
-        sb,
-        {
-          sucursal_id: almacen!.sucursal_id,
-          almacen_id: almacen!.id,
-          canal,
-          corte_id: corte!.id,
-          cliente_id: null,
-          empleado_id: empleado?.id ?? null,
-          descuento: descuentoTotal(),
-        },
-        items.map((l) => ({
-          producto_id: l.producto.id,
-          cantidad: l.cantidad,
-          precio_unitario: precioDe(l.producto),
-          personalizacion: l.personalizacion,
-        })),
-      )
-      // Cobro inmediato aprobado → el trigger descuenta inventario y manda a
-      // cocina. `idempotencyKey`: si esta llamada se reintenta (timeout de
-      // red, doble toque) la base devuelve el mismo pago en vez de crear uno
-      // duplicado.
-      if (mixto) {
-        await cobrarOrdenMixto(sb, orden.id, efectivoMixto, tarjetaMixto, {
-          metodoTarjeta: 'tarjeta',
-          referencia: referencia.trim() || undefined,
-          autorizadoPor: empleado?.id,
-          idempotencyKey: crypto.randomUUID(),
-        })
+      // Cuánto va por cada lado. En mixto son las dos partes; si no, todo el
+      // saldo por el método elegido.
+      const enEfectivo = mixto ? efectivoMixto : metodo === 'efectivo' ? totalNeto : 0
+      const conTarjeta = mixto ? tarjetaMixto : metodo === 'efectivo' ? 0 : totalNeto
+
+      let folio: number
+
+      if (encargo) {
+        /**
+         * Vienen por su encargo y se llevan algo más: UNA sola llamada.
+         *
+         * Crear la orden aquí y cerrar el encargo después serían dos pasos, y
+         * si el segundo fallara el cliente habría pagado con el encargo
+         * todavía apartado — o sea el mismo pan contado dos veces, como
+         * vendido y como separado. El servidor lo hace todo junto o no hace
+         * nada.
+         */
+        const r = await entregarEncargoConVenta(
+          sb,
+          encargo.id,
+          {
+            sucursal_id: almacen!.sucursal_id,
+            almacen_id: almacen!.id,
+            canal,
+            corte_id: corte!.id,
+            empleado_id: empleado?.id ?? null,
+            descuento: descuentoTotal(),
+            efectivo: enEfectivo,
+            tarjeta: conTarjeta,
+            referencia: referencia.trim() || null,
+            idempotencyKey: crypto.randomUUID(),
+          },
+          items.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })),
+        )
+        folio = r.folio
       } else {
-        await cobrarOrden(sb, orden.id, metodo, totalNeto, {
-          referencia: referencia.trim() || undefined,
-          idempotencyKey: crypto.randomUUID(),
-        })
+        const orden = await crearOrden(
+          sb,
+          {
+            sucursal_id: almacen!.sucursal_id,
+            almacen_id: almacen!.id,
+            canal,
+            corte_id: corte!.id,
+            cliente_id: null,
+            empleado_id: empleado?.id ?? null,
+            descuento: descuentoTotal(),
+          },
+          items.map((l) => ({
+            producto_id: l.producto.id,
+            cantidad: l.cantidad,
+            precio_unitario: precioDe(l.producto),
+            personalizacion: l.personalizacion,
+          })),
+        )
+        folio = orden.folio
+        // Cobro inmediato aprobado → el trigger descuenta inventario y manda a
+        // cocina. `idempotencyKey`: si esta llamada se reintenta (timeout de
+        // red, doble toque) la base devuelve el mismo pago en vez de crear uno
+        // duplicado.
+        if (mixto) {
+          await cobrarOrdenMixto(sb, orden.id, efectivoMixto, tarjetaMixto, {
+            metodoTarjeta: 'tarjeta',
+            referencia: referencia.trim() || undefined,
+            autorizadoPor: empleado?.id,
+            idempotencyKey: crypto.randomUUID(),
+          })
+        } else {
+          await cobrarOrden(sb, orden.id, metodo, totalNeto, {
+            referencia: referencia.trim() || undefined,
+            idempotencyKey: crypto.randomUUID(),
+          })
+        }
       }
 
       const ticket: TicketData = {
-        folio: orden.folio,
+        folio,
         fecha: new Date(),
         cajero: empleado?.nombre,
         canal: 'Caja',
@@ -129,6 +176,17 @@ export function Cobro() {
           precioUnitario: precioDe(l.producto),
         })),
         descuento: descuentoTotal(),
+        // El anticipo va en su propio renglón del papel, no sumado al
+        // descuento: el cliente pagó ese dinero y el negocio lo cobró. En el
+        // descuento diría que se le regalaron $200 que están en el cajón
+        // desde el lunes.
+        anticipo: encargo?.anticipo || undefined,
+        // El nombre primero: el recuadro del papel ya dice «ENCARGO PARA», y
+        // lo que se lee a un metro en el mostrador es a quién se le entrega.
+        // El folio va detrás, que es con lo que se concilia después.
+        clienteNombre: encargo
+          ? `${encargo.cliente} (encargo #${encargo.folio})`
+          : undefined,
         metodoPago: mixto
           ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
           : metodoSel.label,
@@ -166,7 +224,9 @@ export function Cobro() {
             ←
           </button>
           <div>
-            <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50">Cobrar orden</p>
+            <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50">
+              {encargo ? `Encargo #${encargo.folio} · ${encargo.cliente}` : 'Cobrar orden'}
+            </p>
             <p className="font-display text-lg text-sa-cream">
               {items.length} {items.length === 1 ? 'producto' : 'productos'}
             </p>
@@ -362,8 +422,16 @@ export function Cobro() {
                 <span>−{mxn(descuentoTotal())}</span>
               </div>
             )}
+            {encargo && encargo.anticipo > 0 && (
+              <div className="flex justify-between text-sa-green-ink/60">
+                <span>Ya pagó de anticipo</span>
+                <span>−{mxn(encargo.anticipo)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-baseline pt-2 border-t border-sa-green-ink/10">
-              <span className="font-display text-xl text-sa-green-ink">Total</span>
+              <span className="font-display text-xl text-sa-green-ink">
+                {encargo && encargo.anticipo > 0 ? 'Le falta' : 'Total'}
+              </span>
               <span className="font-display text-2xl text-sa-green-ink">{mxn(totalNeto)}</span>
             </div>
           </div>

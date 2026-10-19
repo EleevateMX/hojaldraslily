@@ -28,6 +28,27 @@ function nuevaLineaId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `l-${Date.now()}-${Math.random().toString(36).slice(2)}`
 }
 
+/**
+ * El encargo que se está entregando con este ticket.
+ *
+ * Cuando alguien viene por su encargo y **de paso se lleva otra cosa**, sus
+ * renglones entran al carrito como líneas normales y aquí queda anotado de
+ * qué encargo venían. Así el cobro sale en UNA orden, un pago y un papel, en
+ * vez de dos cobros por la misma visita.
+ *
+ * Se guarda lo mínimo para pintarlo y para restar: el resto lo recalcula el
+ * servidor. El `anticipo` que viaja aquí es para **mostrar** el saldo en
+ * pantalla; quien de verdad lo descuenta es `fn_encargo_entregar_con_venta`,
+ * que lo lee de la base. Si los dos no coincidieran, el cobro se rechaza —que
+ * es exactamente lo que tiene que pasar.
+ */
+export interface EncargoEnCarrito {
+  id: string
+  folio: number
+  cliente: string
+  anticipo: number
+}
+
 /** Descuento manual (autorización de caja) — se suma al `descuento` de la orden. */
 export interface DescuentoManual {
   tipo: 'porcentaje' | 'monto'
@@ -67,6 +88,9 @@ interface PosStore {
   // --- Orden activa ---
   items: LineaCarrito[]
   descuentoManual: DescuentoManual | null
+  /** El encargo que se entrega con este ticket, si lo hay. */
+  encargo: EncargoEnCarrito | null
+  setEncargo: (e: EncargoEnCarrito | null) => void
 
   /**
    * Mete un producto al ticket. `cuantos` existe para las piezas sueltas:
@@ -84,6 +108,14 @@ interface PosStore {
   descuentoManualMonto: () => number
   descuentoTotal: () => number
   neto: () => number
+  /**
+   * Lo que de verdad se cobra: el neto menos el anticipo del encargo.
+   *
+   * Nunca baja de cero: si alguien anticipó de más, se cobra 0 y no se le
+   * devuelve dinero por accidente. Devolver es una decisión de la casa, no el
+   * efecto colateral de una resta.
+   */
+  aCobrar: () => number
   totalItems: () => number
 }
 
@@ -100,6 +132,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       corte: null,
       items: [],
       descuentoManual: null,
+      encargo: null,
     }),
 
   almacen: null,
@@ -111,6 +144,9 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   items: [],
   descuentoManual: null,
+  encargo: null,
+
+  setEncargo: (encargo) => set({ encargo }),
 
   agregarItem: (p, personalizacion = null, cuantos = 1) =>
     set((state) => {
@@ -144,14 +180,24 @@ export const usePosStore = create<PosStore>((set, get) => ({
     })),
 
   decrementar: (lineaId) =>
-    set((state) => ({
-      items: state.items
+    set((state) => {
+      const items = state.items
         .map((l) => (l.lineaId === lineaId ? { ...l, cantidad: l.cantidad - 1 } : l))
-        .filter((l) => l.cantidad > 0),
-    })),
+        .filter((l) => l.cantidad > 0)
+      return { items, encargo: items.length === 0 ? null : state.encargo }
+    }),
 
+  // Vaciar el ticket suelta el encargo.
+  //
+  // Si no, el encargo se queda pegado a un carrito vacío: el cajero quita las
+  // líneas, empieza a cobrarle a otra persona, y esa venta cerraría el encargo
+  // de alguien más —y le descontaría su anticipo—. Un carrito sin líneas ya no
+  // es la entrega de nadie.
   quitarItem: (lineaId) =>
-    set((state) => ({ items: state.items.filter((l) => l.lineaId !== lineaId) })),
+    set((state) => {
+      const items = state.items.filter((l) => l.lineaId !== lineaId)
+      return { items, encargo: items.length === 0 ? null : state.encargo }
+    }),
 
   setDescuentoManual: (descuentoManual) => set({ descuentoManual }),
 
@@ -163,6 +209,10 @@ export const usePosStore = create<PosStore>((set, get) => ({
       canal: 'pos',
       items: [],
       descuentoManual: null,
+      // El encargo se suelta con el ticket. Dejarlo pegado le cobraría el
+      // encargo de alguien más al siguiente cliente del mostrador, que es el
+      // mismo daño que dejar el canal en Rappi.
+      encargo: null,
     }),
 
   canal: 'pos',
@@ -213,6 +263,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
   descuentoTotal: () => get().descuentoManualMonto(),
 
   neto: () => Math.max(0, get().subtotal() - get().descuentoTotal()),
+
+  aCobrar: () => Math.max(0, get().neto() - (get().encargo?.anticipo ?? 0)),
 
   totalItems: () => get().items.reduce((s, l) => s + l.cantidad, 0),
 }))

@@ -15,8 +15,8 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
   const {
     items, incrementar, decrementar, quitarItem, limpiarOrden,
     descuentoManual, setDescuentoManual,
-    subtotal, descuentoManualMonto, neto, totalItems,
-    precioDe,
+    subtotal, descuentoManualMonto, neto, aCobrar, totalItems,
+    precioDe, encargo,
   } = usePosStore()
 
   const [modalDescuento, setModalDescuento] = useState(false)
@@ -28,7 +28,9 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
       {/* Encabezado */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-sa-green-ink/10 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <h2 className="font-display text-xl text-sa-green-ink">Orden actual</h2>
+          <h2 className="font-display text-xl text-sa-green-ink">
+            {encargo ? 'Entregando un encargo' : 'Orden actual'}
+          </h2>
           {totalItems() > 0 && (
             <span className="font-mono text-xs bg-sa-green text-sa-cream px-2 py-0.5 rounded-full">
               {totalItems()}
@@ -44,6 +46,25 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
           </button>
         )}
       </div>
+
+      {/* De quién es este ticket.
+          Va arriba de todo y no entre los totales porque cambia lo que el
+          cajero está haciendo: no es una venta de mostrador, es la entrega de
+          un encargo con nombre. Si no se ve, se cobra como si fuera de
+          cualquiera y el encargo se queda apartado. */}
+      {encargo && (
+        <div className="bg-sa-banana/25 border-b border-sa-banana px-5 py-3 flex-shrink-0">
+          <p className="font-display text-lg text-sa-green-ink leading-tight">
+            Encargo #{encargo.folio} · {encargo.cliente}
+          </p>
+          <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/60 mt-0.5">
+            {encargo.anticipo > 0
+              ? `Ya dejó ${mxn(encargo.anticipo)} de anticipo`
+              : 'Sin anticipo'}
+            {' · se cobra todo en un solo ticket'}
+          </p>
+        </div>
+      )}
 
       {/* Lista de ítems */}
       <div className="flex-1 overflow-y-auto">
@@ -142,9 +163,20 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
                 <span className="font-mono text-sa-strawberry">−{mxn(dManual)}</span>
               </div>
             )}
+            {/* El anticipo NO es un descuento: ese dinero sí entró, en el
+                corte del día en que se recibió. Por eso va en su propio
+                renglón y no sumado al de arriba. */}
+            {encargo && encargo.anticipo > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-sa-green-ink/60">Ya pagó de anticipo</span>
+                <span className="font-mono text-sa-green-ink/70">−{mxn(encargo.anticipo)}</span>
+              </div>
+            )}
             <div className="flex justify-between items-baseline pt-2 border-t border-sa-green-ink/10">
-              <span className="font-display text-lg text-sa-green-ink">Total</span>
-              <span className="font-display text-3xl text-sa-green-ink">{mxn(neto())}</span>
+              <span className="font-display text-lg text-sa-green-ink">
+                {encargo && encargo.anticipo > 0 ? 'Le falta' : 'Total'}
+              </span>
+              <span className="font-display text-3xl text-sa-green-ink">{mxn(aCobrar())}</span>
             </div>
           </div>
 
@@ -154,7 +186,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
               onClick={onCobrar}
               className="w-full bg-sa-strawberry hover:brightness-110 active:scale-[0.98] text-white py-4 rounded-sa-lg font-display text-2xl shadow-sa-sm transition-all"
             >
-              Cobrar {mxn(neto())}
+              Cobrar {mxn(aCobrar())}
             </button>
           </div>
         </div>
