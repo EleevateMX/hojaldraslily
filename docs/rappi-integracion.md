@@ -25,8 +25,9 @@ corroborar en el portal antes de programar**):
 | Acceso | **No es autoservicio.** Lo aprueba un contacto comercial de Rappi; entregan `client_id` / `client_secret` de desarrollo y, tras una **certificación** de su equipo de integraciones, los de producción |
 | Autenticación | OAuth2 *client credentials*: `POST token/login/integrations` → token bearer (se renueva al menos cada semana), que viaja en el header `x-authorization` |
 | Base | `/api/v2/restaurants-integrations-public-api/` |
-| Pedidos nuevos | Dos caminos: **webhook** `NEW_ORDER` (Rappi llama a una URL nuestra; se registra con `PUT …/webhook/NEW_ORDER/add-stores` y `…/change-url`) o **sondeo** `GET /orders` (con un mínimo de **45 s entre llamadas**) |
-| Aceptar / rechazar | `POST /orders/{orderId}/take/{cookingTime}` y `POST /orders/{orderId}/reject` |
+| Pedidos nuevos | Dos caminos: **webhook** `NEW_ORDER` (Rappi llama a una URL nuestra; se crea con `POST /webhook`, que devuelve un `secret` para firmar los avisos, y se ajusta con `…/add-stores` y `…/change-url`) o **sondeo** `GET /orders` / `GET /orders/status/sent` (un tercero menciona un mínimo de **45 s entre llamadas**; confirmarlo) |
+| Aceptar / rechazar | **`PUT`** `/orders/{orderId}/take/{cookingTime}` y **`PUT`** `/orders/{orderId}/reject` con un `cancel_type` de lista cerrada (`ITEM_OUT_OF_STOCK`, `ITEM_WRONG_PRICE`, `ORDER_TOTAL_INCORRECT`…) |
+| Listo para recoger | **`POST`** `/orders/{orderId}/ready-for-pickup` — avisa al repartidor; **tope de tres llamadas por pedido** |
 | Eventos del pedido | `/orders/{orderId}/events` |
 | Menú | `/menu` (subir) y `/menu/approved/{storeId}`; **cada menú lo aprueba Rappi** |
 | Tiendas | alta asíncrona; el resultado llega por el webhook `STORE_PROVISIONING_STATUS` |
@@ -104,8 +105,10 @@ de Rappi necesita: aparecer, aceptarse y pasar a comandas.
    **Aceptar** (→ `take/{cookingTime}`, y recién ahí se cobra la orden y
    salen las comandas) y **Rechazar** (→ `reject`, con motivo). Que un
    pedido sin aceptar desconecte la tienda es lo que ese reloj evita.
-4. **Listo**: cuando Empaque marca el pedido empacado, se manda el evento
-   de listo a Rappi (el nombre exacto del estado hay que verlo en el portal).
+4. **Listo**: cuando Empaque marca el pedido empacado, se llama
+   `ready-for-pickup`. Rappi lo limita a **tres llamadas por pedido** y
+   considera mal uso la cuarta, así que va **una vez** desde la función que
+   marca `empacado_at`, no desde un botón que se pueda tocar de más.
 5. **Menú**: `fn_menu_para_rappi` arma el menú desde `productos` +
    `precios_canal` (sin lo marcado con «X») y se sube con `/menu`; se
    vuelve a subir cuando Costeos publica. Rappi lo aprueba a mano.
@@ -115,6 +118,9 @@ Edge Function entra con `service_role`, que se salta los GRANT), ni confiar
 en el precio que manda Rappi.
 
 ## Qué sigue
+
+*(La hoja de qué pedir, con el mensaje listo para el ejecutivo y la
+comparación con Hubster y Deliverect, está en `docs/rappi-que-pedir.md`.)*
 
 1. **La casa** le pide a su ejecutivo de Rappi la integración directa y las
    credenciales de desarrollo. Sin eso no hay paso 2.

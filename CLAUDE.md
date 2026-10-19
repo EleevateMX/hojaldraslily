@@ -2,7 +2,7 @@
 
 Este archivo es para quien retome el trabajo (yo incluido, en otra sesión):
 qué está vivo, cómo se opera y **qué trampas ya nos costaron caro**. Los
-detalles temáticos viven en `docs/` (53 documentos); esto es el mapa.
+detalles temáticos viven en `docs/` (54 documentos); esto es el mapa.
 
 **Este repo es el sistema de Hojaldras Lily**, replicado de un motor que
 ya opera en producción en otro negocio (ver `docs/replicar-el-sistema.md`).
@@ -55,6 +55,12 @@ Lo que falta para abrir, todo fuera del código:
    comparar contra el mínimo, y todo arranca en cero.
 4. **PIN del personal y hardware del local** (ver `docs/hardware.md` y
    `docs/dia-de-instalacion.md`).
+5. **Rappi, si la casa quiere que el pedido entre solo a la caja.** No es
+   código todavía: Rappi entrega las credenciales de su API **por el
+   ejecutivo de cuenta**, no por un botón. El mensaje listo para mandarle,
+   qué contestar y la comparación con Hubster y Deliverect están en
+   `docs/rappi-que-pedir.md`; el plan técnico, en `docs/rappi-integracion.md`.
+   Mientras tanto la caja cobra Rappi a mano con su interruptor.
 
 **El contrato de las cuatro funciones principales** —venta, inventario, caja
 e impresiones— está en **`docs/base-de-replicacion.md`**: qué función hace
