@@ -13,7 +13,7 @@ import {
   type ProductoDelDia,
   type HornoEnVivo,
 } from '@lily/supabase'
-import { mensajeDeError, urlDeFoto, enMoldes } from '@lily/utils'
+import { mensajeDeError, urlDeFoto, enMoldes, nombreDeTamano, medidaDeVenta } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, cx } from '../ui'
 
 /**
@@ -34,7 +34,6 @@ function Fila({
   e,
   paquetes,
   base,
-  molde,
   ocupado,
   onHornear,
   onMerma,
@@ -42,12 +41,19 @@ function Fila({
   e: ExistenciaPorMolde
   paquetes: ProductoDelDia[]
   base: string
-  /** El molde elegido arriba: es con el que apuntan los botones de esta fila. */
-  molde: Molde
   ocupado: boolean
-  onHornear: (moldes: number) => void
-  onMerma: () => void
+  /** Apuntar una horneada a mano: cuántos moldes y **de cuál**. */
+  onHornear: (moldes: number, molde: Molde) => void
+  onMerma: (molde: Molde) => void
 }) {
+  // El molde vive EN LA FILA, no en un interruptor global de la pantalla.
+  //
+  // Era el reclamo de la casa: en la misma hornada caben tres moldes de 48 de
+  // guayaba y dos de 24 de queso, y con un solo interruptor arriba había que
+  // apuntar una tanda, cambiar el interruptor y apuntar la otra — o mentir en
+  // una de las dos. Cada sabor arranca en el molde del que ya tiene pan, que
+  // es el que se está usando ese día.
+  const [molde, setMolde] = useState<Molde>(e.horneados_24 > 0 && e.horneados_48 === 0 ? 24 : 48)
   const foto = urlDeFoto(e.imagen_url, base)
   const agotado = e.cuadros_libres <= 0 && e.cuadros_horneados > 0
   const sinHornear = e.cuadros_horneados === 0
@@ -96,15 +102,38 @@ function Fila({
             {e.cuadros_apartados === 1 ? '' : 's'} para encargos
           </p>
         )}
-        {/* De cuántas formas se puede cortar lo que queda. Es el MISMO pan
-            contado distinto: vender una chica baja también las minis. */}
+        {/* Los tamaños, uno por pastilla y con el nombre del cartel.
+
+            Iba en un renglón de letra chica —«14 de 6 · o · 7 de 12 · o · 3 de
+            24»— y la casa pidió verlos apartados y rotulados: Mini 12, Chica
+            24, Grande 48. Son el MISMO pan contado distinto, y por eso la «o»
+            sigue escrita abajo: vender una Chica baja también las Minis. */}
         {paquetes.length > 0 && e.cuadros_libres > 0 && (
-          <p className="font-mono text-[11px] text-sa-green-ink/60 mt-1.5">
-            alcanza para{' '}
-            {paquetes
-              .map((p) => `${p.paquetes_posibles} de ${p.cuadros}`)
-              .join(' · o · ')}
-          </p>
+          <div className="mt-2">
+            <div className="flex flex-wrap gap-1.5">
+              {paquetes.map((p) => (
+                <span
+                  key={p.producto_id}
+                  className={[
+                    'inline-flex items-baseline gap-1.5 rounded-full px-2.5 py-1',
+                    (p.paquetes_posibles ?? 0) > 0
+                      ? 'bg-sa-mint/20'
+                      : 'bg-sa-green-ink/[0.06]',
+                  ].join(' ')}
+                >
+                  <span className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/60">
+                    {nombreDeTamano(p.cuadros ?? 0)}
+                  </span>
+                  <span className="font-display text-base leading-none text-sa-green-ink">
+                    {p.paquetes_posibles ?? 0}
+                  </span>
+                </span>
+              ))}
+            </div>
+            <p className="font-body text-[10px] text-sa-green-ink/45 mt-1">
+              es el mismo pan: una de estas, no todas
+            </p>
+          </div>
         )}
       </div>
 
@@ -140,12 +169,35 @@ function Fila({
         )}
       </div>
 
-      <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end">
+      <div className="shrink-0 flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+        {/* El molde de ESTA fila. Va junto a sus botones y no arriba, porque
+            es con el que van a apuntar aquí mismo. */}
+        <div
+          className="flex rounded-full border border-sa-green-ink/15 overflow-hidden"
+          role="group"
+          aria-label={`Molde de ${e.sabor}`}
+        >
+          {MOLDES.map((m) => (
+            <button
+              key={m}
+              onClick={() => setMolde(m)}
+              aria-pressed={molde === m}
+              className={[
+                'h-12 px-3 font-mono text-xs uppercase tracking-wide transition-colors',
+                molde === m
+                  ? 'bg-sa-green-ink text-sa-cream'
+                  : 'text-sa-green-ink/55 hover:bg-sa-cream-soft',
+              ].join(' ')}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
         {[1, 2].map((m) => (
           <button
             key={m}
             disabled={ocupado}
-            onClick={() => onHornear(m)}
+            onClick={() => onHornear(m, molde)}
             className="h-12 px-4 rounded-full bg-sa-green text-sa-cream font-display text-sm flex items-center justify-center shadow-sa-sm active:scale-95 transition-transform disabled:opacity-50"
             aria-label={`Agregar ${m} molde de ${molde} de ${e.sabor}`}
           >
@@ -154,7 +206,7 @@ function Fila({
         ))}
         <button
           disabled={ocupado || e.cuadros_libres <= 0}
-          onClick={onMerma}
+          onClick={() => onMerma(molde)}
           className="w-12 h-12 rounded-full border border-sa-green-ink/15 text-sa-green-ink/70 font-display text-xl flex items-center justify-center hover:bg-sa-cream-soft active:scale-95 transition-all disabled:opacity-30"
           title="Se perdió un cuadro (se quemó, se cayó)"
           aria-label={`Restar una merma de ${e.sabor}`}
@@ -241,18 +293,152 @@ function ElHorno() {
   )
 }
 
+/**
+ * Un renglón de lo que se va a mandar a hacer.
+ *
+ * `sabor` es lo que viaja a la base: para las hojaldras es el sabor («Pasta de
+ * Guayaba») y para lo que se hornea al pedido es el **nombre del producto**
+ * («Rosca de Queso Philadelphia · Grande»), porque eso es lo que la mesa tiene
+ * que leer en su pantalla. `molde` solo tiene sentido con `unidad: 'molde'`.
+ */
+interface RenglonPedido {
+  sabor: string
+  cantidad: number
+  unidad: 'molde' | 'pieza'
+  molde: Molde
+}
+
+/**
+ * Un renglón del pedido, con su cantidad y —si va en moldes— su molde.
+ *
+ * La cantidad **se teclea** además de los botones: para treinta roscas se
+ * escribe 30, no se toca «+» treinta veces. Es la misma razón por la que la
+ * cantidad de un encargo se teclea.
+ */
+function RenglonDePedido({
+  clave,
+  nombre,
+  detalle,
+  imagen,
+  base,
+  unidad,
+  valor,
+  onCambiar,
+}: {
+  clave: string
+  nombre: string
+  detalle: string
+  imagen: string | null
+  base: string
+  unidad: 'molde' | 'pieza'
+  valor: RenglonPedido | undefined
+  onCambiar: (r: RenglonPedido | null) => void
+}) {
+  const n = valor?.cantidad ?? 0
+  const molde = valor?.molde ?? 48
+  const foto = urlDeFoto(imagen, base)
+  const corto = unidad === 'molde' ? 'm' : 'pz'
+
+  function poner(cantidad: number, conMolde = molde) {
+    if (cantidad <= 0) return onCambiar(null)
+    onCambiar({ sabor: clave, cantidad, unidad, molde: conMolde })
+  }
+
+  function teclear() {
+    const r = window.prompt(`¿Cuántas ${unidad === 'molde' ? 'moldes' : 'piezas'} de ${nombre}?`, n > 0 ? String(n) : '')
+    if (r === null) return
+    const v = Number(r.trim())
+    if (!Number.isFinite(v) || v < 0) return
+    poner(Math.floor(v))
+  }
+
+  return (
+    <div className="flex items-center gap-3 py-2 border-b border-sa-green-ink/5 last:border-0">
+      {foto && <img src={foto} alt="" className="w-9 h-9 object-contain shrink-0" />}
+      <div className="min-w-0 flex-1">
+        <p className="font-body text-sm text-sa-green-ink leading-tight">{nombre}</p>
+        <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
+          {detalle}
+        </p>
+      </div>
+
+      {/* El molde de ESTE renglón. Solo donde significa algo: una rosca no
+          tiene molde, y ofrecerle uno es ofrecerle una mentira. */}
+      {unidad === 'molde' && (
+        <div
+          className="hidden sm:flex rounded-full border border-sa-green-ink/15 overflow-hidden shrink-0"
+          role="group"
+          aria-label={`Molde de ${nombre}`}
+        >
+          {MOLDES.map((m) => (
+            <button
+              key={m}
+              onClick={() => poner(Math.max(n, 0), m)}
+              aria-pressed={molde === m}
+              className={[
+                'h-9 px-2.5 font-mono text-[11px] uppercase tracking-wide transition-colors',
+                molde === m
+                  ? 'bg-sa-green-ink text-sa-cream'
+                  : 'text-sa-green-ink/55 hover:bg-sa-cream-soft',
+              ].join(' ')}
+            >
+              {m}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 shrink-0">
+        <button
+          onClick={() => poner(Math.max(0, n - 1))}
+          disabled={n === 0}
+          className="w-9 h-9 rounded-full border border-sa-green-ink/15 text-sa-green-ink/60 disabled:opacity-25"
+          aria-label={`Quitar uno de ${nombre}`}
+        >
+          −
+        </button>
+        <button
+          onClick={teclear}
+          className="font-mono text-base w-14 text-center tabular-nums rounded-sa py-1 hover:bg-sa-cream-soft"
+          title="Escribir la cantidad"
+        >
+          {n > 0 ? `${n} ${corto}` : '—'}
+        </button>
+        <button
+          onClick={() => poner(n + 1)}
+          className="w-9 h-9 rounded-full bg-sa-green text-sa-cream font-display"
+          aria-label={`Agregar uno de ${nombre}`}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Produccion() {
   const [sabores, setSabores] = useState<ExistenciaPorMolde[]>([])
   const [paquetes, setPaquetes] = useState<ProductoDelDia[]>([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
-  // Lo que se va a mandar a hacer: sabor -> moldes.
-  const [pedido, setPedido] = useState<Record<string, number>>({})
-  // Con qué molde se va a hornear esta tanda: 48 o 24. Es UNA decisión por
-  // envío y no por sabor, porque así se decide en la práctica — se prende el
-  // horno con los moldes que se van a usar, no uno de cada tamaño a la vez.
-  const [molde, setMolde] = useState<Molde>(48)
+  /**
+   * Lo que se va a mandar a hacer. La llave es el renglón de pantalla, y cada
+   * uno lleva **su propio molde**.
+   *
+   * Antes el molde era UNA decisión para todo el envío. La casa lo reclamó: en
+   * la misma hornada caben tres moldes de 48 de guayaba y dos de 24 de queso,
+   * y con un solo interruptor había que mandar dos órdenes o mentir en uno de
+   * los dos renglones. La base ya lo guardaba por renglón
+   * (`orden_produccion_items.cuadros_por_molde`); lo que faltaba era poder
+   * pedirlo así.
+   *
+   * Y la unidad también va por renglón: las hojaldras se piden en moldes, y lo
+   * que se hornea al pedido —roscas, trenzas, panes, galletas, anís, Pan de
+   * Muerto, Hojaldra de Corazón, bocadillos— se pide en **piezas**, porque no
+   * sale de ningún molde.
+   */
+  const [pedido, setPedido] = useState<Record<string, RenglonPedido>>({})
   const [abrirPedido, setAbrirPedido] = useState(false)
   const [mandando, setMandando] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
@@ -280,9 +466,9 @@ export default function Produccion() {
     void cargar()
   }, [cargar])
 
-  // Con el molde elegido arriba, no con uno global: es la diferencia entre
+  // Con el molde de SU fila, no con uno global: es la diferencia entre
   // apuntar diez moldes de 24 y apuntar lo que el sistema creyó que eran.
-  async function hornear(e: ExistenciaPorMolde, moldes: number) {
+  async function hornear(e: ExistenciaPorMolde, moldes: number, molde: Molde) {
     setOcupado(e.sabor)
     try {
       await registrarHorneada(sb, e.sabor, moldes * molde, molde, 'horneado')
@@ -294,7 +480,7 @@ export default function Produccion() {
     }
   }
 
-  async function merma(e: ExistenciaPorMolde) {
+  async function merma(e: ExistenciaPorMolde, molde: Molde) {
     setOcupado(e.sabor)
     try {
       await registrarHorneada(sb, e.sabor, 1, molde, 'merma')
@@ -307,17 +493,27 @@ export default function Produccion() {
   }
 
   async function mandar() {
-    const items = Object.entries(pedido)
-      .filter(([, n]) => n > 0)
-      .map(([sabor, moldes]) => ({ sabor, moldes, molde }))
+    const items = Object.values(pedido)
+      .filter((r) => r.cantidad > 0)
+      .map((r) =>
+        r.unidad === 'pieza'
+          ? { sabor: r.sabor, moldes: r.cantidad, unidad: 'pieza' as const }
+          : { sabor: r.sabor, moldes: r.cantidad, molde: r.molde, unidad: 'molde' as const },
+      )
     if (items.length === 0) return
     setMandando(true)
     try {
       await mandarAProducir(sb, items)
-      const moldes = items.reduce((s, i) => s + i.moldes, 0)
+      // El resumen se dice por unidad, no sumado: «5 moldes y 12 piezas» es
+      // lo que de verdad se mandó. Un «17» a secas no es de nada.
+      const moldes = items.filter((i) => i.unidad === 'molde').reduce((s, i) => s + i.moldes, 0)
+      const piezas = items.filter((i) => i.unidad === 'pieza').reduce((s, i) => s + i.moldes, 0)
+      const partes = [
+        moldes > 0 ? `${moldes} molde${moldes === 1 ? '' : 's'}` : '',
+        piezas > 0 ? `${piezas} pieza${piezas === 1 ? '' : 's'}` : '',
+      ].filter(Boolean)
       setAviso(
-        `Mandados a hacer ${moldes} molde${moldes === 1 ? '' : 's'} de ${molde} ` +
-          `(${moldes * molde} cuadros). Ya salió en la pantalla de Producción.`,
+        `Mandado a hacer: ${partes.join(' y ')}. Ya salió en la pantalla de Producción.`,
       )
       setPedido({})
       setAbrirPedido(false)
@@ -340,7 +536,35 @@ export default function Produccion() {
       l.push(p)
       m.set(p.sabor, l)
     })
+    // Del mas chico al mas grande, que es el orden del cartel: 6, Mini, Chica,
+    // Grande. Venia en el orden en que la base los devolvio, o sea en ninguno.
+    for (const l of m.values()) l.sort((a, b) => (a.cuadros ?? 0) - (b.cuadros ?? 0))
     return m
+  }, [paquetes])
+
+  /**
+   * Lo que **no sale de un molde**, para poder mandarlo a hacer también.
+   *
+   * Era lo que faltaba, y la casa lo dijo corto: «en producción falta que hagan
+   * todos los panes». Media panadería no es hojaldra —las roscas, la Trenza
+   * Suiza, las Patas, los Tutis, las galletas, lo de anís, el Pan de Muerto, la
+   * Hojaldra de Corazón, los bocadillos— y la pantalla solo sabía pedir
+   * sabores que se cuentan en cuadros.
+   *
+   * Se reconocen por `sabor` en null: eso deja fuera el café y las bebidas
+   * (que sí traen sabor y tampoco se hornean) sin tener que escribir una lista
+   * de categorías a mano, que es la clase de lista que se queda vieja.
+   */
+  const alPedido = useMemo(() => {
+    const m = new Map<string, ProductoDelDia[]>()
+    paquetes.forEach((p) => {
+      if (p.sabor !== null) return
+      const l = m.get(p.categoria) ?? []
+      l.push(p)
+      m.set(p.categoria, l)
+    })
+    for (const l of m.values()) l.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
+    return [...m.entries()]
   }, [paquetes])
 
   const porCategoria = useMemo(() => {
@@ -358,7 +582,19 @@ export default function Produccion() {
   const cuadrosVendidos = sabores.reduce((s, f) => s + f.cuadros_vendidos, 0)
   const cuadrosApartados = sabores.reduce((s, f) => s + f.cuadros_apartados, 0)
   const agotados = sabores.filter((f) => f.cuadros_horneados > 0 && f.cuadros_libres <= 0)
-  const aMandar = Object.values(pedido).reduce((s, n) => s + n, 0)
+  const renglones = Object.values(pedido).filter((r) => r.cantidad > 0)
+  const aMandarMoldes = renglones
+    .filter((r) => r.unidad === 'molde')
+    .reduce((s, r) => s + r.cantidad, 0)
+  const aMandarPiezas = renglones
+    .filter((r) => r.unidad === 'pieza')
+    .reduce((s, r) => s + r.cantidad, 0)
+  // Los cuadros se suman con el molde de CADA renglón: dos de 48 y dos de 24
+  // no son cuatro de nada, son 144 cuadros.
+  const aMandarCuadros = renglones
+    .filter((r) => r.unidad === 'molde')
+    .reduce((s, r) => s + r.cantidad * r.molde, 0)
+  const aMandar = renglones.length
 
   if (cargando) return <Loading>Cargando la producción de hoy…</Loading>
 
@@ -392,8 +628,10 @@ export default function Produccion() {
           <div>
             <p className="font-display text-xl text-sa-green-ink">Mandar a producir</p>
             <p className="font-body text-sm text-sa-green-ink/60 mt-0.5">
-              Se pide por moldes, eligiendo abajo si son de 48 o de 24. Los
-              tamaños se cortan después, conforme se vendan.
+              Las hojaldras se piden en moldes, y cada renglón elige si son de
+              48 o de 24; los tamaños se cortan después, conforme se vendan. Lo
+              demás —roscas, trenzas, panes, galletas, anís, bocadillos— se
+              pide en piezas.
             </p>
           </div>
           <span className="font-mono text-xs uppercase tracking-wide text-sa-green shrink-0">
@@ -403,75 +641,77 @@ export default function Produccion() {
 
         {abrirPedido && (
           <div className="mt-5 space-y-2">
-            {sabores.map((f) => {
-              const n = pedido[f.sabor] ?? 0
-              const foto = urlDeFoto(f.imagen_url, base)
-              return (
-                <div
-                  key={f.sabor}
-                  className="flex items-center gap-3 py-2 border-b border-sa-green-ink/5 last:border-0"
-                >
-                  {foto && <img src={foto} alt="" className="w-9 h-9 object-contain shrink-0" />}
-                  <div className="min-w-0 flex-1">
-                    <p className="font-body text-sm text-sa-green-ink leading-tight">{f.sabor}</p>
-                    <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
-                      quedan{' '}
-                      {([48, 24] as const)
-                        .map((m) => ({ m, c: m === 48 ? f.libres_48 : f.libres_24 }))
-                        .filter((b) => b.c > 0)
-                        .map((b) => `${enMoldes(b.c, b.m).texto} de ${b.m}`)
-                        .join(' y ') || 'nada'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <button
-                      onClick={() => setPedido((p) => ({ ...p, [f.sabor]: Math.max(0, n - 1) }))}
-                      disabled={n === 0}
-                      className="w-9 h-9 rounded-full border border-sa-green-ink/15 text-sa-green-ink/60 disabled:opacity-25"
-                      aria-label={`Quitar un molde de ${f.sabor}`}
-                    >
-                      −
-                    </button>
-                    <span className="font-mono text-base w-14 text-center tabular-nums">
-                      {n > 0 ? `${n} m` : '—'}
-                    </span>
-                    <button
-                      onClick={() => setPedido((p) => ({ ...p, [f.sabor]: n + 1 }))}
-                      className="w-9 h-9 rounded-full bg-sa-green text-sa-cream font-display"
-                      aria-label={`Agregar un molde de ${f.sabor}`}
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              )
-            })}
+            <p className="font-mono text-xs uppercase tracking-[0.16em] text-sa-green">
+              Hojaldras · se piden en moldes
+            </p>
+            {sabores.map((f) => (
+              <RenglonDePedido
+                key={f.sabor}
+                clave={f.sabor}
+                nombre={f.sabor}
+                detalle={
+                  'quedan ' +
+                  (([48, 24] as const)
+                    .map((m) => ({ m, c: m === 48 ? f.libres_48 : f.libres_24 }))
+                    .filter((b) => b.c > 0)
+                    .map((b) => `${enMoldes(b.c, b.m).texto} de ${b.m}`)
+                    .join(' y ') || 'nada')
+                }
+                imagen={f.imagen_url}
+                base={base}
+                unidad="molde"
+                valor={pedido[f.sabor]}
+                onCambiar={(r) =>
+                  setPedido((p) => {
+                    const { [f.sabor]: _fuera, ...resto } = p
+                    return r ? { ...resto, [f.sabor]: r } : resto
+                  })
+                }
+              />
+            ))}
 
-            {/* El molde. Va abajo, junto al total, porque es lo último que
-                se decide: primero se elige qué sabores y cuántos, y ya con eso
-                enfrente se decide en qué molde entran. */}
-            <div className="flex items-center gap-3 pt-4 flex-wrap">
-              <span className={cx.label}>Molde</span>
-              {MOLDES.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMolde(m)}
-                  aria-pressed={molde === m}
-                  className={
-                    molde === m
-                      ? 'px-5 py-3 rounded-sa bg-sa-green text-sa-cream font-display text-lg'
-                      : 'px-5 py-3 rounded-sa border border-sa-green-ink/15 text-sa-green-ink font-display text-lg hover:bg-sa-cream-soft'
-                  }
-                >
-                  {m} cuadros
-                </button>
-              ))}
-            </div>
+            {/* Lo que se hornea al pedido. Va aparte y no mezclado con las
+                hojaldras porque se cuenta distinto: aquí no hay molde que
+                elegir ni cuadros que repartir, hay piezas. */}
+            {alPedido.map(([categoria, lista]) => (
+              <div key={categoria} className="pt-4">
+                <p className="font-mono text-xs uppercase tracking-[0.16em] text-sa-green">
+                  {categoria} · se piden en piezas
+                </p>
+                {lista.map((p) => (
+                  <RenglonDePedido
+                    key={p.producto_id}
+                    clave={p.nombre}
+                    nombre={p.nombre}
+                    detalle={medidaDeVenta(p).texto || 'se hornea al pedido'}
+                    imagen={p.imagen_url}
+                    base={base}
+                    unidad="pieza"
+                    valor={pedido[p.nombre]}
+                    onCambiar={(r) =>
+                      setPedido((q) => {
+                        const { [p.nombre]: _fuera, ...resto } = q
+                        return r ? { ...resto, [p.nombre]: r } : resto
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            ))}
 
-            <div className="flex items-center justify-between gap-4 pt-4">
+            <div className="flex items-center justify-between gap-4 pt-5">
               <p className="font-body text-sm text-sa-green-ink/70">
                 {aMandar > 0
-                  ? `${aMandar} molde${aMandar === 1 ? '' : 's'} de ${molde} · ${aMandar * molde} cuadros`
+                  ? [
+                      aMandarMoldes > 0
+                        ? `${aMandarMoldes} molde${aMandarMoldes === 1 ? '' : 's'} · ${aMandarCuadros} cuadros`
+                        : '',
+                      aMandarPiezas > 0
+                        ? `${aMandarPiezas} pieza${aMandarPiezas === 1 ? '' : 's'}`
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')
                   : 'Todavía no ha puesto nada'}
               </p>
               <button
@@ -548,10 +788,9 @@ export default function Produccion() {
               e={e}
               paquetes={porSabor.get(e.sabor) ?? []}
               base={base}
-              molde={molde}
               ocupado={ocupado === e.sabor}
-              onHornear={(m) => void hornear(e, m)}
-              onMerma={() => void merma(e)}
+              onHornear={(m, mol) => void hornear(e, m, mol)}
+              onMerma={(mol) => void merma(e, mol)}
             />
           ))}
         </div>

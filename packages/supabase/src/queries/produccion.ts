@@ -26,16 +26,39 @@ export interface ItemDeProduccion {
   /** El sabor que hay que hornear. El tamaño se decide al vender, no aquí. */
   sabor: string
   imagen_url: string | null
-  /** Moldes pedidos. */
+  /** Cuántos se pidieron: moldes o piezas, según `unidad`. */
   moldes: number
-  /** De cuántos cuadros es cada molde de ESTE renglón: 48 o 24. */
-  molde: Molde
+  /**
+   * Cómo se cuenta este renglón.
+   *
+   * `'molde'` son las hojaldras: salen de un molde de 48 o de 24 cuadros y de
+   * ahí se cortan los paquetes. `'pieza'` es todo lo que **no** sale de un
+   * molde —las roscas, la Trenza Suiza, las Patas, los Tutis, las galletas, lo
+   * de anís, el Pan de Muerto, la Hojaldra de Corazón, los bocadillos—: se
+   * hornea al pedido y no se cuenta en cuadros.
+   */
+  unidad: 'molde' | 'pieza'
+  /**
+   * De cuántos cuadros es cada molde de ESTE renglón: 48 o 24.
+   *
+   * `null` cuando se cuenta en piezas. No es un 48 de relleno a propósito: una
+   * rosca no tiene molde, y un 48 inventado se sumaría como cuadros que no
+   * existen.
+   */
+  molde: Molde | null
   /** Moldes que producción ya armó. Es un TOTAL, no un incremento. */
   armados: number
   /** Cuántos hay dentro del horno ahorita. */
   enHorno: number
   /** Moldes que ya salieron del horno: lo único que es pan de verdad. */
   horneados: number
+  /**
+   * Cuántas masas le quedan a producción para este renglón.
+   *
+   * `null` NO es cero: es «todavía nadie contó». Lo teclea la mesa, no lo
+   * calcula el sistema, porque una masa no rinde siempre los mismos moldes.
+   */
+  masas: number | null
   terminado_por: string | null
 }
 
@@ -63,11 +86,13 @@ interface FilaOrden {
     id: string
     sabor: string | null
     moldes: number | null
-    cuadros_por_molde: number
+    cuadros_por_molde: number | null
+    unidad: 'molde' | 'pieza'
     moldes_armados: number
     moldes_en_horno: number
     cantidad_hecha: number
     terminado_por: string | null
+    masas_restantes: number | null
   }[]
 }
 
@@ -84,8 +109,9 @@ export async function listarOrdenesDeProduccion(
     .from('ordenes_produccion')
     .select(
       'id, folio, fecha, estado, nota, creada_por, created_at,' +
-        ' orden_produccion_items(id, sabor, moldes, cuadros_por_molde,' +
-        ' moldes_armados, moldes_en_horno, cantidad_hecha, terminado_por)',
+        ' orden_produccion_items(id, sabor, moldes, cuadros_por_molde, unidad,' +
+        ' moldes_armados, moldes_en_horno, cantidad_hecha, terminado_por,' +
+        ' masas_restantes)',
     )
     .order('created_at', { ascending: false })
     .limit(50)
@@ -107,14 +133,23 @@ export async function listarOrdenesDeProduccion(
   // código para pintar la foto y no pintó una sola nunca. Frente a la mesa,
   // con las manos llenas de masa, se reconoce el pan de un vistazo; leer
   // «Pasta de Guayaba y Queso de Bola» a dos metros, no.
+  // Los renglones de PIEZA guardan el **nombre** del producto en `sabor` —una
+  // rosca no tiene sabor de hojaldra— así que el mapa se llena por las dos
+  // llaves. Con solo `sabor`, las roscas y los panes salían sin foto, que es
+  // el mismo defecto que ya había dejado a esta pantalla sin pintar una sola.
   const fotos = new Map<string, string>()
   const { data: prods } = await sb
     .from('productos')
-    .select('sabor, imagen_url')
-    .not('sabor', 'is', null)
+    .select('nombre, sabor, imagen_url')
     .not('imagen_url', 'is', null)
-  for (const p of (prods ?? []) as { sabor: string | null; imagen_url: string | null }[]) {
-    if (p.sabor && p.imagen_url && !fotos.has(p.sabor)) fotos.set(p.sabor, p.imagen_url)
+  for (const p of (prods ?? []) as {
+    nombre: string
+    sabor: string | null
+    imagen_url: string | null
+  }[]) {
+    if (!p.imagen_url) continue
+    if (p.sabor && !fotos.has(p.sabor)) fotos.set(p.sabor, p.imagen_url)
+    if (p.nombre && !fotos.has(p.nombre)) fotos.set(p.nombre, p.imagen_url)
   }
 
   return ((data ?? []) as unknown as FilaOrden[]).map((o) => ({
@@ -130,26 +165,68 @@ export async function listarOrdenesDeProduccion(
       sabor: i.sabor ?? '—',
       imagen_url: (i.sabor && fotos.get(i.sabor)) || null,
       moldes: i.moldes ?? 0,
-      molde: (i.cuadros_por_molde === 24 ? 24 : 48) as Molde,
+      unidad: i.unidad === 'pieza' ? 'pieza' : 'molde',
+      // Un renglón de pieza no tiene molde, y aquí NO se le pone 48 por
+      // defecto: la pantalla lo necesita en null para no escribir «moldes de
+      // 48 cuadros» debajo de veinte roscas.
+      molde:
+        i.unidad === 'pieza' || i.cuadros_por_molde == null
+          ? null
+          : ((i.cuadros_por_molde === 24 ? 24 : 48) as Molde),
       armados: i.moldes_armados,
       enHorno: i.moldes_en_horno,
       horneados: i.cantidad_hecha,
+      masas: i.masas_restantes ?? null,
       terminado_por: i.terminado_por,
     })),
   }))
 }
 
 /**
- * Manda a hacer, en MOLDES de un sabor.
+ * Apunta cuántas masas le quedan a producción en un renglón.
  *
- * Se pide por sabor y no por paquete porque así se hornea: sale un molde de
- * 48 cuadros y de ahí se cortan los paquetes conforme se venden. Pedir «10
- * paquetes de 12» obligaría a decidir en el horno algo que se decide en el
- * mostrador.
+ * Lo teclea la mesa: el sistema no lo calcula, porque una masa no rinde
+ * siempre los mismos moldes y la gente de la mesa lo sabe mejor. Pasar
+ * `null` borra la cuenta y vuelve a «nadie contó».
+ */
+export async function apuntarMasas(
+  sb: ClienteLily,
+  itemId: string,
+  masas: number | null,
+): Promise<number | null> {
+  const { data, error } = await sb.rpc('fn_produccion_masas', {
+    p_item_id: itemId,
+    p_masas: masas as number,
+  })
+  if (error) throw error
+  return data === null ? null : Number(data)
+}
+
+/**
+ * Manda a hacer. Cada renglón lleva su propia cuenta.
+ *
+ * Las hojaldras se piden en **moldes** de un sabor, no en paquetes, porque así
+ * se hornea: sale un molde de 48 cuadros y de ahí se cortan los paquetes
+ * conforme se venden. Pedir «10 paquetes de 12» obligaría a decidir en el
+ * horno algo que se decide en el mostrador.
+ *
+ * Pero media panadería **no sale de un molde** —las roscas, la Trenza Suiza,
+ * las Patas, los Tutis, las galletas, lo de anís, el Pan de Muerto, la
+ * Hojaldra de Corazón, los bocadillos—. Eso va con `unidad: 'pieza'` y se pide
+ * en piezas, con `sabor` = el nombre del producto y **sin molde**.
+ *
+ * Y el molde va por RENGLÓN, no por envío: en una misma hornada caben tres
+ * moldes de 48 de guayaba y dos de 24 de queso. Un solo molde para todo el
+ * envío obliga a mentir en uno de los dos renglones.
  */
 export async function mandarAProducir(
   sb: ClienteLily,
-  items: { sabor: string; moldes: number; molde?: Molde }[],
+  items: {
+    sabor: string
+    moldes: number
+    molde?: Molde | null
+    unidad?: 'molde' | 'pieza'
+  }[],
   nota?: string,
 ): Promise<string> {
   const { data, error } = await sb.rpc('fn_produccion_mandar_a_hacer', {
@@ -778,18 +855,30 @@ export async function guardarPrecioDeCanal(
 export const MOLDES = [48, 24] as const
 export type Molde = (typeof MOLDES)[number]
 
+/**
+ * Cómo se cuenta un renglón del horno.
+ *
+ * `'pieza'` es lo que no sale de un molde: las roscas, la Trenza Suiza, las
+ * Patas, los Tutis, las galletas, lo de anís, el Pan de Muerto, la Hojaldra de
+ * Corazón, los bocadillos. Ahí `molde` y `cuadros` llegan en **null**, y la
+ * pantalla tiene que escribir «3 piezas», no «3 moldes de 48».
+ */
+export type UnidadDeProduccion = 'molde' | 'pieza'
+
 export interface EnElHorno {
   item_id: string
-  folio: number
   sabor: string
+  folio: number
   /** La foto del sabor, la misma que ve el kiosko. Frente al horno se
    *  reconoce el pan de un vistazo; su nombre completo, a dos metros, no. */
   imagen_url: string | null
-  /** Moldes que hay dentro ahorita. */
+  /** Cuántos hay dentro ahorita: moldes o piezas, según `unidad`. */
   moldes: number
-  /** De cuántos cuadros es cada molde: 48 o 24. */
-  molde: Molde
-  cuadros: number
+  unidad: UnidadDeProduccion
+  /** De cuántos cuadros es cada molde: 48 o 24. `null` si va en piezas. */
+  molde: Molde | null
+  /** Cuadros que representa. `null` si va en piezas: eso no se cuenta así. */
+  cuadros: number | null
   entro_en: string
   listo_en: string
   minutos: number
@@ -802,8 +891,9 @@ export interface EsperandoHorno {
   sabor: string
   imagen_url: string | null
   moldes: number
-  molde: Molde
-  cuadros: number
+  unidad: UnidadDeProduccion
+  molde: Molde | null
+  cuadros: number | null
   minutos: number
 }
 
@@ -813,7 +903,8 @@ export interface SinArmar {
   sabor: string
   imagen_url: string | null
   moldes: number
-  molde: Molde
+  unidad: UnidadDeProduccion
+  molde: Molde | null
 }
 
 export interface HornoEnVivo {
@@ -889,13 +980,27 @@ export async function sacarDelHorno(
   sb: ClienteLily,
   itemId: string,
   moldes?: number,
-): Promise<{ sacados: number; sabor: string; cuadros: number; libres: number }> {
+): Promise<{
+  sacados: number
+  sabor: string
+  unidad: UnidadDeProduccion
+  /** `null` cuando va en piezas: eso no se cuenta en cuadros. */
+  cuadros: number | null
+  /** Cuadros libres del sabor. `null` cuando va en piezas: no lleva existencia. */
+  libres: number | null
+}> {
   const { data, error } = await sb.rpc('fn_horno_sacar', {
     p_item_id: itemId,
     p_moldes: moldes ?? undefined,
   })
   if (error) throw error
-  return data as unknown as { sacados: number; sabor: string; cuadros: number; libres: number }
+  return data as unknown as {
+    sacados: number
+    sabor: string
+    unidad: UnidadDeProduccion
+    cuadros: number | null
+    libres: number | null
+  }
 }
 
 /**

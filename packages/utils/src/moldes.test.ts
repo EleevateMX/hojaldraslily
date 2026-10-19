@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { enMoldes, enMoldesConTamano, cuadrosPorCuarto } from './moldes'
+import {
+  enMoldes,
+  enMoldesConTamano,
+  cuadrosPorCuarto,
+  medidaDeProduccion,
+  nombreDeTamano,
+} from './moldes'
 
 describe('cuadrosPorCuarto', () => {
   // La razón de ser de los cuartos: un cuarto de molde es el paquete más
@@ -89,5 +95,45 @@ describe('enMoldesConTamano', () => {
   })
   it('con menos de un cuarto no hay molde del que hablar', () => {
     expect(enMoldesConTamano(7, 48)).toBe('7 cuadros')
+  })
+})
+
+describe('medidaDeProduccion', () => {
+  it('las hojaldras van en moldes, con su tamaño y sus cuadros', () => {
+    expect(medidaDeProduccion(3, 'molde', 48, 144)).toBe('3 moldes de 48 · 144 cuadros')
+    expect(medidaDeProduccion(1, 'molde', 24, 24)).toBe('1 molde de 24 · 24 cuadros')
+  })
+
+  it('sin cuadros se queda en el molde, no inventa un total', () => {
+    expect(medidaDeProduccion(2, 'molde', 48)).toBe('2 moldes de 48')
+    expect(medidaDeProduccion(2, 'molde', 48, null)).toBe('2 moldes de 48')
+  })
+
+  // Lo que se hornea al pedido no sale de un molde: decir "3 moldes de 48" de
+  // tres roscas es inventarle 144 cuadros a un pan que no se cuenta asi.
+  it('lo que va en piezas se dice en piezas', () => {
+    expect(medidaDeProduccion(3, 'pieza')).toBe('3 piezas')
+    expect(medidaDeProduccion(1, 'pieza', null, null)).toBe('1 pieza')
+  })
+
+  // Una fila a medio migrar: dice molde pero no trae molde. Mejor leerla como
+  // piezas que anunciar un molde que no existe.
+  it('sin molde no habla de moldes, diga lo que diga la unidad', () => {
+    expect(medidaDeProduccion(4, 'molde', null)).toBe('4 piezas')
+  })
+})
+
+describe('nombreDeTamano', () => {
+  it('los tres nombres del cartel', () => {
+    expect(nombreDeTamano(12)).toBe('Mini')
+    expect(nombreDeTamano(24)).toBe('Chica')
+    expect(nombreDeTamano(48)).toBe('Grande')
+  })
+
+  // El de 6 no tiene nombre en la lista de la casa, asi que no se le inventa
+  // uno: se dice en cuadros, que es como lo pide la gente.
+  it('al de 6 no le inventa un nombre', () => {
+    expect(nombreDeTamano(6)).toBe('6 cuadros')
+    expect(nombreDeTamano(1)).toBe('1 cuadro')
   })
 })

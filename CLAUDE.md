@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **186 migraciones aplicadas en orden, y 186
+`fzkdgqqvfkogmxdgqsxj` tiene **191 migraciones aplicadas en orden, y 191
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -108,6 +108,22 @@ propósito hasta entonces.
   en **moldes de 48 o de 24 cuadros** y de ahí se cortan los paquetes conforme
   se venden — cuatro de 12, dos de 24, uno de 48, o mezclado. Por eso venden
   pan del día: **no se comprometen a un tamaño hasta que alguien lo pide**.
+
+**Y no todo sale de un molde.** `orden_produccion_items.unidad` dice cómo se
+cuenta el renglón: `'molde'` son las hojaldras y `'pieza'` es todo lo demás
+—las roscas, la Trenza Suiza, las Patas, los Tutis, las galletas, lo de anís,
+el Pan de Muerto, la Hojaldra de Corazón, los bocadillos—, que se hornea al
+pedido. En un renglón de pieza `cuadros_por_molde` va en **null**, no en un 48
+de relleno: un 48 inventado se suma como cuadros que no existen. Y **lo que va
+en piezas no entra al inventario de cuadros** — el trigger lo salta a
+propósito, porque esos panes se venden sin existencia (`paquetes_posibles =
+null`) y no hay de dónde descontarlos. Lo horneado queda apuntado en
+`cantidad_hecha`, que es lo que miran la mesa y el horno.
+
+Antes de esto, la pantalla de Producción **solo sabía pedir hojaldras**: la
+columna traía `not null` con `check in (24, 48)`, así que media panadería no
+tenía por dónde mandarse a hacer. Era literal el reclamo de la casa — «en
+producción falta que hagan todos los panes».
 
 **El tamaño del molde va por RENGLÓN, no en un parámetro global.** Vive en
 `orden_produccion_items.cuadros_por_molde` (con `check in (24, 48)`), porque

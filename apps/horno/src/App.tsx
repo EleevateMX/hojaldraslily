@@ -13,7 +13,7 @@ import {
   type EmpleadoSesion,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
-import { mensajeDeError, urlDeFoto } from '@lily/utils'
+import { mensajeDeError, urlDeFoto, medidaDeProduccion } from '@lily/utils'
 import { sb } from './lib/sb'
 
 /**
@@ -69,8 +69,7 @@ function Adentro({
         <div className="min-w-0 flex-1">
           <p className="font-display text-2xl text-sa-green-ink leading-tight">{item.sabor}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
-            {item.cuadros} cuadros
+            {medidaDeProduccion(item.moldes, item.unidad, item.molde, item.cuadros)}
           </p>
         </div>
         <span className="font-mono text-xs text-sa-green-ink/45 shrink-0">#{item.folio}</span>
@@ -121,8 +120,7 @@ function Esperando({
         <div className="min-w-0 flex-1">
           <p className="font-display text-xl text-sa-green-ink leading-tight">{item.sabor}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            {item.moldes} {item.moldes === 1 ? 'molde' : 'moldes'} de {item.molde} ·{' '}
-            {item.minutos} min
+            {medidaDeProduccion(item.moldes, item.unidad, item.molde)} · {item.minutos} min
           </p>
         </div>
         <span className="font-mono text-xs text-sa-green-ink/45 shrink-0">#{item.folio}</span>
@@ -238,7 +236,14 @@ export default function App() {
     setOcupado(true)
     try {
       const r = await sacarDelHorno(sb, item.item_id)
-      avisar(`Salieron ${r.cuadros} cuadros de ${r.sabor}. Quedan ${r.libres} libres.`)
+      // Lo que va en piezas no tiene cuadros que anunciar ni existencia que
+      // reportar: decirle «quedan 0 libres» a quien acaba de sacar cinco
+      // roscas es decirle que no hay roscas.
+      avisar(
+        r.cuadros == null
+          ? `Salieron ${r.sacados} pieza${r.sacados === 1 ? '' : 's'} de ${r.sabor}.`
+          : `Salieron ${r.cuadros} cuadros de ${r.sabor}. Quedan ${r.libres ?? 0} libres.`,
+      )
       await cargar()
     } catch (e) {
       setError(mensajeDeError(e))
@@ -283,7 +288,10 @@ export default function App() {
             {tarde > 0
               ? `${tarde} se pasó de su hora`
               : (r?.en_horno ?? 0) > 0
-                ? `${r?.en_horno} molde${r?.en_horno === 1 ? '' : 's'} en el horno`
+                  ? // «Tandas» y no «moldes»: en el horno pueden convivir
+                    // moldes de hojaldra y piezas de rosca, y sumarlos como
+                    // moldes es contar roscas en una unidad que no es la suya.
+                    `${r?.en_horno} tanda${r?.en_horno === 1 ? '' : 's'} en el horno`
                 : (r?.esperando ?? 0) > 0
                   ? `${r?.esperando} esperando turno`
                   : 'El horno está libre'}
@@ -369,7 +377,7 @@ export default function App() {
                     {i.sabor}
                   </p>
                   <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/55 mt-1">
-                    {i.moldes} {i.moldes === 1 ? 'molde' : 'moldes'} de {i.molde} · aún sin armar
+                    {medidaDeProduccion(i.moldes, i.unidad, i.molde)} · aún sin armar
                   </p>
                 </div>
                 <span className="font-mono text-xs text-sa-green-ink/35 shrink-0">#{i.folio}</span>

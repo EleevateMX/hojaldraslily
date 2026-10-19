@@ -111,3 +111,56 @@ export function enMoldesConTamano(cuadros: number, molde: number): string {
   const parte = r.cuartos === 0 ? '' : ` y ${FRACCION[r.cuartos]}`
   return `${r.moldes} molde${r.moldes === 1 ? '' : 's'} de ${r.molde}${parte}`
 }
+
+/**
+ * Cuánto es un renglón de producción, dicho como lo cuenta quien lo hace.
+ *
+ * Hay dos maneras de contar en esta panadería y la pantalla tiene que usar la
+ * del renglón que está pintando:
+ *
+ * - **moldes**: las hojaldras. Salen de un molde de 48 o de 24 cuadros y de
+ *   ahí se cortan los paquetes. Se dice «3 moldes de 48 · 144 cuadros».
+ * - **piezas**: las roscas, la Trenza Suiza, las Patas, los Tutis, las
+ *   galletas, lo de anís, el Pan de Muerto, la Hojaldra de Corazón, los
+ *   bocadillos. No salen de un molde y no se cuentan en cuadros: «3 piezas».
+ *
+ * Existe para que las cuatro pantallas que preguntan lo mismo lo escriban
+ * igual. Escrito a mano en cada una, la primera que alguien toque empieza a
+ * decir «3 moldes de null cuadros» debajo de veinte roscas.
+ */
+export function medidaDeProduccion(
+  cantidad: number,
+  unidad: 'molde' | 'pieza',
+  molde?: number | null,
+  cuadros?: number | null,
+): string {
+  const n = Math.max(0, Math.floor(cantidad))
+  // Sin molde no hay molde del que hablar, diga lo que diga `unidad`: así una
+  // fila a medio migrar se lee bien en vez de anunciar un molde inexistente.
+  if (unidad === 'pieza' || molde == null) {
+    return `${n} pieza${n === 1 ? '' : 's'}`
+  }
+  const base = `${n} molde${n === 1 ? '' : 's'} de ${molde}`
+  if (cuadros == null) return base
+  return `${base} · ${cuadros} cuadro${cuadros === 1 ? '' : 's'}`
+}
+
+/**
+ * Cómo le dice la casa a un paquete de N cuadros.
+ *
+ * Los nombres están en el cartel y en la lista de precios, y son los que usa
+ * el mostrador: **Mini** son 12 cuadros, **Chica** 24, **Grande** 48. El de 6
+ * no tiene nombre —en la lista aparece como «6 cuadros»— y aquí tampoco se le
+ * inventa uno.
+ *
+ * Existe porque la casa pidió ver los tamaños rotulados («Mini 12, Chica 24,
+ * grandes 48»), y porque un «7 de 12 · o · 3 de 24» en letra chica es
+ * exactamente lo que nadie lee. Si mañana cambia un nombre, cambia aquí y
+ * cambia en todas las pantallas a la vez.
+ */
+export function nombreDeTamano(cuadros: number): string {
+  if (cuadros === 12) return 'Mini'
+  if (cuadros === 24) return 'Chica'
+  if (cuadros === 48) return 'Grande'
+  return `${cuadros} cuadro${cuadros === 1 ? '' : 's'}`
+}

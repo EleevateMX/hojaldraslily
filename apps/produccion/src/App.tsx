@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import {
   listarOrdenesDeProduccion,
   armarMoldes,
+  apuntarMasas,
   entrarConPin,
   empleadoDeLaSesion,
   salirDeSesion,
@@ -10,7 +11,8 @@ import {
   type EmpleadoSesion,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
-import { mensajeDeError, urlDeFoto } from '@lily/utils'
+import { mensajeDeError } from '@lily/utils'
+import { Tarjeta, ordenesPorDia } from './vista'
 import { sb } from './lib/sb'
 
 /**
@@ -35,132 +37,6 @@ import { sb } from './lib/sb'
  */
 
 const REFRESCO_MS = 20000
-
-/** Un renglón: un sabor y cuántos moldes van armados de los que se pidieron. */
-function Renglon({
-  item,
-  ocupado,
-  onMarcar,
-}: {
-  item: ItemDeProduccion
-  ocupado: boolean
-  onMarcar: (armados: number) => void
-}) {
-  const foto = urlDeFoto(item.imagen_url, import.meta.env.BASE_URL)
-  const falta = Math.max(0, item.moldes - item.armados)
-  const listo = falta === 0
-  // No se puede desarmar lo que ya se fue al horno o ya salió de él.
-  const piso = item.enHorno + item.horneados
-
-  return (
-    <div
-      className={[
-        'rounded-sa-lg border-2 p-5 transition-colors',
-        listo ? 'bg-sa-mint/10 border-sa-mint/50' : 'bg-white border-sa-green-ink/10',
-      ].join(' ')}
-    >
-      <div className="flex items-center gap-4">
-        {foto && <img src={foto} alt="" className="w-16 h-16 object-contain shrink-0" />}
-        <div className="min-w-0 flex-1">
-          <p className="font-display text-2xl leading-tight text-sa-green-ink">{item.sabor}</p>
-          <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            moldes de {item.molde} cuadros
-          </p>
-          {(item.enHorno > 0 || item.horneados > 0) && (
-            <p className="font-body text-xs text-sa-green-ink/55 mt-1">
-              {item.enHorno > 0 && `${item.enHorno} en el horno`}
-              {item.enHorno > 0 && item.horneados > 0 && ' · '}
-              {item.horneados > 0 && `${item.horneados} ya salieron`}
-            </p>
-          )}
-        </div>
-        <div className="text-right shrink-0">
-          <p className="font-display text-4xl leading-none text-sa-green-ink">
-            {item.armados}
-            <span className="text-2xl text-sa-green-ink/35"> / {item.moldes}</span>
-          </p>
-          <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-            {listo ? 'todo armado' : `faltan ${falta} molde${falta === 1 ? '' : 's'}`}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 mt-4">
-        {[1, 2].map((n) => (
-          <button
-            key={n}
-            disabled={ocupado}
-            onClick={() => onMarcar(item.armados + n)}
-            className="flex-1 h-14 rounded-sa bg-sa-green text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-50"
-          >
-            +{n} molde{n === 1 ? '' : 's'}
-          </button>
-        ))}
-        {/* "Ya está" evita tener que sumar a mano hasta llegar al numero
-            pedido, que es lo que se hace 9 de cada 10 veces. */}
-        <button
-          disabled={ocupado || listo}
-          onClick={() => onMarcar(item.moldes)}
-          className="flex-[1.4] h-14 rounded-sa bg-sa-green-deep text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-30"
-        >
-          Ya está
-        </button>
-        <button
-          disabled={ocupado || item.armados <= piso}
-          onClick={() => onMarcar(Math.max(piso, item.armados - 1))}
-          className="w-14 h-14 rounded-sa border-2 border-sa-green-ink/15 text-sa-green-ink/60 font-display text-2xl active:scale-95 transition-transform disabled:opacity-25"
-          title="Me pasé, quitar uno"
-        >
-          −
-        </button>
-      </div>
-    </div>
-  )
-}
-
-function Tarjeta({
-  orden,
-  ocupado,
-  onMarcar,
-}: {
-  orden: OrdenDeProduccion
-  ocupado: string | null
-  onMarcar: (item: ItemDeProduccion, armados: number) => void
-}) {
-  const total = orden.items.reduce((s, i) => s + i.moldes, 0)
-  const hecho = orden.items.reduce((s, i) => s + Math.min(i.armados, i.moldes), 0)
-  const pct = total > 0 ? Math.round((hecho / total) * 100) : 0
-
-  return (
-    <section className="bg-sa-cream-soft rounded-sa-lg p-5 shadow-sa">
-      <div className="flex items-baseline justify-between gap-4 mb-1">
-        <p className="font-display text-2xl text-sa-green-ink">Orden #{orden.folio}</p>
-        <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50">
-          {hecho} de {total} moldes
-        </p>
-      </div>
-      {orden.nota && (
-        <p className="font-body text-sm text-sa-green-ink/70 mb-2">{orden.nota}</p>
-      )}
-
-      {/* Una barra, no un porcentaje suelto: de lejos se ve cuanto falta. */}
-      <div className="h-2 rounded-full bg-sa-green-ink/10 overflow-hidden mb-4">
-        <div className="h-full bg-sa-green transition-all" style={{ width: `${pct}%` }} />
-      </div>
-
-      <div className="space-y-3">
-        {orden.items.map((i) => (
-          <Renglon
-            key={i.id}
-            item={i}
-            ocupado={ocupado === i.id}
-            onMarcar={(h) => onMarcar(i, h)}
-          />
-        ))}
-      </div>
-    </section>
-  )
-}
 
 export default function App() {
   const [empleado, setEmpleado] = useState<EmpleadoSesion | null>(null)
@@ -197,6 +73,24 @@ export default function App() {
     const t = setInterval(() => void cargar(), REFRESCO_MS)
     return () => clearInterval(t)
   }, [empleado, cargar])
+
+  async function apuntar(item: ItemDeProduccion, masas: number | null) {
+    setOcupado(item.id)
+    setOrdenes((antes) =>
+      antes.map((o) => ({
+        ...o,
+        items: o.items.map((i) => (i.id === item.id ? { ...i, masas } : i)),
+      })),
+    )
+    try {
+      await apuntarMasas(sb, item.id, masas)
+    } catch (e) {
+      setError(mensajeDeError(e))
+    } finally {
+      await cargar()
+      setOcupado(null)
+    }
+  }
 
   async function marcar(item: ItemDeProduccion, moldes: number) {
     setOcupado(item.id)
@@ -242,10 +136,22 @@ export default function App() {
       />
     )
 
-  const pendientes = ordenes.reduce(
-    (s, o) => s + o.items.reduce((x, i) => x + Math.max(0, i.moldes - i.armados), 0),
-    0,
-  )
+  const dias = ordenesPorDia(ordenes)
+  const vencidos = dias.filter((d) => d.vencido).reduce((s, d) => s + d.faltan, 0)
+  const deHoy = dias.filter((d) => d.hoy).reduce((s, d) => s + d.faltan, 0)
+  const pendientes = dias.reduce((s, d) => s + d.faltan, 0)
+
+  // Un solo titular, y el más urgente: lo que se quedó de días pasados duele
+  // antes que lo de hoy, y lo de hoy antes que lo del sábado. Si dijera las
+  // tres cifras a la vez, de lejos no se leería ninguna.
+  const titular =
+    vencidos > 0
+      ? `Se quedaron ${vencidos} de antes`
+      : deHoy > 0
+        ? `Faltan ${deHoy} por hacer hoy`
+        : pendientes > 0
+          ? `Hoy nada · ${pendientes} para después`
+          : 'Todo al día'
 
   return (
     <div className="min-h-screen bg-sa-cream-paper text-sa-green-ink">
@@ -259,11 +165,7 @@ export default function App() {
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">
             Producción
           </p>
-          <h1 className="font-display text-4xl leading-none mt-1">
-            {pendientes > 0
-              ? `Faltan ${pendientes} molde${pendientes === 1 ? '' : 's'} por hacer`
-              : 'Todo al día'}
-          </h1>
+          <h1 className="font-display text-4xl leading-none mt-1">{titular}</h1>
         </div>
         <button
           onClick={() => void salirDeSesion(sb).then(() => setEmpleado(null))}
@@ -298,8 +200,35 @@ export default function App() {
             </p>
           </div>
         ) : (
-          ordenes.map((o) => (
-            <Tarjeta key={o.id} orden={o} ocupado={ocupado} onMarcar={marcar} />
+          dias.map((d) => (
+            <section key={d.fecha} className="space-y-5">
+              {/* El separador del día. Lo que se quedó de antes va en carmín
+                  profundo, que es el color de la alarma de la casa: el acento
+                  rosa se ve despintado a un metro (§4). */}
+              <div className="flex items-baseline gap-3 pt-1">
+                <h2
+                  className={[
+                    'font-display text-2xl',
+                    d.vencido ? 'text-sa-green-deep' : d.hoy ? 'text-sa-green-ink' : 'text-sa-green-ink/55',
+                  ].join(' ')}
+                >
+                  {d.titulo}
+                </h2>
+                <div className="h-px flex-1 bg-sa-green-ink/10" />
+                <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/45">
+                  {d.faltan > 0 ? `faltan ${d.faltan}` : 'listo'}
+                </p>
+              </div>
+              {d.ordenes.map((o) => (
+                <Tarjeta
+                  key={o.id}
+                  orden={o}
+                  ocupado={ocupado}
+                  onMarcar={marcar}
+                  onApuntarMasas={apuntar}
+                />
+              ))}
+            </section>
           ))
         )}
       </main>

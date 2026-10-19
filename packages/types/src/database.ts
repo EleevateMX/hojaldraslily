@@ -1689,7 +1689,7 @@ export type Database = {
         Row: {
           cantidad_hecha: number
           cantidad_pedida: number | null
-          cuadros_por_molde: number
+          cuadros_por_molde: number | null
           horno_entro_en: string | null
           id: string
           masas_restantes: number | null
@@ -1701,11 +1701,12 @@ export type Database = {
           sabor: string | null
           terminado_en: string | null
           terminado_por: string | null
+          unidad: string
         }
         Insert: {
           cantidad_hecha?: number
           cantidad_pedida?: number | null
-          cuadros_por_molde: number
+          cuadros_por_molde?: number | null
           horno_entro_en?: string | null
           id?: string
           masas_restantes?: number | null
@@ -1717,11 +1718,12 @@ export type Database = {
           sabor?: string | null
           terminado_en?: string | null
           terminado_por?: string | null
+          unidad?: string
         }
         Update: {
           cantidad_hecha?: number
           cantidad_pedida?: number | null
-          cuadros_por_molde?: number
+          cuadros_por_molde?: number | null
           horno_entro_en?: string | null
           id?: string
           masas_restantes?: number | null
@@ -1733,6 +1735,7 @@ export type Database = {
           sabor?: string | null
           terminado_en?: string | null
           terminado_por?: string | null
+          unidad?: string
         }
         Relationships: [
           {
