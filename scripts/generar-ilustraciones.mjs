@@ -32,6 +32,9 @@ const C = {
   philly: '#FFF3E0', bola: '#F2C94C', cera: '#C8384D', verde: '#7FA85A',
   nutella: '#5C3A25', nutella2: '#4A2C1A', canela: '#A9633A', lomo: '#B86B4B',
   azucar: '#FFF9EE', sombra: '#000000',
+  // Bebidas
+  cola: '#E0343B', cola2: '#B8262D', plata: '#D9DDE3', plata2: '#F1F3F5',
+  naranja: '#F2A33A', naranja2: '#D8872A', naranja3: '#E8771E',
 }
 
 // ── Piezas reutilizables ───────────────────────────────────────────────────
@@ -168,6 +171,49 @@ const ILUSTRACIONES = {
     ${brillo(96, 94)}`,
 
   // Por encargo
+  // Bebidas (20/10/26: la lista de la casa). Mismo molde: formas redondeadas,
+  // dos o tres tonos, un brillo y la sombra. Sin marcas dibujadas —una lata
+  // roja ya se lee como lo que es— y sin texto, que a 56 px no se lee.
+  'coca-cola-lata': `${sombra(128, 214, 50, 10)}
+    <rect x="84" y="56" width="88" height="140" rx="16" fill="${C.cola2}"/>
+    <rect x="84" y="56" width="88" height="140" rx="16" fill="${C.cola}" opacity=".0"/>
+    <rect x="84" y="56" width="88" height="140" rx="16" fill="${C.cola}"/>
+    <rect x="84" y="56" width="26" height="140" rx="13" fill="${C.cola2}" opacity=".35"/>
+    <ellipse cx="128" cy="58" rx="44" ry="10" fill="${C.plata}"/>
+    <ellipse cx="128" cy="56" rx="38" ry="7" fill="${C.plata2}"/>
+    <rect x="118" y="50" width="20" height="5" rx="2.5" fill="${C.plata}"/>
+    <path d="M84,126 q44,-26 88,0 v12 q-44,-26 -88,0z" fill="${C.blanco}" opacity=".9"/>
+    ${brillo(104, 76, 4)}${brillo(100, 168, 3)}`,
+  'coca-cola-botella': `${sombra(128, 216, 44, 9)}
+    <path d="M114,34 h28 v18 q22,12 22,40 q0,22 -8,36 q8,14 8,34 v28 q0,12 -12,12 h-48 q-12,0 -12,-12 v-28 q0,-20 8,-34 q-8,-14 -8,-36 q0,-28 22,-40z" fill="${C.cola2}"/>
+    <path d="M114,34 h28 v18 q22,12 22,40 q0,22 -8,36 q8,14 8,34 v28 q0,12 -12,12 h-48 q-12,0 -12,-12 v-28 q0,-20 8,-34 q-8,-14 -8,-36 q0,-28 22,-40z" fill="${C.cola}" transform="translate(0,-4)"/>
+    <rect x="112" y="26" width="32" height="12" rx="5" fill="${C.plata}"/>
+    <rect x="94" y="108" width="68" height="40" rx="8" fill="${C.blanco}" opacity=".92"/>
+    <path d="M100,128 q28,-14 56,0" stroke="${C.cola}" stroke-width="5" fill="none" stroke-linecap="round"/>
+    ${brillo(104, 70, 4)}${brillo(104, 176, 3)}`,
+  'boxito': `${sombra(128, 214, 52, 10)}
+    <path d="M78,80 l50,-20 l50,20 v104 q0,10 -10,10 h-80 q-10,0 -10,-10z" fill="${C.naranja2}"/>
+    <path d="M78,80 l50,-20 l50,20 l-50,20z" fill="${C.naranja3}"/>
+    <rect x="78" y="100" width="100" height="94" rx="6" fill="${C.naranja}"/>
+    <circle cx="128" cy="150" r="24" fill="${C.naranja3}"/><circle cx="128" cy="150" r="16" fill="${C.queso}"/>
+    <path d="M128,134 v32 M112,150 h32" stroke="${C.naranja3}" stroke-width="3" opacity=".8"/>
+    <rect x="156" y="36" width="8" height="58" rx="4" fill="${C.blanco}" transform="rotate(14 160 65)"/>
+    ${brillo(92, 114, 4)}`,
+  'soldado-chocolate': `${sombra(128, 216, 46, 9)}
+    <path d="M104,50 h48 v16 q24,10 24,38 v84 q0,12 -12,12 h-72 q-12,0 -12,-12 v-84 q0,-28 24,-38z" fill="${C.nutella2}"/>
+    <path d="M104,50 h48 v16 q24,10 24,38 v84 q0,12 -12,12 h-72 q-12,0 -12,-12 v-84 q0,-28 24,-38z" fill="${C.nutella}" transform="translate(0,-4)"/>
+    <rect x="100" y="38" width="56" height="16" rx="6" fill="${C.canela}"/>
+    <rect x="86" y="110" width="84" height="44" rx="8" fill="${C.crema}"/>
+    <ellipse cx="128" cy="132" rx="22" ry="12" fill="${C.nutella}"/>
+    ${brillo(96, 80, 4)}${brillo(94, 180, 3)}`,
+  'jugo': `${sombra(128, 216, 46, 9)}
+    <path d="M106,44 h44 v14 q26,10 26,40 v88 q0,12 -12,12 h-72 q-12,0 -12,-12 v-88 q0,-30 26,-40z" fill="${C.naranja2}"/>
+    <path d="M106,44 h44 v14 q26,10 26,40 v88 q0,12 -12,12 h-72 q-12,0 -12,-12 v-88 q0,-30 26,-40z" fill="${C.naranja}" transform="translate(0,-4)"/>
+    <rect x="102" y="32" width="52" height="16" rx="6" fill="${C.verde}"/>
+    <circle cx="128" cy="138" r="28" fill="${C.naranja3}"/><circle cx="128" cy="138" r="21" fill="${C.queso}"/>
+    <path d="M128,117 v42 M107,138 h42 M113,123 l30,30 M143,123 l-30,30" stroke="${C.naranja3}" stroke-width="2.5" opacity=".8"/>
+    ${brillo(98, 78, 4)}`,
+
   'hojaldra-de-corazon': `${sombra(128, 216, 76)}
     <path d="M128,206 C70,164 44,134 44,98 a40,40 0 0,1 84,-18 a40,40 0 0,1 84,18 c0,36 -26,66 -84,108z" fill="${C.corteza}" transform="translate(0,14)"/>
     <path d="M128,206 C70,164 44,134 44,98 a40,40 0 0,1 84,-18 a40,40 0 0,1 84,18 c0,36 -26,66 -84,108z" fill="${C.masa}"/>

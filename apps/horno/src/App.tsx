@@ -8,13 +8,14 @@ import {
   entrarConPin,
   empleadoDeLaSesion,
   salirDeSesion,
+  vigilarSesion,
   type HornoEnVivo,
   type EnElHorno,
   type EsperandoHorno,
   type EmpleadoSesion,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
-import { mensajeDeError, urlDeFoto, medidaDeProduccion } from '@lily/utils'
+import { mensajeDeError, urlDeFoto, medidaDeProduccion, crearPaciencia } from '@lily/utils'
 import { sb } from './lib/sb'
 
 /**
@@ -202,14 +203,23 @@ export default function App() {
     void empleadoDeLaSesion(sb).then(setEmpleado)
   }, [])
 
+  // Una relectura que falla al volver del bloqueo no se pinta: se reintenta
+  // a los 10 s. El error se enseña cuando lleva un rato sin una buena.
+  const paciencia = useRef(crearPaciencia())
   const cargar = useCallback(async () => {
     try {
       setDatos(await hornoEnVivo(sb))
       setError(null)
+      paciencia.current.bien()
     } catch (e) {
-      setError(mensajeDeError(e))
+      if (paciencia.current.seAcabo()) setError(mensajeDeError(e))
     }
   }, [])
+
+  useEffect(
+    () => vigilarSesion(sb, { alVolver: () => void cargar(), alSalir: () => setEmpleado(null) }),
+    [cargar],
+  )
 
   useEffect(() => {
     if (!empleado) return

@@ -1,5 +1,13 @@
 # Banorte: qué se necesita para habilitarlo
 
+> **Actualizado el 20/10/26.** Ya está el manual oficial y ya hay usuario y
+> contraseña. Las preguntas 3, 4 y 7 del correo de abajo **ya las contesta el
+> manual** (no hay cable ni driver: la pinpad va por WiFi y se cobra por una
+> API REST; hay verificación por número de control). Lo que falta pedir ahora
+> son **cuatro datos** y está, con su mensaje listo, en
+> `docs/interredes-manual.md` §4. Esta hoja se queda como registro de lo que
+> se preguntó antes de tener el manual.
+
 Hoja práctica. El análisis completo —qué ofrece Banorte, por qué el camino de
 e-commerce no sirve y de dónde salió cada dato— está en
 `docs/terminal-banorte.md`. Esto es solo **qué hacer**.

@@ -1,5 +1,15 @@
 # Cobrar con terminal Banorte
 
+> **Corregido el 20/10/26 por el manual oficial.** La casa entregó el *Manual
+> de Integración Interredes Remoto V1.8.1*, y lo que dice está en
+> `docs/interredes-manual.md`. Lo esencial: la pinpad actual (PAX A920Pro)
+> se cobra por una **API REST con JSON**, no por un puerto COM; el cobro va
+> en una Edge Function como Clip y no depende de la PC de la tienda. La
+> sección «La pinpad es un puerto COM» de abajo describe el camino viejo
+> (el DLL `PINPAD.TPV`), que sigue existiendo para otras pinpads pero **no
+> es el de Lily**. El resto de este documento —qué es Interredes, por qué no
+> usar e-commerce, dónde encaja `PaymentProvider`— sigue valiendo.
+
 Investigación de qué ofrece Banorte y cuál de sus caminos sirve para una
 panadería que cobra en el mostrador. **Todavía no hay código**: al final se
 explica por qué, y qué hay que preguntarle al ejecutivo del banco antes de

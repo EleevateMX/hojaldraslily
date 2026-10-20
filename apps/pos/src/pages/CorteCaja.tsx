@@ -8,10 +8,11 @@ import { ContarEfectivo, CONTEO_VACIO } from '@/components/pos/ContarEfectivo'
 import type { CorteResumen } from '@lily/types'
 import { useVentasSinInternet } from '../store/sinInternet'
 import { useConexion } from '../lib/conexion'
+import { salirDeLaCaja } from '../lib/sesion'
 
 export function CorteCaja() {
   const navigate = useNavigate()
-  const { empleado, corte, setCorte, cerrarSesion, limpiarOrden } = usePosStore()
+  const { empleado, corte, setCorte, limpiarOrden } = usePosStore()
 
   const [resumen, setResumen] = useState<CorteResumen | null>(null)
   // Se cuenta el cajon pieza por pieza. El total lo saca el SERVIDOR desde
@@ -94,7 +95,7 @@ export function CorteCaja() {
             Volver a caja
           </button>
           <button
-            onClick={() => { cerrarSesion(); navigate('/login') }}
+            onClick={() => void salirDeLaCaja().then(() => navigate('/login'))}
             className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-8 py-4 rounded-sa-lg font-display text-lg shadow-sa-sm transition-all"
           >
             Cerrar sesión

@@ -687,8 +687,27 @@ export function suscribirProduccion(sb: ClienteLily, onCambio: () => void): () =
   }
   conectar()
 
+  // Al volver del fondo (una tableta bloqueada, una pestaña escondida) el
+  // canal puede estar muerto sin haberlo dicho: el navegador cortó el socket
+  // y el aviso de CLOSED llega hasta que vence el latido, medio minuto
+  // después. Mientras tanto no entra nada en vivo. Si no está unido, se
+  // vuelve a conectar ya; y se relee una vez, porque lo que pasó mientras
+  // dormía no llegó por ningún lado.
+  const alVolver = () => {
+    if (apagado || document.visibilityState !== 'visible') return
+    if (canal?.state !== 'joined') {
+      if (canal) void sb.removeChannel(canal)
+      canal = null
+      if (reintento) clearTimeout(reintento)
+      conectar()
+    }
+    avisar()
+  }
+  document.addEventListener('visibilitychange', alVolver)
+
   return () => {
     apagado = true
+    document.removeEventListener('visibilitychange', alVolver)
     if (reintento) clearTimeout(reintento)
     if (espera) clearTimeout(espera)
     if (canal) void sb.removeChannel(canal)

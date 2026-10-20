@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><defs>
+  <radialGradient id="sombra"><stop offset="0" stop-color="#000000" stop-opacity=".22"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
+</defs><ellipse cx="128" cy="216" rx="46" ry="9" fill="url(#sombra)"/>
+    <path d="M104,50 h48 v16 q24,10 24,38 v84 q0,12 -12,12 h-72 q-12,0 -12,-12 v-84 q0,-28 24,-38z" fill="#4A2C1A"/>
+    <path d="M104,50 h48 v16 q24,10 24,38 v84 q0,12 -12,12 h-72 q-12,0 -12,-12 v-84 q0,-28 24,-38z" fill="#5C3A25" transform="translate(0,-4)"/>
+    <rect x="100" y="38" width="56" height="16" rx="6" fill="#A9633A"/>
+    <rect x="86" y="110" width="84" height="44" rx="8" fill="#FFF6DF"/>
+    <ellipse cx="128" cy="132" rx="22" ry="12" fill="#5C3A25"/>
+    <circle cx="96" cy="80" r="4" fill="#FFFFFF" opacity=".9"/><circle cx="94" cy="180" r="3" fill="#FFFFFF" opacity=".9"/></svg>

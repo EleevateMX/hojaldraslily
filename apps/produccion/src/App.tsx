@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   listarOrdenesDeProduccion,
   listarEncargos,
@@ -8,13 +8,14 @@ import {
   entrarConPin,
   empleadoDeLaSesion,
   salirDeSesion,
+  vigilarSesion,
   type OrdenDeProduccion,
   type ItemDeProduccion,
   type EmpleadoSesion,
   type Encargo,
 } from '@lily/supabase'
 import { CandadoDeEstacion } from '@lily/ui'
-import { mensajeDeError } from '@lily/utils'
+import { mensajeDeError, crearPaciencia } from '@lily/utils'
 import { Tarjeta, EncargosPorHora, ordenesPorDia } from './vista'
 import { sb } from './lib/sb'
 
@@ -70,6 +71,10 @@ export default function App() {
     })()
   }, [])
 
+  // Una relectura que falla al volver del bloqueo (el WiFi reconectando, el
+  // token renovándose en ese instante) no se pinta: se vuelve a intentar a
+  // los 10 s. Solo se enseña el error cuando lleva un rato sin una buena.
+  const paciencia = useRef(crearPaciencia())
   const cargar = useCallback(async (conSpinner = false) => {
     if (conSpinner) setCargando(true)
     try {
@@ -80,12 +85,20 @@ export default function App() {
       setOrdenes(o)
       setEncargos(e)
       setError(null)
+      paciencia.current.bien()
     } catch (e) {
-      setError(mensajeDeError(e))
+      if (paciencia.current.seAcabo()) setError(mensajeDeError(e))
     } finally {
       setCargando(false)
     }
   }, [])
+
+  // Al desbloquear la tableta: renovar el token, releer, y si la sesión ya no
+  // está, volver al PIN.
+  useEffect(
+    () => vigilarSesion(sb, { alVolver: () => void cargar(), alSalir: () => setEmpleado(null) }),
+    [cargar],
+  )
 
   useEffect(() => {
     if (!empleado) return

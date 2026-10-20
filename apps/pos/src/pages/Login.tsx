@@ -4,6 +4,7 @@ import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
 import { listarEmpleadosActivos, entrarConPin } from '@lily/supabase'
 import type { Empleado } from '@lily/supabase'
+import { recordarCajero } from '../lib/sesion'
 
 export function Login() {
   const navigate = useNavigate()
@@ -57,6 +58,7 @@ export function Login() {
       // El PIN es la autoridad: si hay tile seleccionado, debe coincidir.
       if (r.ok && r.empleado && (!seleccionado || r.empleado.id === seleccionado.id)) {
         iniciarSesion(r.empleado)
+        void recordarCajero(r.empleado)
         navigate('/')
         return
       }

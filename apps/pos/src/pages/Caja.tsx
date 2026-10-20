@@ -11,13 +11,15 @@ import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
 import { mensajeDeError, sumaConteo, hayConteo, horaEnMerida, type Conteo } from '@lily/utils'
 import { conRespaldo } from '../lib/respaldo'
+import { salirDeLaCaja } from '../lib/sesion'
 
 export function Caja() {
   const navigate = useNavigate()
   const {
-    empleado, almacen, caja, corte, setContexto, setCorte, cerrarSesion, limpiarOrden,
+    empleado, almacen, caja, corte, setContexto, setCorte,
     canal, setCanal,
   } = usePosStore()
+  const salir = () => void salirDeLaCaja().then(() => navigate('/login'))
 
   // El horno ya no se consulta aquí: lo hace el PanelDeProducción, que es
   // quien lo enseña. Antes esta pantalla leía `listarOrdenesConTiempo` para
@@ -164,7 +166,7 @@ export function Caja() {
                     : 'Abrir caja'}
               </button>
               <button
-                onClick={() => { cerrarSesion(); navigate('/login') }}
+                onClick={salir}
                 className="w-full mt-3 font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 hover:text-sa-strawberry"
               >
                 Salir
@@ -240,7 +242,7 @@ export function Caja() {
             Corte de caja
           </button>
           <button
-            onClick={() => { limpiarOrden(); cerrarSesion(); navigate('/login') }}
+            onClick={salir}
             className="font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-4 py-2 rounded-full transition-colors border border-sa-strawberry/30"
           >
             Salir

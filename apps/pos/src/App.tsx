@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { Login } from './pages/Login'
 import { Caja } from './pages/Caja'
@@ -11,6 +11,10 @@ import { registrarPwa } from '@lily/pwa/registrar'
 import { vigilarConexion } from './lib/conexion'
 import { cargarDatosDelTicket } from './lib/ticket'
 import { useVentasSinInternet, vigilarVentasSinInternet } from './store/sinInternet'
+import { recuperarCajero } from './lib/sesion'
+import { recuperarTicketEnCurso, guardarTicketEnCurso } from './lib/ticketEnCurso'
+import { vigilarSesion } from '@lily/supabase'
+import { sb } from './lib/sb'
 
 function RequireAuth({ children }: { children: React.ReactNode }) {
   const empleado = usePosStore((s) => s.empleado)
@@ -19,6 +23,38 @@ function RequireAuth({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  // ¿Hay un cajero con sesión viva? Se pregunta ANTES de pintar nada: si se
+  // mandara al login mientras se averigua, la tableta recién desbloqueada
+  // enseñaría el PIN un segundo y luego la caja — o peor, el cajero
+  // alcanzaría a teclearlo. Ver `lib/sesion.ts`.
+  const [revisando, setRevisando] = useState(() => usePosStore.getState().empleado === null)
+  useEffect(() => {
+    if (!revisando) return
+    void recuperarCajero()
+      .then((e) => {
+        if (!e) return
+        usePosStore.getState().iniciarSesion(e)
+        // Y el ticket que estaba a medias, si lo había y es de hace poco.
+        recuperarTicketEnCurso()
+      })
+      .finally(() => setRevisando(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => guardarTicketEnCurso(), [])
+
+  // Y mientras la caja vive: si la sesión se cierra desde otra pestaña o se
+  // vence del todo, se vuelve al PIN en vez de seguir enseñando errores. El
+  // «al volver» renueva el token antes de que el siguiente cobro salga con
+  // uno vencido.
+  useEffect(
+    () =>
+      vigilarSesion(sb, {
+        alSalir: () => {
+          if (usePosStore.getState().empleado) usePosStore.getState().cerrarSesion()
+        },
+      }),
+    [],
+  )
   // Deja la caja instalable (icono propio, a pantalla completa) y guarda su
   // casco para que abra con internet intermitente.
   //
@@ -46,6 +82,14 @@ export default function App() {
     vigilarVentasSinInternet()
     void cargarDatosDelTicket()
   }, [])
+
+  if (revisando) {
+    return (
+      <div className="min-h-screen grid place-items-center bg-sa-green-deep">
+        <p className="font-mono text-sm uppercase tracking-wide text-sa-cream/60">Un momento…</p>
+      </div>
+    )
+  }
 
   return (
     <Routes>

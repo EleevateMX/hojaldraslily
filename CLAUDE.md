@@ -2,7 +2,7 @@
 
 Este archivo es para quien retome el trabajo (yo incluido, en otra sesión):
 qué está vivo, cómo se opera y **qué trampas ya nos costaron caro**. Los
-detalles temáticos viven en `docs/` (54 documentos); esto es el mapa.
+detalles temáticos viven en `docs/` (55 documentos); esto es el mapa.
 
 **Este repo es el sistema de Hojaldras Lily**, replicado de un motor que
 ya opera en producción en otro negocio (ver `docs/replicar-el-sistema.md`).
@@ -11,7 +11,7 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **212 migraciones aplicadas en orden, y 212
+`fzkdgqqvfkogmxdgqsxj` tiene **213 migraciones aplicadas en orden, y 213
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
@@ -38,10 +38,15 @@ Lo que falta para abrir, todo fuera del código:
 1. **Decidir la terminal, y sus secretos.** Clip ya está escrito y probado;
    solo faltan sus tres secretos en Supabase (`CLIP_API_KEY`,
    `CLIP_WEBHOOK_SECRET`, `CLIP_TERMINAL_SERIAL`). Si al final es **Banorte**,
-   el camino es otro y hay que preguntarle cosas al banco primero: el análisis
-   está en `docs/terminal-banorte.md` y la hoja de qué pedir —con el correo
-   listo para el ejecutivo— en `docs/banorte-que-pedir.md`. Cambiar de proveedor **no toca ninguna
-   pantalla** — para eso existe `PaymentProvider` en `packages/payments`.
+   **ya llegó el manual oficial de Interredes** (20/10/26) y cambia lo que se
+   creía: la pinpad nueva (PAX A920Pro) se cobra por una **API REST con
+   JSON**, no por un puerto COM, así que el cobro cabe en una Edge Function
+   igual que Clip y no depende de la PC de la tienda. Qué dice el manual, qué
+   tenemos y qué falta está en `docs/interredes-manual.md`; el análisis
+   anterior (`docs/terminal-banorte.md`) y la hoja de qué pedir
+   (`docs/banorte-que-pedir.md`) quedan corregidos por ese documento. Cambiar
+   de proveedor **no toca ninguna pantalla** — para eso existe
+   `PaymentProvider` en `packages/payments`.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
 3. **Costos, recetas y proveedores en Costeos.** La **lista de precios** ya
@@ -533,13 +538,14 @@ Dos consecuencias que hay que respetar:
   no se imprime**: vive solo en pantalla.
 - Si el agente "acepta datos y no imprime", el problema es físico
   (papel/tapa/sensor): el autotest con FEED al encender lo confirma.
-- **Si la terminal termina siendo Banorte, el cobro vive aquí también.** Su
-  pinpad se instala como un **puerto COM de Windows**, y un navegador no puede
-  abrir un puerto COM: es la misma frontera que el papel. No iría en una Edge
-  Function sino en este programa, con su cola, como la de impresión. Ojo con
-  la consecuencia: así el cobro **solo funciona con la PC de la tienda
-  encendida**, cosa que con Clip no pasa porque el cobro se pide por internet.
-  Ver `docs/terminal-banorte.md`.
+- **Si la terminal termina siendo Banorte, el cobro NO vive aquí** —esto se
+  creía antes del manual—. El manual de Interredes Remotas (20/10/26) trae
+  dos caminos: el DLL `PINPAD.TPV` para pinpads viejas (y ese sí ataría el
+  cobro a la PC) y una **API REST** para la A920Pro, donde la caja manda un
+  JSON a `posbridgetpv.tpvsolutions.com.mx`, la API se lo pasa a la pinpad
+  por WiFi y devuelve el resultado. Es la forma de Clip: va en una Edge
+  Function con los secretos del lado del servidor y funciona con la PC
+  apagada. Ver `docs/interredes-manual.md`.
 
 ### 2.5 La identidad es una sola, y vive en `packages/brand`
 
@@ -667,6 +673,8 @@ empaquetador y se desvían solas:
 | Se fue el internet | **Seguir vendiendo**: efectivo o terminal del banco. El folio sale como «S-01» y las ventas se registran solas al volver. No se puede cerrar la caja hasta que entren (ver `docs/sin-internet.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
 | Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
+| Las pestañas de la caja | Van en el orden que pidió gerencia (20/10): Todos, Menú del día, Bocadillos, Panes, Galletas, Anís, Menú de temporada, Bebidas, Por encargo. Es `categorias.orden`; se cambia en Admin → Categorías |
+| Las bebidas | Son las de la lista de la casa (20/10): Coca Cola en lata y botella, regular y sin azúcar, Agua, Boxito, Soldado Chocolate y Jugo. Viven en Costeos → Bebidas (son reventa): cambiar un precio ahí y Guardar. La Coca Cola es **una tarjeta con cuatro opciones** porque el nombre lleva el `·` |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
 | Abrir o cerrar el turno contando el cajón | Se teclea **cuántas piezas** hay de cada billete y de cada moneda; el total lo saca el sistema. Billetes y monedas van en columnas separadas porque **el $20 existe como los dos** |
 | Contar el almacén | Admin → **Inventario** → **Contar**. Se escribe lo que HAY, no la diferencia. **Es el único lugar donde se fijan existencias**: la pestaña Inventario de Costeos sirve para contar e imprimir la hoja, no para fijarlas |
@@ -874,6 +882,28 @@ empaquetador y se desvían solas:
 
 **Frontend**
 
+- **Una tableta bloqueada es una recarga.** Al bloquear la tableta el sistema
+  descarta la página para ahorrar memoria, y al desbloquear la vuelve a cargar
+  de cero. El cajero vivía solo en memoria (`usePosStore.empleado`), así que
+  la caja mandaba al login **con la sesión de Supabase todavía viva** en
+  localStorage; y el ticket a medias se perdía. Era literal el reclamo de la
+  casa: «al bloquear la tableta y abrirla, se sale del programa». Ahora
+  `lib/sesion.ts` recupera al cajero de la sesión al arrancar (con respaldo
+  para cuando el WiFi todavía no vuelve) y `lib/ticketEnCurso.ts` guarda el
+  ticket dos horas. Consecuencia que no se veía: «Salir» solo vaciaba el
+  store y **nunca cerraba la sesión del servidor**; desde que el cajero se
+  recupera, un «Salir» así lo volvía a meter en la siguiente recarga. Ahora
+  `salirDeLaCaja` cierra las dos.
+- **Y la otra mitad del bloqueo es el «error que se va solo».** Mientras la
+  tableta duerme no corre el temporizador que renueva el token ni vive el
+  canal de Realtime. Al volver, la primera consulta salía con el token
+  vencido (401) o antes de que el WiFi reconectara, y las pantallas de
+  estación pintaban ese fallo en rojo diez segundos. `vigilarSesion`
+  (`@lily/supabase`) renueva el token al volver a primer plano, relee, y
+  manda al PIN si la sesión ya no existe; `suscribirProduccion` reconecta
+  el canal si no está unido; y `crearPaciencia` (`@lily/utils`) hace que el
+  error se enseñe solo si lleva 25 s sin una lectura buena. Es la regla de
+  arriba: si se recupera con un reintento, se reintenta en silencio.
 - El kiosko **no se recarga a media venta**: la señal de recarga espera a
   que la pantalla esté en el menú y sin carrito. **Lo mismo vale para
   estrenar una versión nueva de la app**: activar un service worker recarga

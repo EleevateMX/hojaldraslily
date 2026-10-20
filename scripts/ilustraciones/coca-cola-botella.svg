@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256"><defs>
+  <radialGradient id="sombra"><stop offset="0" stop-color="#000000" stop-opacity=".22"/><stop offset="1" stop-color="#000000" stop-opacity="0"/></radialGradient>
+</defs><ellipse cx="128" cy="216" rx="44" ry="9" fill="url(#sombra)"/>
+    <path d="M114,34 h28 v18 q22,12 22,40 q0,22 -8,36 q8,14 8,34 v28 q0,12 -12,12 h-48 q-12,0 -12,-12 v-28 q0,-20 8,-34 q-8,-14 -8,-36 q0,-28 22,-40z" fill="#B8262D"/>
+    <path d="M114,34 h28 v18 q22,12 22,40 q0,22 -8,36 q8,14 8,34 v28 q0,12 -12,12 h-48 q-12,0 -12,-12 v-28 q0,-20 8,-34 q-8,-14 -8,-36 q0,-28 22,-40z" fill="#E0343B" transform="translate(0,-4)"/>
+    <rect x="112" y="26" width="32" height="12" rx="5" fill="#D9DDE3"/>
+    <rect x="94" y="108" width="68" height="40" rx="8" fill="#FFFFFF" opacity=".92"/>
+    <path d="M100,128 q28,-14 56,0" stroke="#E0343B" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <circle cx="104" cy="70" r="4" fill="#FFFFFF" opacity=".9"/><circle cx="104" cy="176" r="3" fill="#FFFFFF" opacity=".9"/></svg>

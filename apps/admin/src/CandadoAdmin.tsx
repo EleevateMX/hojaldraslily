@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 // El logotipo va sobre carmin pleno (barra lateral): version en negativo.
 import logo from '@lily/brand/logo-negativo.png'
-import { entrarConPin, empleadoDeLaSesion, salirDeSesion, type EmpleadoSesion } from '@lily/supabase'
+import { entrarConPin, empleadoDeLaSesion, salirDeSesion, vigilarSesion, type EmpleadoSesion } from '@lily/supabase'
 import { sb } from './lib/sb'
 
 /**
@@ -35,6 +35,12 @@ export function CandadoAdmin({ children }: { children: ReactNode }) {
       setRevisando(false)
     })()
   }, [])
+
+  // Admin se abre desde el teléfono, y el teléfono se bloquea a cada rato.
+  // Al volver se renueva el token antes de la siguiente consulta, y si la
+  // sesión ya no está se vuelve al PIN en vez de dejar cada pantalla
+  // enseñando su propio error.
+  useEffect(() => vigilarSesion(sb, { alSalir: () => setEmpleado(null) }), [])
 
   async function entrar() {
     if (pin.length < 4 || entrando) return
