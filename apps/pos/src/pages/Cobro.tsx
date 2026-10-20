@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
@@ -8,6 +8,7 @@ import {
   cobrarOrdenMixto,
   entregarEncargoConVenta,
 } from '@lily/supabase'
+import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
 import { type TicketData } from '@lily/ui'
 import { sacarTicket } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
@@ -21,9 +22,12 @@ import {
 
 /* Dos formas de cobro y ya: efectivo o terminal. Cuantas menos opciones,
    menos se equivoca quien cobra con gente esperando.
-   La terminal se guarda como `tarjeta` en la base —el enum de metodos no
-   cambia— y la referencia (folio del voucher) queda opcional, para poder
-   conciliar el corte con lo que reporte la terminal que se contrate.
+   La terminal es la pinpad de Banorte: el importe se le manda desde aquí
+   (`obtenerTerminal`), la pinpad cobra y el servidor registra la venta en la
+   misma llamada. Se guarda como `tarjeta` en la base —el enum de metodos no
+   cambia—. Si la terminal todavia no esta conectada al sistema, la caja cae
+   al cobro manual de siempre: se cobra en la pinpad a mano y la referencia
+   (folio del voucher) queda opcional para conciliar el corte.
    Los iconos son SVG, no emoji: el emoji se ve distinto en cada equipo y no
    se puede tenir (esta escrito en docs/replicar-el-sistema.md). */
 const METODOS: { key: MetodoPago; label: string; icono: 'efectivo' | 'terminal'; pideRef?: boolean }[] = [
@@ -103,6 +107,16 @@ export function Cobro() {
   const [recibido, setRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /** Un aviso que no es error: «la terminal no está conectada, se cobra a mano». */
+  const [aviso, setAviso] = useState<string | null>(null)
+  /** El importe que está esperando en la pinpad, mientras se espera la tarjeta. */
+  const [enTerminal, setEnTerminal] = useState<number | null>(null)
+  /**
+   * La orden que ya nació para este ticket. Si la tarjeta se rechaza y el
+   * cajero vuelve a intentar, se cobra ESTA orden en vez de crear otra: una
+   * orden sin pagar por cada intento ensucia los folios y el corte.
+   */
+  const ordenViva = useRef<{ id: string; folio: number } | null>(null)
   const enLinea = useConexion((s) => s.enLinea)
 
   // Guarda: sin corte o sin ítems no hay nada que cobrar.
@@ -126,9 +140,10 @@ export function Cobro() {
     ? mixtoValido
     : metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
 
-  /** El ticket del papel, con el folio que corresponda. */
-  function armarDatosDelTicket(folio: number | string): TicketData {
+  /** El ticket del papel, con el folio que corresponda y, si la terminal cobró, su voucher. */
+  function armarDatosDelTicket(folio: number | string, voucher: VoucherTerminal | null = null): TicketData {
     return {
+      tarjeta: voucher ?? undefined,
       folio,
       fecha: new Date(),
       cajero: empleado?.nombre,
@@ -161,7 +176,9 @@ export function Cobro() {
             { metodo: 'Terminal', monto: tarjetaMixto },
           ]
         : undefined,
-      referenciaPago: referencia.trim() || null,
+      // La autorización del banco manda sobre lo que se haya tecleado: si la
+      // terminal cobró, la referencia es la suya.
+      referenciaPago: voucher?.autorizacion ?? (referencia.trim() || null),
       recibido: !mixto && metodo === 'efectivo' && recibidoNum > 0 ? recibidoNum : undefined,
     }
   }
@@ -259,12 +276,107 @@ export function Cobro() {
       const enEfectivo = mixto ? efectivoMixto : metodo === 'efectivo' ? totalNeto : 0
       const conTarjeta = mixto ? tarjetaMixto : metodo === 'efectivo' ? 0 : totalNeto
 
-      let folio: number
+      let folio = 0
       // El id de la orden, para mandarle el ticket a la térmica. Si queda en
       // null, el papel sale por el navegador como hasta hoy.
       let ordenId: string | null = null
+      let voucher: VoucherTerminal | null = null
 
-      if (encargo) {
+      /**
+       * Lo que va con tarjeta pasa por la pinpad de Banorte.
+       *
+       * El importe aparece en la terminal, el cliente pone la tarjeta y el
+       * servidor registra la venta en la misma llamada —por el mismo camino
+       * que una venta de mostrador—. Aquí solo se espera y se lee la
+       * respuesta. Tres salidas:
+       *
+       *   - aprobada: la venta ya está registrada; queda imprimir.
+       *   - la terminal no está conectada al sistema (`no_configurado`): se
+       *     avisa y se sigue por el cobro manual de siempre, con la orden que
+       *     ya nació si es el caso.
+       *   - rechazada / sin respuesta / anulada: se enseña tal cual y NO se
+       *     limpia el ticket, para volver a intentar o cambiar de método.
+       */
+      let registradaEnTerminal = false
+      if (conTarjeta > 0) {
+        const terminal = obtenerTerminal(sb)
+        let peticion
+        if (encargo) {
+          peticion = {
+            encargo: {
+              encargo_id: encargo.id,
+              sucursal_id: almacen!.sucursal_id,
+              almacen_id: almacen!.id,
+              canal,
+              corte_id: corte!.id,
+              descuento: descuentoTotal(),
+              efectivo: enEfectivo,
+              tarjeta: conTarjeta,
+              items: items.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })),
+            },
+            idempotencyKey: crypto.randomUUID(),
+            empleadoId: empleado?.id ?? null,
+          }
+        } else {
+          yaTocamosElServidor = true
+          if (!ordenViva.current) {
+            const orden = await crearOrden(
+              sb,
+              {
+                sucursal_id: almacen!.sucursal_id,
+                almacen_id: almacen!.id,
+                canal,
+                corte_id: corte!.id,
+                cliente_id: null,
+                empleado_id: empleado?.id ?? null,
+                descuento: descuentoTotal(),
+              },
+              items.map((l) => ({
+                producto_id: l.producto.id,
+                cantidad: l.cantidad,
+                precio_unitario: precioDe(l.producto),
+                personalizacion: l.personalizacion,
+              })),
+            )
+            ordenViva.current = { id: orden.id, folio: orden.folio }
+          }
+          peticion = {
+            ordenId: ordenViva.current.id,
+            efectivo: enEfectivo,
+            idempotencyKey: crypto.randomUUID(),
+            empleadoId: empleado?.id ?? null,
+          }
+        }
+
+        yaTocamosElServidor = true
+        setEnTerminal(conTarjeta)
+        let r
+        try {
+          r = await terminal.cobrar(peticion)
+        } finally {
+          setEnTerminal(null)
+        }
+
+        if (r.ok) {
+          folio = r.folio ?? ordenViva.current?.folio ?? 0
+          ordenId = r.ordenId
+          voucher = r.voucher
+          registradaEnTerminal = true
+          ordenViva.current = null
+          if (r.modo && r.modo !== 'PRD') {
+            setAviso(`La terminal está en modo de PRUEBA (${r.modo}): esta venta NO se cobró de verdad.`)
+          }
+        } else if (r.estado === 'no_configurado') {
+          setAviso('La terminal de Banorte todavía no está conectada al sistema: cobra en la pinpad a mano y confirma aquí.')
+        } else {
+          setError(r.mensaje)
+          return
+        }
+      }
+
+      if (registradaEnTerminal) {
+        // nada: ya está
+      } else if (encargo) {
         /**
          * Vienen por su encargo y se llevan algo más: UNA sola llamada.
          *
@@ -296,24 +408,27 @@ export function Cobro() {
         ordenId = r.orden_id
       } else {
         yaTocamosElServidor = true
-        const orden = await crearOrden(
-          sb,
-          {
-            sucursal_id: almacen!.sucursal_id,
-            almacen_id: almacen!.id,
-            canal,
-            corte_id: corte!.id,
-            cliente_id: null,
-            empleado_id: empleado?.id ?? null,
-            descuento: descuentoTotal(),
-          },
-          items.map((l) => ({
-            producto_id: l.producto.id,
-            cantidad: l.cantidad,
-            precio_unitario: precioDe(l.producto),
-            personalizacion: l.personalizacion,
-          })),
-        )
+        // La orden que ya nació para la terminal, si la hubo; si no, nace aquí.
+        const orden =
+          ordenViva.current ??
+          (await crearOrden(
+            sb,
+            {
+              sucursal_id: almacen!.sucursal_id,
+              almacen_id: almacen!.id,
+              canal,
+              corte_id: corte!.id,
+              cliente_id: null,
+              empleado_id: empleado?.id ?? null,
+              descuento: descuentoTotal(),
+            },
+            items.map((l) => ({
+              producto_id: l.producto.id,
+              cantidad: l.cantidad,
+              precio_unitario: precioDe(l.producto),
+              personalizacion: l.personalizacion,
+            })),
+          ))
         folio = orden.folio
         ordenId = orden.id
         // Cobro inmediato aprobado → el trigger descuenta inventario y manda a
@@ -333,9 +448,10 @@ export function Cobro() {
             idempotencyKey: crypto.randomUUID(),
           })
         }
+        ordenViva.current = null
       }
 
-      await sacarTicket(ordenId, armarDatosDelTicket(folio))
+      await sacarTicket(ordenId, armarDatosDelTicket(folio, voucher))
 
       limpiarOrden()
       navigate('/', { replace: true })
@@ -367,6 +483,24 @@ export function Cobro() {
 
   return (
     <div className="h-dvh flex flex-col bg-sa-cream-paper overflow-hidden">
+      {/* El importe ya está en la pinpad: lo único que hay que hacer es esperar
+          la tarjeta. Encima de todo, sin botón de cancelar: la llamada al
+          banco no se puede cortar desde aquí, y cerrar esta pantalla a medias
+          es la forma de no saber si cobró. Se cancela desde la pinpad. */}
+      {enTerminal != null && (
+        <div className="fixed inset-0 z-50 bg-sa-green-deep flex flex-col items-center justify-center gap-5 px-8 text-sa-cream text-center">
+          <svg className="animate-spin w-14 h-14 text-sa-cream/70" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+            <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <p className="font-display text-4xl leading-tight">Cobra en la terminal</p>
+          <p className="font-display text-6xl">{mxn(enTerminal)}</p>
+          <p className="font-body text-base text-sa-cream/70 max-w-sm">
+            El importe ya está en la pinpad de Banorte: acerca, inserta o desliza la
+            tarjeta. No cierres esta pantalla hasta que conteste.
+          </p>
+        </div>
+      )}
       {/* Hero con total */}
       <header className="bg-sa-green-deep text-sa-cream flex-shrink-0">
         <div className="flex items-center gap-4 px-4 md:px-6 py-2 md:py-3 border-b border-sa-cream/10">
@@ -531,23 +665,34 @@ export function Cobro() {
             </div>
           )}
 
-          {/* Referencia para Clip / Otro */}
+          {/* Con tarjeta: al confirmar, el importe se manda a la pinpad de
+              Banorte. El folio a mano solo hace falta si la terminal no está
+              conectada al sistema (entonces la caja lo avisa). */}
           {(mixto || metodoSel.pideRef) && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
+              <p className="font-display text-base text-sa-green-ink mb-1">
+                Al confirmar, {mixto ? mxn(tarjetaMixto) : mxn(totalNeto)} aparece en la terminal
+              </p>
+              <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
+                El cliente acerca o inserta su tarjeta en la pinpad de Banorte y la venta
+                queda registrada sola, con su voucher en el ticket.
+              </p>
               <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
-                Folio del voucher (opcional)
+                Folio del voucher (solo si cobró a mano en la pinpad)
               </label>
               <input
                 type="text"
                 value={referencia}
                 onChange={(e) => setReferencia(e.target.value)}
-                placeholder="Para cuadrar el corte con la terminal"
+                placeholder="Opcional, para cuadrar el corte"
                 className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-sm text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
               />
-              <p className="font-mono text-xs text-sa-green-ink/50 mt-2 leading-relaxed">
-                Cobre el monto en la terminal y, si quiere, anote aquí el folio del
-                voucher. Puede dejarlo vacío.
-              </p>
+            </div>
+          )}
+
+          {aviso && (
+            <div className="bg-sa-banana/30 border border-sa-banana rounded-sa px-4 py-3 mb-4">
+              <p className="font-mono text-sm text-sa-green-ink">{aviso}</p>
             </div>
           )}
 

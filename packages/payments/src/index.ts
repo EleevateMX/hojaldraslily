@@ -1,4 +1,5 @@
 export * from './types'
+export * from './terminal'
 export { ClipPaymentProvider } from './clipProvider'
 export { MockPaymentProvider } from './mockProvider'
 

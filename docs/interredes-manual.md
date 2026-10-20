@@ -171,42 +171,60 @@ Si lo que Kenny tiene abre la consola de multicobros, son las primeras.
 
 ---
 
-## 3. Lo que falta de nuestro lado
+## 3. Lo que ya está escrito (20/10, tarde) y lo que sigue faltando
 
-1. **`supabase/functions/interredes-cobrar`** (y `-cancelar`, `-devolver`,
-   `-verificar`), sobre `_shared/interredes.ts`, que ya existe (§0) con la
-   base, el certificado que falta y el `login`: token en memoria (2 h), `sale` con
-   `mode` leído de un secreto (`AUT` en pruebas, `PRD` en producción),
-   `controlNumber` = folio de la orden + intento, y el resultado guardado
-   **crudo** en `pagos.raw` antes de interpretarlo. Si no hay respuesta
-   (`T`, timeout o red), **verificar por `controlNumber`** antes de dar por
-   fallado. Secretos: `INTERREDES_API_USER`, `INTERREDES_API_PASSWORD`,
-   `PAYWORKS_USER`, `PAYWORKS_PASSWORD`, `PINPAD_SERIAL`, `PAYWORKS_GROUP`,
-   `PAYWORKS_MODE`. **Nunca en el repo ni en el chat.**
-2. **`banorteProvider.ts`** en `packages/payments`, implementando
-   `PaymentProvider` contra esas funciones, y el `if` en
-   `obtenerPaymentProvider()` que hoy tiene a Clip escrito duro (que elija
-   por un parámetro de la sucursal, no por código).
-3. **El voucher en el ticket.** El Anexo VII obliga a imprimir, para una
-   venta con tarjeta: «Banorte», número de afiliación, nombre, dirección y
-   teléfono del comercio, fecha y hora, tipo de operación, **número de
-   control**, **Terminal ID**, importe, **últimos 4 dígitos**, **código de
-   autorización** (o motivo del rechazo), **referencia**, marca de la
-   tarjeta, crédito/débito, banco emisor, y la validación: la línea de firma,
-   o **«AUTORIZADO CON FIRMA ELECTRÓNICA»** si hubo PIN, o nada si fue QPS.
-   Con chip se agregan **AID, TVR, TSI, Application Preferred Name** (o
-   Application Label). Contactless menor a $1,000 **no imprime voucher** al
-   cliente. Todo eso ya viene en la respuesta; es un bloque nuevo de
-   `TicketData` (`tarjeta?: {...}`) que `armarTicket` y `ticketHTML` pintan
-   igual, con su prueba de que los dos coinciden.
-4. **La cancelación del día desde la caja** (`void` con `paywReference` +
-   `authCode`), que hoy no existe como gesto porque con Clip no hacía falta.
-   Un cobro aprobado y una venta que no se concreta es el caso que más
-   pasa; sin este botón, el reembolso es un trámite con el banco.
+*(La casa decidió ese mismo día que la terminal es Banorte y solo Banorte:
+el cron de Clip se apagó y su código se queda de referencia hasta que esto
+esté certificado.)*
+
+**Ya está, desplegado y con el camino del dinero sin tocar:**
+
+1. **`supabase/functions/interredes-cobrar`**, sobre `_shared/interredes.ts`
+   (login con token en memoria, `sale`, `void`, verificación). La caja le
+   manda la orden; la función lee el total **del servidor**, escribe el
+   intento en `terminal_intentos` (idempotencia y rastro), manda la venta a
+   la pinpad con `mode` del secreto `PAYWORKS_MODE`, y si se aprueba
+   registra la venta por **`fn_cobrar_orden` / `fn_cobrar_orden_mixto` /
+   `fn_encargo_entregar_con_venta`** — el mismo camino que efectivo. La
+   respuesta cruda queda en `pagos.proveedor_payload`. Si la red no contesta,
+   **verifica por `controlNumber`** antes de rendirse; si la tarjeta se
+   aprobó y la venta no entró, **anula en la misma llamada**. Solo con sesión
+   del personal (`fn_es_staff`), probado: la llave publicable sola recibe 403.
+2. **`interredes-cancelar`**: la cancelación del día (`void` con
+   `paywReference` + `authCode`), solo gerencia. Marca el pago y la orden
+   cancelados. Todavía **sin botón** en pantalla.
+3. **`@lily/payments` → `obtenerTerminal()` / `BanorteTerminal`**, una
+   interfaz propia (síncrona: una pregunta, una respuesta) en vez de
+   `PaymentProvider`, que era la forma de Clip con sondeo y webhook. La caja
+   (`Cobro.tsx`) cobra «Terminal» y «Mixto» por ahí, enseña «Cobra en la
+   terminal $X» mientras espera, y **cae al cobro manual** si la función
+   contesta `no_configurado`.
+4. **El voucher en el ticket** (Anexo VII): `TicketData.tarjeta`, pintado
+   igual por `armarTicket` (térmica) y `ticketHTML` (navegador), con prueba
+   de que coinciden y de que **solo salen los últimos 4** de la tarjeta.
+   Con NIP imprime «AUTORIZADO CON FIRMA ELECTRÓNICA»; con firma, la raya;
+   QPS, nada.
+
+**Lo que sigue faltando, y todo es de la casa o del proveedor:**
+
+1. **Los siete secretos** en Supabase (`supabase/functions/README.md` dice
+   cuál es cada uno y quién lo da). El 20/10 estaban puestos los dos de la
+   API, pero el usuario capturado no existía en TPV Solutions.
+2. **La primera venta en modo `AUT`**, que aprueba sin cobrar: ahí se
+   confirman los **nombres de las claves JSON de la respuesta** (el anexo no
+   los trae; `leerResultado` los busca sin importar mayúsculas ni nivel, y
+   si alguno no aparece se ajusta ahí y en ningún otro lado) y los campos
+   exactos de `void` y `/transaction`.
+3. **El botón de cancelar del día** en la caja (con PIN de gerencia), sobre
+   `interredes-cancelar`, que ya existe.
+4. **La devolución** (`refund`, para otro día) — sin botón ni función
+   todavía; hoy es un trámite con el banco.
 5. **La matriz de certificación**: correr contra `AUT` las transacciones que
    el laboratorio pida (venta, cancelación, devolución, verificación, cierre)
    y llenar el Excel con afiliación, número de control, referencia, fecha y
    hora de cada una. Eso es un día de la casa con nosotros al lado.
+6. **El cierre de lote** (`settlement` por `group`), si Banorte lo exige
+   desde la caja y no lo hace solo la pinpad. Se sabrá en la certificación.
 
 ---
 

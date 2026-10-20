@@ -106,6 +106,44 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.find((x) => x.startsWith('TOTAL'))!.endsWith('$340.00')).toBe(true)
   })
 
+  it('el voucher de la terminal imprime lo que pide el banco y solo los últimos 4', () => {
+    const conTarjeta: TicketData = {
+      ...venta,
+      metodoPago: 'Terminal',
+      recibido: undefined,
+      referenciaPago: '123456',
+      tarjeta: {
+        afiliacion: '7654321', terminalId: 'TID01', controlNumber: 'L1042T1ABC',
+        autorizacion: '123456', referencia: '000012345678', marca: 'VISA', tipo: 'CREDITO',
+        banco: 'BANORTE', pan: '4152 31** **** 9876', entrada: 'CHIP', pin: '1',
+        aid: 'A0000000031010', aplicacion: 'VISA CREDITO', tvr: '0000008000', tsi: 'E800',
+      },
+    }
+    const l = texto(armarTicket(conTarjeta, NEGOCIO_DEFAULT))
+    expect(l).toContain('BANORTE')
+    expect(l.some((x) => x.startsWith('Tarjeta') && x.endsWith('VISA CREDITO **** 9876'))).toBe(true)
+    expect(l.some((x) => x.startsWith('Autorización') && x.endsWith('123456'))).toBe(true)
+    expect(l.some((x) => x.startsWith('AID') && x.endsWith('A0000000031010'))).toBe(true)
+    expect(l).toContain('AUTORIZADO CON FIRMA ELECTRONICA')
+    // El PAN completo no sale en ningún renglón, y la referencia manual no se
+    // duplica cuando ya va en el voucher.
+    expect(l.some((x) => x.includes('4152'))).toBe(false)
+    expect(l.filter((x) => x.startsWith('Ref. '))).toEqual([])
+    // Ninguna línea se pasa del papel con el bloque puesto.
+    expect(armarTicket(conTarjeta, NEGOCIO_DEFAULT).filter((x) => columnas(x) > COLUMNAS_80MM)).toEqual([])
+    // Y el HTML dice lo mismo.
+    const html = ticketHTML(conTarjeta, NEGOCIO_DEFAULT)
+    expect(html).toContain('**** 9876')
+    expect(html).toContain('AUTORIZADO CON FIRMA ELECTRÓNICA')
+    expect(html).not.toContain('4152')
+    // Con firma: la raya; con QPS: nada.
+    const firma = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '0' } }, NEGOCIO_DEFAULT))
+    expect(firma.some((x) => x.trim() === 'Firma')).toBe(true)
+    const qps = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '2' } }, NEGOCIO_DEFAULT))
+    expect(qps.some((x) => x.trim() === 'Firma')).toBe(false)
+    expect(qps).not.toContain('AUTORIZADO CON FIRMA ELECTRONICA')
+  })
+
   it('el pago mixto sale con un renglón por parte', () => {
     const l = texto(armarTicket({
       ...venta,

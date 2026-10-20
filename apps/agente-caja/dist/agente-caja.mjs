@@ -39,6 +39,36 @@ function pesos(n) {
   const [ent, dec] = v.toFixed(2).split(".");
   return "$" + ent.replace(/\B(?=(\d{3})+(?!\d))/g, ",") + "." + dec;
 }
+function ultimosCuatro(pan) {
+  const digitos = (pan ?? "").replace(/\D/g, "");
+  return digitos.length >= 4 ? digitos.slice(-4) : null;
+}
+function parejasDeVoucher(t) {
+  const p = [];
+  const pon = (k, v) => {
+    if (v && String(v).trim()) p.push([k, String(v).trim()]);
+  };
+  pon("Afiliaci\xF3n", t.afiliacion);
+  pon("Terminal", t.terminalId);
+  pon("No. control", t.controlNumber);
+  const u4 = ultimosCuatro(t.pan);
+  pon("Tarjeta", [t.marca, t.tipo, u4 ? `**** ${u4}` : null].filter(Boolean).join(" "));
+  pon("Emisor", t.banco);
+  pon("Autorizaci\xF3n", t.autorizacion);
+  pon("Referencia", t.referencia);
+  pon("Entrada", t.entrada);
+  pon("AID", t.aid);
+  pon("Aplicaci\xF3n", t.aplicacion);
+  pon("TVR", t.tvr);
+  pon("TSI", t.tsi);
+  return p;
+}
+function validacionDeVoucher(pin) {
+  const v = (pin ?? "").trim();
+  if (v === "1") return "nip";
+  if (v === "2") return "nada";
+  return "firma";
+}
 function formato(ancho) {
   const W = ancho;
   const centrar = (s) => s.length >= W ? s.slice(0, W) : " ".repeat(Math.floor((W - s.length) / 2)) + s;
@@ -159,7 +189,22 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   } else {
     L.push(parear(data.metodoPago, pesos(total)));
   }
-  if (data.referenciaPago) L.push(`Ref. ${data.referenciaPago}`);
+  if (data.referenciaPago && !data.tarjeta) L.push(`Ref. ${data.referenciaPago}`);
+  if (data.tarjeta) {
+    L.push("");
+    L.push(estilo("BANORTE", { negrita: true, alinear: "centro" }));
+    for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
+    const validacion = validacionDeVoucher(data.tarjeta.pin);
+    if (validacion === "nip") {
+      L.push("");
+      L.push(estilo("AUTORIZADO CON FIRMA ELECTRONICA", { negrita: true, alinear: "centro" }));
+    } else if (validacion === "firma") {
+      L.push("");
+      L.push("");
+      L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
+      L.push(centrar("Firma"));
+    }
+  }
   if (data.recibido != null && data.recibido >= total) {
     L.push(parear("Recibido", pesos(data.recibido)));
     L.push(parear("Cambio", pesos(data.recibido - total)));

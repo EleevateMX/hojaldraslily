@@ -11,7 +11,7 @@
 
 import { NEGOCIO_DEFAULT } from './ticketTipos'
 import type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
-import { lineasDeAvisos } from './ticketLineas'
+import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher } from './ticketLineas'
 
 export type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
 export { NEGOCIO_DEFAULT } from './ticketTipos'
@@ -117,6 +117,29 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     )
     .join('')
 
+  // El voucher de la terminal, si el cobro pasó por ella. Las parejas y la
+  // validación salen de `ticketLineas`, para que el papel y esto digan lo
+  // mismo (Anexo VII de Interredes).
+  const voucher = data.tarjeta
+    ? (() => {
+        const parejas = parejasDeVoucher(data.tarjeta)
+        const validacion = validacionDeVoucher(data.tarjeta.pin)
+        return `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed #000;font-size:9px;line-height:1.4">
+    <div style="text-align:center;font-weight:600;letter-spacing:.12em">BANORTE</div>
+    <div class="cuentas" style="margin-top:3px">
+      ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right">${esc(v)}</div>`).join('')}
+    </div>
+    ${
+      validacion === 'nip'
+        ? `<div style="text-align:center;margin-top:6px;font-weight:600">AUTORIZADO CON FIRMA ELECTRÓNICA</div>`
+        : validacion === 'firma'
+          ? `<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>`
+          : ''
+    }
+  </div>`
+      })()
+    : ''
+
   const direccion = (negocio.direccion ?? '')
     .split('\n')
     .filter(Boolean)
@@ -213,6 +236,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     ${data.recibido != null ? `<div>Recibido</div><div style="text-align:right">${money(data.recibido)}</div>` : ''}
     ${cambio != null ? `<div style="font-weight:500">Cambio</div><div style="text-align:right;font-weight:500">${money(cambio)}</div>` : ''}
   </div>
+  ${voucher}
 
   <div class="regla" style="margin:8px 0 7px"></div>
 

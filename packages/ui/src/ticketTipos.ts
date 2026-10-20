@@ -50,6 +50,29 @@ export interface TicketNegocio {
   mostrarCajero?: boolean
 }
 
+export interface VoucherTarjeta {
+  afiliacion?: string | null
+  controlNumber?: string | null
+  autorizacion?: string | null
+  referencia?: string | null
+  terminalId?: string | null
+  marca?: string | null
+  /** Crédito / débito. */
+  tipo?: string | null
+  /** Banco emisor. */
+  banco?: string | null
+  /** PAN enmascarado; solo se imprimen los últimos 4. */
+  pan?: string | null
+  /** CHIP, CONTACTLESSCHIP, BANDA… */
+  entrada?: string | null
+  /** 1 = con NIP, 2 = QPS (sin firma ni NIP), 0 = con firma. */
+  pin?: string | null
+  aid?: string | null
+  aplicacion?: string | null
+  tvr?: string | null
+  tsi?: string | null
+}
+
 export interface TicketItem {
   cantidad: number
   nombre: string
@@ -85,7 +108,18 @@ export interface TicketData {
    * desde el lunes.
    */
   anticipo?: number
-  referenciaPago?: string | null // voucher/autorización Clip
+  referenciaPago?: string | null // autorización de la terminal, o el folio anotado a mano
+  /**
+   * El voucher de la terminal bancaria, cuando el cobro pasó por ella.
+   *
+   * Lo pide el Anexo VII del manual de Interredes (Banorte) para una venta
+   * con tarjeta: afiliación, número de control, Terminal ID, últimos 4,
+   * autorización, referencia, marca, crédito/débito, emisor, y cómo se
+   * validó (firma, NIP o nada si fue QPS). Con chip, además AID, TVR, TSI y
+   * el nombre de la aplicación. Todo opcional porque viene de la respuesta
+   * de la red: lo que no venga no se imprime, y no se inventa.
+   */
+  tarjeta?: VoucherTarjeta | null
   recibido?: number // efectivo entregado (para el cambio)
   // Lealtad
   /** A nombre de quién va el pedido. No es una ficha de cliente: es lo que

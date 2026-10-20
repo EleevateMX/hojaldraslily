@@ -331,6 +331,9 @@ importers:
       '@lily/brand':
         specifier: workspace:*
         version: link:../../packages/brand
+      '@lily/payments':
+        specifier: workspace:*
+        version: link:../../packages/payments
       '@lily/pwa':
         specifier: workspace:*
         version: link:../../packages/pwa

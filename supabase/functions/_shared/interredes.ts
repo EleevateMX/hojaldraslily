@@ -3,7 +3,8 @@
 // La API vive en `posbridgetpv.tpvsolutions.com.mx` y se documenta en
 // `docs/interredes-manual.md` (Anexo IX del manual de Interredes). Esto es
 // lo compartido entre las funciones que la usan: la base, el certificado
-// que le falta al servidor, y el login.
+// que le falta al servidor, el login con su token, y las tres operaciones
+// que la caja necesita (venta, verificación, cancelación).
 //
 // **El servidor manda su certificado dos veces y no manda el intermedio.**
 // Comprobado el 20/10/26 desde tres sitios distintos: pg_net desde la base
@@ -71,13 +72,93 @@ JEltkYnTAH41QJ6SAWO66GrrUESwN/cgZzL4JLEqz1Y=
 -----END CERTIFICATE-----
 `
 
-/** Faltan las credenciales de la API en los secrets del proyecto. */
+// ---------------------------------------------------------------------------
+// Secretos
+// ---------------------------------------------------------------------------
+
+/** Faltan secretos del proyecto. `faltan` dice cuáles, por nombre. */
 export class InterredesSinCredenciales extends Error {
-  constructor() {
-    super('INTERREDES_API_USER / INTERREDES_API_PASSWORD no están configuradas en los secrets del proyecto.')
+  readonly faltan: string[]
+  constructor(faltan: string[]) {
+    super(`Faltan en los secrets del proyecto: ${faltan.join(', ')}.`)
     this.name = 'InterredesSinCredenciales'
+    this.faltan = faltan
   }
 }
+
+/** Las credenciales de la API (las de TPV Solutions, no las de Payworks). */
+export function credencialesInterredes(): { username: string; password: string } {
+  const username = Deno.env.get('INTERREDES_API_USER')
+  const password = Deno.env.get('INTERREDES_API_PASSWORD')
+  const faltan = [!username && 'INTERREDES_API_USER', !password && 'INTERREDES_API_PASSWORD'].filter(Boolean) as string[]
+  if (faltan.length) throw new InterredesSinCredenciales(faltan)
+  return { username: username!, password: password! }
+}
+
+export type ModoInterredes = 'PRD' | 'AUT' | 'DEC' | 'RND'
+
+/**
+ * Todo lo que hace falta para COBRAR, no solo para entrar.
+ *
+ * Son dos juegos de credenciales distintos, y confundirlos es el error más
+ * fácil: las de la API (`INTERREDES_API_*`) abren el `/login`; las de
+ * Payworks (`PAYWORKS_*`) viajan DENTRO de cada venta como `user` y
+ * `password`, junto con la afiliación que representan.
+ *
+ * `PAYWORKS_MODE` decide si la pinpad cobra de verdad: `PRD` cobra; `AUT`,
+ * `DEC` y `RND` simulan (aprobada, declinada, al azar) sin tocar la tarjeta.
+ * Se exige explícito: un `PRD` por omisión es la forma de cobrarle de
+ * verdad a alguien durante una prueba.
+ */
+export interface ConfigInterredes {
+  api: { username: string; password: string }
+  payworks: { user: string; password: string }
+  /** Número de serie de la pinpad, como lo quiere Payworks («0» + últimos 8 en PAX). */
+  serial: string
+  /** Grupo/caja al que pertenece la terminal; va en cada venta y en el cierre. */
+  group: string
+  modo: ModoInterredes
+}
+
+export function configInterredes(): ConfigInterredes {
+  const lee = (k: string) => Deno.env.get(k)?.trim() || null
+  const api = { username: lee('INTERREDES_API_USER'), password: lee('INTERREDES_API_PASSWORD') }
+  const payworks = { user: lee('PAYWORKS_USER'), password: lee('PAYWORKS_PASSWORD') }
+  const serial = lee('PINPAD_SERIAL')
+  const group = lee('PAYWORKS_GROUP')
+  const modo = lee('PAYWORKS_MODE')?.toUpperCase() ?? null
+  const faltan: string[] = []
+  if (!api.username) faltan.push('INTERREDES_API_USER')
+  if (!api.password) faltan.push('INTERREDES_API_PASSWORD')
+  if (!payworks.user) faltan.push('PAYWORKS_USER')
+  if (!payworks.password) faltan.push('PAYWORKS_PASSWORD')
+  if (!serial) faltan.push('PINPAD_SERIAL')
+  if (!group) faltan.push('PAYWORKS_GROUP')
+  if (!modo || !['PRD', 'AUT', 'DEC', 'RND'].includes(modo)) faltan.push('PAYWORKS_MODE (PRD | AUT | DEC | RND)')
+  if (faltan.length) throw new InterredesSinCredenciales(faltan)
+  return {
+    api: { username: api.username!, password: api.password! },
+    payworks: { user: payworks.user!, password: payworks.password! },
+    serial: serial!,
+    group: group!,
+    modo: modo as ModoInterredes,
+  }
+}
+
+/** Qué secretos faltan para cobrar, sin lanzar. Para la sonda. */
+export function secretosQueFaltan(): string[] {
+  try {
+    configInterredes()
+    return []
+  } catch (e) {
+    if (e instanceof InterredesSinCredenciales) return e.faltan
+    throw e
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Transporte
+// ---------------------------------------------------------------------------
 
 let cliente: Deno.HttpClient | null = null
 
@@ -104,27 +185,49 @@ export function fetchInterredes(ruta: string, init: RequestInit = {}): Promise<R
   } as RequestInit & { client: Deno.HttpClient })
 }
 
-/** Las credenciales de la API (las de TPV Solutions, no las de Payworks). */
-export function credencialesInterredes(): { username: string; password: string } {
-  const username = Deno.env.get('INTERREDES_API_USER')
-  const password = Deno.env.get('INTERREDES_API_PASSWORD')
-  if (!username || !password) throw new InterredesSinCredenciales()
-  return { username, password }
+/** La API contestó, pero con un error (RFC 7807: el texto útil va en `detail`). */
+export class InterredesError extends Error {
+  readonly http: number
+  readonly cuerpo: unknown
+  constructor(http: number, cuerpo: unknown, mensaje: string) {
+    super(mensaje)
+    this.name = 'InterredesError'
+    this.http = http
+    this.cuerpo = cuerpo
+  }
+}
+
+/** Lee una respuesta: JSON si lo es, texto si no, y el mensaje útil de un error. */
+async function leerRespuesta(r: Response): Promise<{ http: number; cuerpo: unknown; texto: string }> {
+  const texto = await r.text()
+  let cuerpo: unknown = texto
+  try {
+    cuerpo = JSON.parse(texto)
+  } catch {
+    /* no era JSON */
+  }
+  return { http: r.status, cuerpo, texto }
+}
+
+function mensajeDeError(http: number, cuerpo: unknown, texto: string): string {
+  const c = cuerpo as Record<string, unknown> | null
+  const detalle = c && typeof c === 'object' ? (c.detail ?? c.message ?? c.title) : null
+  return typeof detalle === 'string' && detalle ? detalle : `La API de Interredes respondió ${http}: ${texto.slice(0, 200)}`
 }
 
 export interface LoginInterredes {
   /** Código HTTP que contestó la API. */
   http: number
-  /** `true` si vino un token. */
+  /** El token, o null si no vino. */
   token: string | null
   /** Lo que dijo la API cuando no dio token (`message`, o el cuerpo crudo). */
   mensaje: string | null
 }
 
 /**
- * `POST /login` → `{ status: true, token }` con un JWT de 2 horas, o
- * `{ status: false, message }`. El token va después en
- * `Authorization: Bearer …`.
+ * `POST /login` → `{ status: true, token }` con un JWT de 2 horas, o un
+ * error. Un usuario que no existe es un **500** con `detail: "El cliente X
+ * no existe."`, no un 401 — comprobado el 20/10/26.
  */
 export async function loginInterredes(username: string, password: string): Promise<LoginInterredes> {
   const r = await fetchInterredes('/login', {
@@ -132,16 +235,246 @@ export async function loginInterredes(username: string, password: string): Promi
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ username, password }),
   })
-  const texto = await r.text()
-  let cuerpo: { status?: boolean; token?: string; message?: string } = {}
+  const { http, cuerpo, texto } = await leerRespuesta(r)
+  const c = (cuerpo && typeof cuerpo === 'object' ? cuerpo : {}) as { status?: boolean; token?: string; message?: string }
+  const token = c.status && c.token ? c.token : null
+  return { http, token, mensaje: token ? null : mensajeDeError(http, cuerpo, texto) }
+}
+
+// El token vive 2 h. Se guarda por instancia de la función y se renueva
+// cuando le quedan menos de 5 minutos, o si la API lo rechaza (401).
+let tokenCache: { token: string; vence: number } | null = null
+
+function venceSegunJwt(token: string): number | null {
   try {
-    cuerpo = JSON.parse(texto)
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return typeof payload.exp === 'number' ? payload.exp * 1000 : null
   } catch {
-    /* no era JSON: se devuelve el texto como mensaje */
+    return null
   }
+}
+
+export async function tokenInterredes(cfg: ConfigInterredes, forzar = false): Promise<string> {
+  if (!forzar && tokenCache && tokenCache.vence - Date.now() > 5 * 60_000) return tokenCache.token
+  const r = await loginInterredes(cfg.api.username, cfg.api.password)
+  if (!r.token) throw new InterredesError(r.http, null, `No se pudo entrar a la API de Interredes: ${r.mensaje}`)
+  tokenCache = { token: r.token, vence: venceSegunJwt(r.token) ?? Date.now() + 110 * 60_000 }
+  return r.token
+}
+
+/**
+ * Una llamada autenticada. Si el token ya no sirve (401), entra de nuevo y
+ * reintenta UNA vez. Devuelve el cuerpo tal cual; si la API contestó un
+ * error, lanza `InterredesError` con su `detail`.
+ */
+export async function llamarInterredes(cfg: ConfigInterredes, ruta: string, body: Record<string, unknown>): Promise<unknown> {
+  let token = await tokenInterredes(cfg)
+  for (let intento = 0; intento < 2; intento++) {
+    const r = await fetchInterredes(ruta, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    })
+    const { http, cuerpo, texto } = await leerRespuesta(r)
+    if (http === 401 && intento === 0) {
+      token = await tokenInterredes(cfg, true)
+      continue
+    }
+    if (http < 200 || http >= 300) throw new InterredesError(http, cuerpo, mensajeDeError(http, cuerpo, texto))
+    return cuerpo
+  }
+  throw new InterredesError(401, null, 'La API de Interredes rechazó el token dos veces.')
+}
+
+// ---------------------------------------------------------------------------
+// Leer lo que contesta la pinpad
+// ---------------------------------------------------------------------------
+
+/**
+ * Lo del voucher (Anexo VII del manual): lo que el papel tiene que decir de
+ * una venta con tarjeta. Todo opcional porque viene de la respuesta y el
+ * manual no fija los nombres de las claves; lo que no venga no se imprime.
+ */
+export interface VoucherInterredes {
+  afiliacion: string | null
+  /** Número de control que mandamos nosotros. */
+  controlNumber: string | null
+  /** Código de autorización del banco. */
+  autorizacion: string | null
+  /** `paywReference`: con esto se cancela o devuelve. */
+  referencia: string | null
+  terminalId: string | null
+  marca: string | null
+  /** Crédito / débito. */
+  tipo: string | null
+  banco: string | null
+  /** PAN enmascarado, tal cual viene. */
+  pan: string | null
+  /** CHIP, CONTACTLESSCHIP, BANDA… */
+  entrada: string | null
+  /** 1 = con NIP, 2 = QPS (sin firma ni NIP), 0 = con firma. */
+  pin: string | null
+  aid: string | null
+  /** Application Preferred Name, o Application Label si no hay. */
+  aplicacion: string | null
+  tvr: string | null
+  tsi: string | null
+}
+
+export interface ResultadoTerminal {
+  /** A aprobada · D declinada · R rechazada · T sin respuesta · ? no se entendió. */
+  resultado: 'A' | 'D' | 'R' | 'T' | '?'
+  aprobado: boolean
+  /** `paywCode`: el motivo, cuando no se aprobó. */
+  codigo: string | null
+  /** `text`: lo que dice la red, para la pantalla. */
+  texto: string | null
+  voucher: VoucherInterredes
+  /** La respuesta entera, tal cual llegó. Se guarda antes de interpretarla. */
+  crudo: unknown
+}
+
+/**
+ * Aplana la respuesta a un solo nivel con las claves normalizadas (minúsculas,
+ * sin guiones ni guiones bajos). El Anexo IX enseña las PETICIONES en
+ * capturas y los campos de la respuesta por su nombre del DLL (`paywResult`,
+ * `authCode`…) sin decir si la API los devuelve así, envueltos en `data`, o
+ * en mayúsculas. Buscarlos sin importar forma ni nivel es lo que hace que la
+ * primera venta en modo AUT los encuentre en vez de reventar.
+ */
+export function aplanar(o: unknown, out: Record<string, unknown> = {}): Record<string, unknown> {
+  if (o && typeof o === 'object' && !Array.isArray(o)) {
+    for (const [k, v] of Object.entries(o as Record<string, unknown>)) {
+      if (v && typeof v === 'object' && !Array.isArray(v)) aplanar(v, out)
+      else {
+        const kk = k.toLowerCase().replace(/[^a-z0-9]/g, '')
+        if (!(kk in out)) out[kk] = v
+      }
+    }
+  }
+  return out
+}
+
+function campo(plano: Record<string, unknown>, ...nombres: string[]): string | null {
+  for (const n of nombres) {
+    const v = plano[n.toLowerCase().replace(/[^a-z0-9]/g, '')]
+    if (v === null || v === undefined) continue
+    const s = String(v).trim()
+    if (s) return s
+  }
+  return null
+}
+
+export function leerResultado(crudo: unknown): ResultadoTerminal {
+  const p = aplanar(crudo)
+  const bruto = (campo(p, 'paywResult', 'payw_result', 'result', 'resultado') ?? '?').toUpperCase()
+  const resultado = (['A', 'D', 'R', 'T'].includes(bruto[0]) ? bruto[0] : '?') as ResultadoTerminal['resultado']
   return {
-    http: r.status,
-    token: cuerpo.status && cuerpo.token ? cuerpo.token : null,
-    mensaje: cuerpo.token ? null : (cuerpo.message ?? texto.slice(0, 300)),
+    resultado,
+    aprobado: resultado === 'A',
+    codigo: campo(p, 'paywCode', 'payw_code', 'code'),
+    texto: campo(p, 'text', 'message', 'detail'),
+    voucher: {
+      afiliacion: campo(p, 'affiliation', 'afiliacion', 'merchantId'),
+      controlNumber: campo(p, 'controlNumber', 'control_number'),
+      autorizacion: campo(p, 'authCode', 'auth_code', 'authorization'),
+      referencia: campo(p, 'paywReference', 'payw_reference', 'reference'),
+      terminalId: campo(p, 'terminalId', 'terminal_id', 'tid'),
+      marca: campo(p, 'cardBrand', 'card_brand', 'brand'),
+      tipo: campo(p, 'cardType', 'card_type'),
+      banco: campo(p, 'issuingBank', 'issuing_bank', 'bank'),
+      pan: campo(p, 'pan', 'maskedPan', 'cardNumber'),
+      entrada: campo(p, 'entryMode', 'entry_mode'),
+      pin: campo(p, 'pinRequested', 'pin_requested'),
+      aid: campo(p, 'appId', 'app_id', 'aid'),
+      aplicacion: campo(p, 'appPrefName', 'app_pref_name', 'appLabel', 'app_label'),
+      tvr: campo(p, 'tvr'),
+      tsi: campo(p, 'tsi'),
+    },
+    crudo,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Las operaciones
+// ---------------------------------------------------------------------------
+
+/**
+ * El importe como lo quiere la API: en pesos, y con punto decimal SOLO si
+ * hay centavos («4301», «100.01» — los dos ejemplos del manual).
+ */
+export function montoInterredes(n: number): string {
+  const v = Math.round(n * 100) / 100
+  return Number.isInteger(v) ? String(v) : v.toFixed(2)
+}
+
+/** Lo que va en toda transacción: credenciales de Payworks, pinpad, grupo, modo. */
+function base(cfg: ConfigInterredes, controlNumber: string) {
+  return {
+    controlNumber,
+    customerRef1: '',
+    customerRef3: '',
+    // Lo exige el manual, siempre con este valor exacto.
+    customerRef5: 'PaxInterredAPI',
+    group: cfg.group,
+    mode: cfg.modo,
+    user: cfg.payworks.user,
+    password: cfg.payworks.password,
+    serialPinpad: cfg.serial,
+    timeout: '90',
+  }
+}
+
+/**
+ * Venta: el importe aparece en la pinpad, el cliente pone la tarjeta, y la
+ * llamada se queda esperando hasta que hay resultado o pasan 90 s.
+ */
+export async function ventaInterredes(cfg: ConfigInterredes, p: { controlNumber: string; monto: number }): Promise<ResultadoTerminal> {
+  const crudo = await llamarInterredes(cfg, '/transaction/sale', {
+    ...base(cfg, p.controlNumber),
+    deferment: '',
+    paymentNumber: '',
+    planType: '',
+    transactionAmount: montoInterredes(p.monto),
+  })
+  return leerResultado(crudo)
+}
+
+/**
+ * Cancelación del día (`void`): deshace una venta aprobada hoy. Pide la
+ * `paywReference` y el `authCode` de la venta original.
+ */
+export async function anularInterredes(
+  cfg: ConfigInterredes,
+  p: { controlNumber: string; monto: number; referencia: string; autorizacion: string },
+): Promise<ResultadoTerminal> {
+  const crudo = await llamarInterredes(cfg, '/transaction/void', {
+    ...base(cfg, p.controlNumber),
+    transactionAmount: montoInterredes(p.monto),
+    paywReference: p.referencia,
+    authCode: p.autorizacion,
+  })
+  return leerResultado(crudo)
+}
+
+/**
+ * Verificación: «¿qué pasó con el número de control X?». Es la pregunta que
+ * se hace cuando la venta no contestó (red, timeout): la pinpad pudo haber
+ * cobrado y nosotros no enterarnos. Devuelve null si la API no la encuentra.
+ */
+export async function verificarInterredes(
+  cfg: ConfigInterredes,
+  p: { controlNumber: string; referencia?: string | null },
+): Promise<ResultadoTerminal | null> {
+  try {
+    const crudo = await llamarInterredes(cfg, '/transaction', {
+      ...base(cfg, p.controlNumber),
+      ...(p.referencia ? { paywReference: p.referencia } : {}),
+    })
+    const r = leerResultado(crudo)
+    return r.resultado === '?' ? null : r
+  } catch (e) {
+    if (e instanceof InterredesError && (e.http === 404 || e.http === 500)) return null
+    throw e
   }
 }

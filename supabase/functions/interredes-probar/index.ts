@@ -26,6 +26,7 @@ import {
   InterredesSinCredenciales,
   credencialesInterredes,
   loginInterredes,
+  secretosQueFaltan,
 } from '../_shared/interredes.ts'
 
 interface Intento {
@@ -77,8 +78,15 @@ Deno.serve(async (req: Request) => {
     conIntermedio(username, password),
   ])
 
+  // Entrar no es cobrar: para la venta hacen falta además las credenciales
+  // de Payworks, la serie de la pinpad, el grupo y el modo. Se dice cuáles
+  // faltan, nunca sus valores.
+  const faltan_para_cobrar = secretosQueFaltan()
+
   return new Response(
-    JSON.stringify({ base: INTERREDES_BASE, credenciales, a_secas, con_intermedio, cuando: new Date().toISOString() }),
+    JSON.stringify({
+      base: INTERREDES_BASE, credenciales, a_secas, con_intermedio, faltan_para_cobrar, cuando: new Date().toISOString(),
+    }),
     { headers: { ...corsHeaders, 'content-type': 'application/json' } },
   )
 })

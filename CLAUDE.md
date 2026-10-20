@@ -11,20 +11,19 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **214 migraciones aplicadas en orden, y 214
+`fzkdgqqvfkogmxdgqsxj` tiene **215 migraciones aplicadas en orden, y 215
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
-el catálogo semilla de hojaldras está sembrado. **Las Edge Functions NO
-están todas desplegadas**: 6 de 8 (`supabase/functions/README.md` trae la
-tabla). Faltan `clip-crear-cobro` y `clip-barrer-pendientes` —las dos de
-Clip que cobran y barren—, y no importa mientras no haya terminal Clip;
-el cron que las llama cada 2 minutos recibe un 404 hasta entonces. Esto se
-descubrió el 20/10 por el lado de pg_net: la extensión **tampoco** estaba
-instalada (la replicación no copia extensiones) y el cron llevaba 39,956
-fallos de «schema net does not exist» sin que nadie lo viera. Instalada en
-`20261020110000`.
+el catálogo semilla de hojaldras está sembrado. **Las Edge Functions que
+importan están desplegadas**, y `supabase/functions/README.md` trae la
+tabla de cuáles sí y cuáles no: estar en la carpeta no es estar arriba.
+Las dos de Clip que cobran y barren nunca se desplegaron, y ya no hace
+falta (ver abajo). Esto se descubrió el 20/10 por el lado de pg_net: la
+extensión **tampoco** estaba instalada (la replicación no copia
+extensiones) y el cron de Clip llevaba 39,956 fallos de «schema net does
+not exist» sin que nadie lo viera. Instalada en `20261020110000`.
 
 **Y está EN CERO desde el 19/10** (`20261019190000`): la casa pidió arrancar
 limpio. Se borró la historia de las pruebas —órdenes, pagos, cortes,
@@ -42,25 +41,27 @@ pero Admin se abre desde el teléfono en cualquier parte.
 
 Lo que falta para abrir, todo fuera del código:
 
-1. **Decidir la terminal, y sus secretos.** Clip ya está escrito y probado;
-   solo faltan sus tres secretos en Supabase (`CLIP_API_KEY`,
-   `CLIP_WEBHOOK_SECRET`, `CLIP_TERMINAL_SERIAL`). Si al final es **Banorte**,
-   **ya llegó el manual oficial de Interredes** (20/10/26) y cambia lo que se
-   creía: la pinpad nueva (PAX A920Pro) se cobra por una **API REST con
-   JSON**, no por un puerto COM, así que el cobro cabe en una Edge Function
-   igual que Clip y no depende de la PC de la tienda. Qué dice el manual, qué
-   tenemos y qué falta está en `docs/interredes-manual.md`; el análisis
-   anterior (`docs/terminal-banorte.md`) y la hoja de qué pedir
-   (`docs/banorte-que-pedir.md`) quedan corregidos por ese documento. Cambiar
-   de proveedor **no toca ninguna pantalla** — para eso existe
-   `PaymentProvider` en `packages/payments`.
-   **Y la API de Interredes ya contestó desde Supabase** (20/10, §0 de ese
-   documento): la sonda `interredes-probar` está desplegada; con las
-   credenciales en los secrets (`INTERREDES_API_USER` /
-   `INTERREDES_API_PASSWORD`) dice si entramos. Ojo: el servidor de TPV
-   Solutions **no manda el certificado intermedio**, y Deno lo rechaza; el
-   `fetch` a Interredes va SIEMPRE por `_shared/interredes.ts`, que confía
-   en ese intermedio a propósito. Un `fetch()` a secas rebota.
+1. **Los secretos de Banorte, y la prueba en modo AUT.** La casa decidió el
+   20/10 que la terminal es **la de Banorte y solo esa** (Interredes Remotas,
+   vía la API de TPV Solutions; nada de Clip). **El camino ya está escrito y
+   desplegado**: `interredes-cobrar` manda el importe a la pinpad y, si se
+   aprueba, la venta entra por `fn_cobrar_orden` como cualquier otra;
+   `interredes-cancelar` es la cancelación del día (solo gerencia); la caja
+   cobra «Terminal» por ahí y **cae al cobro manual** si faltan secretos; el
+   voucher del Anexo VII sale en el ticket. Lo que falta es **de la casa**:
+   los siete secretos (`supabase/functions/README.md` los lista con quién da
+   cada uno) y la primera venta en modo `AUT`, que aprueba sin cobrar y es
+   donde se confirman los nombres de las claves de la respuesta (el manual
+   no los trae). `interredes-probar` dice si entramos y qué secretos faltan.
+   El estado de cada cosa está en `docs/interredes-manual.md`.
+   Ojo con dos cosas: el servidor de TPV Solutions **no manda el
+   certificado intermedio**, y Deno lo rechaza — el `fetch` a Interredes va
+   SIEMPRE por `_shared/interredes.ts`, que confía en ese intermedio a
+   propósito; y hay **dos juegos de credenciales** (las de la API para
+   entrar, las de Payworks dentro de cada venta), y el 20/10 el usuario que
+   quedó capturado en `INTERREDES_API_USER` no existía en TPV Solutions.
+   Clip se queda en el repo como referencia (sin cron, sin secretos, sin
+   quien lo llame) hasta que Banorte esté certificado; luego se quita.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
 3. **Costos, recetas y proveedores en Costeos.** La **lista de precios** ya
@@ -439,10 +440,12 @@ pago por INSERT directo.
 
 ### 2.3 Clip: la verdad se pregunta, no se escucha
 
-*(Clip es el proveedor implementado hoy. La tienda todavía no decide si se
-queda con él o se va a Banorte; la comparación está en
-`docs/terminal-banorte.md`. Lo de abajo aplica a Clip, pero la lección del
-timbre aplica a cualquiera.)*
+*(Clip ya NO es el proveedor: la casa se fue a Banorte el 20/10/26 y el
+cobro vive en `supabase/functions/interredes-cobrar` sobre
+`_shared/interredes.ts` —síncrono: la llamada espera a la pinpad y registra
+la venta en el mismo acto, sin webhook—. Esto se queda porque la lección del
+timbre aplica a cualquiera, y porque el código de Clip sigue en el repo
+como referencia hasta que Banorte esté certificado.)*
 
 El webhook `PINPAD_INTENT_STATUS_CHANGED` **no viene firmado**: es un
 timbre, no una fuente. El estado real siempre se consulta autenticado.
@@ -693,6 +696,8 @@ empaquetador y se desvían solas:
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
 | Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
 | Cobrar | En el cobro hay **tres botones iguales: Efectivo, Terminal, Mixto**. En efectivo salen atajos con los billetes que de verdad entregan ($650, $700, $800, $1,000 para un ticket de $625) |
+| Cobrar con tarjeta | **Terminal** (o Mixto): al confirmar, el importe aparece solo en la pinpad de Banorte, el cliente pone la tarjeta y la venta queda registrada con su voucher en el ticket. Si la pinpad no está conectada al sistema (faltan secretos), la caja lo avisa y se cobra a mano en la pinpad como hasta hoy, anotando el folio si se quiere |
+| Deshacer un cobro con tarjeta de hoy | Es de gerencia: `interredes-cancelar` manda el `void` a la pinpad y marca el pago y la orden cancelados. Todavía no tiene botón en pantalla; otro día ya es devolución, con el banco |
 | Cobrar una parte en efectivo y otra con tarjeta | **Mixto**. Se teclea solo el efectivo; el resto se calcula y se cobra en la terminal |
 | Probar si una impresora responde | Admin → **Impresoras** → **Probar**. Si sale papel, todo sirve; si no sale y el trabajo se marcó impreso, es papel/tapa/sensor |
 | Si el ticket del cliente no sale | Si ya hay térmica dada de alta, el trabajo **se ve en Admin → Impresoras**: ahí dice si salió o falló. Si todavía no la hay, el ticket va por el navegador y entonces es **otra** impresora: se revisa que sea la **predeterminada** de Windows (ver `docs/hardware-caja.md`) |

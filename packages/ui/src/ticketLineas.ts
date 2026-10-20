@@ -96,6 +96,57 @@ function pesos(n: number): string {
   return '$' + ent.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + '.' + dec
 }
 
+/**
+ * Los últimos cuatro de la tarjeta, vengan como vengan.
+ *
+ * La red manda el PAN ya enmascarado («4152 31** **** 1234», «************1234»);
+ * se toman los últimos cuatro dígitos y se imprime SOLO eso. Un ticket es un
+ * papel que se tira en la calle.
+ */
+export function ultimosCuatro(pan: string | null | undefined): string | null {
+  const digitos = (pan ?? '').replace(/\D/g, '')
+  return digitos.length >= 4 ? digitos.slice(-4) : null
+}
+
+/**
+ * Las parejas del voucher (Anexo VII de Interredes): etiqueta → valor, en el
+ * orden que pide el banco, y solo con lo que vino. Compartido entre el papel
+ * y el HTML para que los dos digan lo mismo.
+ */
+export function parejasDeVoucher(t: import('./ticketTipos').VoucherTarjeta): [string, string][] {
+  const p: [string, string][] = []
+  const pon = (k: string, v: string | null | undefined) => {
+    if (v && String(v).trim()) p.push([k, String(v).trim()])
+  }
+  pon('Afiliación', t.afiliacion)
+  pon('Terminal', t.terminalId)
+  pon('No. control', t.controlNumber)
+  const u4 = ultimosCuatro(t.pan)
+  pon('Tarjeta', [t.marca, t.tipo, u4 ? `**** ${u4}` : null].filter(Boolean).join(' '))
+  pon('Emisor', t.banco)
+  pon('Autorización', t.autorizacion)
+  pon('Referencia', t.referencia)
+  pon('Entrada', t.entrada)
+  pon('AID', t.aid)
+  pon('Aplicación', t.aplicacion)
+  pon('TVR', t.tvr)
+  pon('TSI', t.tsi)
+  return p
+}
+
+/**
+ * Cómo se validó la venta, según `pinRequested`: con NIP se imprime la
+ * leyenda que exige el banco; con firma, la raya; QPS (contactless chico) no
+ * lleva nada. Si no vino, se deja la raya: es lo que no deja a nadie sin
+ * comprobante.
+ */
+export function validacionDeVoucher(pin: string | null | undefined): 'nip' | 'firma' | 'nada' {
+  const v = (pin ?? '').trim()
+  if (v === '1') return 'nip'
+  if (v === '2') return 'nada'
+  return 'firma'
+}
+
 /** Los cuatro gestos de un papel monoespaciado. */
 function formato(ancho: number) {
   const W = ancho
@@ -298,7 +349,25 @@ export function armarTicket(
   } else {
     L.push(parear(data.metodoPago, pesos(total)))
   }
-  if (data.referenciaPago) L.push(`Ref. ${data.referenciaPago}`)
+  if (data.referenciaPago && !data.tarjeta) L.push(`Ref. ${data.referenciaPago}`)
+  if (data.tarjeta) {
+    // ---- El voucher de la terminal (Anexo VII de Interredes) ----
+    // Pareja por renglón, con lo que vino. Cierra con cómo se validó: la
+    // leyenda del NIP, la raya de la firma, o nada si fue QPS.
+    L.push('')
+    L.push(estilo('BANORTE', { negrita: true, alinear: 'centro' }))
+    for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
+    const validacion = validacionDeVoucher(data.tarjeta.pin)
+    if (validacion === 'nip') {
+      L.push('')
+      L.push(estilo('AUTORIZADO CON FIRMA ELECTRONICA', { negrita: true, alinear: 'centro' }))
+    } else if (validacion === 'firma') {
+      L.push('')
+      L.push('')
+      L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
+      L.push(centrar('Firma'))
+    }
+  }
   if (data.recibido != null && data.recibido >= total) {
     L.push(parear('Recibido', pesos(data.recibido)))
     L.push(parear('Cambio', pesos(data.recibido - total)))
