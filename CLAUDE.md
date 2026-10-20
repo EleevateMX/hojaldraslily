@@ -11,13 +11,20 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **213 migraciones aplicadas en orden, y 213
+`fzkdgqqvfkogmxdgqsxj` tiene **214 migraciones aplicadas en orden, y 214
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
-el catálogo semilla de hojaldras está sembrado y las Edge Functions
-desplegadas.
+el catálogo semilla de hojaldras está sembrado. **Las Edge Functions NO
+están todas desplegadas**: 6 de 8 (`supabase/functions/README.md` trae la
+tabla). Faltan `clip-crear-cobro` y `clip-barrer-pendientes` —las dos de
+Clip que cobran y barren—, y no importa mientras no haya terminal Clip;
+el cron que las llama cada 2 minutos recibe un 404 hasta entonces. Esto se
+descubrió el 20/10 por el lado de pg_net: la extensión **tampoco** estaba
+instalada (la replicación no copia extensiones) y el cron llevaba 39,956
+fallos de «schema net does not exist» sin que nadie lo viera. Instalada en
+`20261020110000`.
 
 **Y está EN CERO desde el 19/10** (`20261019190000`): la casa pidió arrancar
 limpio. Se borró la historia de las pruebas —órdenes, pagos, cortes,
@@ -47,6 +54,13 @@ Lo que falta para abrir, todo fuera del código:
    (`docs/banorte-que-pedir.md`) quedan corregidos por ese documento. Cambiar
    de proveedor **no toca ninguna pantalla** — para eso existe
    `PaymentProvider` en `packages/payments`.
+   **Y la API de Interredes ya contestó desde Supabase** (20/10, §0 de ese
+   documento): la sonda `interredes-probar` está desplegada; con las
+   credenciales en los secrets (`INTERREDES_API_USER` /
+   `INTERREDES_API_PASSWORD`) dice si entramos. Ojo: el servidor de TPV
+   Solutions **no manda el certificado intermedio**, y Deno lo rechaza; el
+   `fetch` a Interredes va SIEMPRE por `_shared/interredes.ts`, que confía
+   en ese intermedio a propósito. Un `fetch()` a secas rebota.
 2. **Cloudflare Pages y dominios** — los proyectos `lily-*` se crean solos
    en el primer push a `main` con los secretos del workflow puestos.
 3. **Costos, recetas y proveedores en Costeos.** La **lista de precios** ya
@@ -1118,6 +1132,22 @@ empaquetador y se desvían solas:
   registró la migración**: se corre por partes con `execute_sql` y la fila
   de `supabase_migrations.schema_migrations` se inserta a mano con las
   mismas sentencias, para que el conteo siga cuadrando.
+- **La replicación no copia extensiones.** Las migraciones llamaban a
+  `net.http_post` (el cron de Clip, cada 2 minutos) y pg_net nunca se
+  instaló en este proyecto: casi 40,000 fallos de «schema net does not
+  exist» en `cron.job_run_details` y ningún aviso. Al replicar, comparar
+  `pg_extension` contra el proyecto original, no solo las migraciones.
+  Ahora que está, **pg_net es la forma de hacer una petición HTTP desde la
+  base** (`net.http_post` + leer `net._http_response`), y es como se llama
+  una Edge Function desde aquí: este contenedor no llega a
+  `*.supabase.co/functions` ni a la API de Interredes, pero la base sí.
+- **Lo que un navegador acepta, Deno puede rechazarlo.** El servidor de la
+  API de Interredes no manda su certificado intermedio; Windows va por él
+  solo y por eso a TPV Solutions nunca le falló nada, pero curl, pg_net y la
+  Edge Function rebotan con `UnknownIssuer`. Se resolvió confiando
+  explícitamente en el intermedio (verificado contra la raíz del sistema),
+  no desactivando la verificación. Cuando un proveedor diga «a nosotros nos
+  funciona», probar desde donde va a correr de verdad.
 
 ---
 

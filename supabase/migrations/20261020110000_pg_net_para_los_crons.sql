@@ -1,0 +1,13 @@
+-- pg_net, que faltaba.
+--
+-- El cron `clip-barrer-pendientes` (20260822215313) llama a la Edge Function
+-- con `net.http_post`, y pg_net NUNCA estuvo instalado en este proyecto: el
+-- job lleva desde la replicación fallando cada dos minutos sin que nadie lo
+-- viera (`cron.job_run_details` lo dice). En el motor original sí estaba,
+-- y el buscar-y-reemplazar de la replicación no copia extensiones.
+--
+-- Se instala en `extensions`, que es donde Supabase las quiere. Además de
+-- arreglar el barrido de Clip, es la única forma de hacer una petición HTTP
+-- desde la base — lo que hace falta para comprobar desde aquí que la API de
+-- Interredes contesta (ver docs/interredes-manual.md).
+create extension if not exists pg_net with schema extensions;

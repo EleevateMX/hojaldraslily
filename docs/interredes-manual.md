@@ -16,6 +16,49 @@ trabajo contra el ambiente de pruebas (§5).
 
 ---
 
+## 0. Comprobado el 20/10: la API contesta desde Supabase
+
+Se le preguntó a la API desde el mismo sitio desde el que cobraría la caja
+—una Edge Function— con un usuario inventado, y contestó:
+
+```
+POST /api/v1/pinpad/login  {username:"prueba", password:"prueba"}
+→ 500  {"title":"Internal Server Error","detail":"El cliente prueba no existe.", …}
+```
+
+Eso es la respuesta buena: la API está viva, leyó el JSON y fue a buscar al
+usuario. Con las credenciales de verdad la misma llamada devuelve el token.
+**La sonda quedó desplegada** (`supabase/functions/interredes-probar`): el
+día que lleguen las credenciales se ponen en los secrets del proyecto
+(`INTERREDES_API_USER`, `INTERREDES_API_PASSWORD`, **nunca en el chat ni en
+el repo**), se llama la función y `con_intermedio.token: true` es «entramos».
+Hasta entonces usa las falsas y lo dice (`credenciales: "falsas"`).
+
+Dos cosas que salieron de probar y que no están en el manual:
+
+- **El servidor manda su certificado dos veces y no manda el intermedio de
+  Sectigo.** Un navegador en Windows lo acepta porque va a buscar el
+  intermedio solo; curl, pg_net y Deno no, así que un `fetch()` a secas desde
+  la Edge Function rebota con `invalid peer certificate: UnknownIssuer` antes
+  de mandar un byte. `supabase/functions/_shared/interredes.ts` confía
+  explícitamente en ese intermedio («Sectigo Public Server Authentication CA
+  DV R36», verificado con `openssl verify` contra la raíz R46 que ya está en
+  todos los almacenes): se verifica la misma cadena que un navegador, con el
+  eslabón que el servidor olvidó. La sonda hace los dos intentos y enseña
+  los dos resultados a propósito. Hay que **pedirle a TPV Solutions que
+  arregle su cadena** (punto 6 del mensaje de §4); cuando lo hagan, el pin
+  sobra y no estorba.
+- **Los errores vienen como `application/problem+json`** (RFC 7807):
+  `{type, title, status, detail, instance, description}`, y un usuario que no
+  existe es un **500**, no un 401. El texto útil va en `detail`. Hay que
+  leerlo así en `interredes-cobrar`: un 500 de esta API no es «se cayó».
+
+Y una más, que es nuestra: la URL `http://` (sin s) del mismo host **no
+contesta** (se queda esperando hasta el timeout). No hay camino sin TLS,
+que es lo correcto.
+
+---
+
 ## 1. Lo que el manual dice, y lo que cambia
 
 ### Hay DOS formas de integrarse, no una
@@ -131,7 +174,8 @@ Si lo que Kenny tiene abre la consola de multicobros, son las primeras.
 ## 3. Lo que falta de nuestro lado
 
 1. **`supabase/functions/interredes-cobrar`** (y `-cancelar`, `-devolver`,
-   `-verificar`): login a la API con el token en memoria (2 h), `sale` con
+   `-verificar`), sobre `_shared/interredes.ts`, que ya existe (§0) con la
+   base, el certificado que falta y el `login`: token en memoria (2 h), `sale` con
    `mode` leído de un secreto (`AUT` en pruebas, `PRD` en producción),
    `controlNumber` = folio de la orden + intento, y el resultado guardado
    **crudo** en `pagos.raw` antes de interpretarlo. Si no hay respuesta
@@ -197,6 +241,11 @@ Y una pregunta que no es un dato: ¿la afiliación ya está en **producción**
 >    las pruebas en modo AUT.
 > 5. Un ejemplo del **JSON de respuesta** de `/transaction/sale` (el anexo
 >    trae las peticiones pero no la respuesta).
+> 6. Que el servidor `posbridgetpv.tpvsolutions.com.mx` **envíe la cadena de
+>    certificados completa**: hoy manda el certificado del dominio dos veces
+>    y no el intermedio de Sectigo («Sectigo Public Server Authentication CA
+>    DV R36»). Los navegadores lo toleran, pero cualquier cliente de servidor
+>    (curl, Node, Deno) rechaza la conexión.
 >
 > Nuestra integración está en Node/TypeScript y no instala nada en la
 > computadora de la tienda: habla con la API por HTTPS.
