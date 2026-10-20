@@ -420,15 +420,15 @@ export function Encargos() {
   const dinero = encargos.reduce((s, e) => s + e.total, 0)
 
   return (
-    <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
-      <header className="flex items-center justify-between px-5 py-3 bg-sa-green-deep text-sa-cream flex-shrink-0">
-        <div className="flex items-baseline gap-4 min-w-0">
+    <div className="h-dvh flex flex-col bg-sa-cream-paper overflow-hidden">
+      <header className="flex flex-wrap items-center justify-between gap-2 px-4 md:px-5 py-3 bg-sa-green-deep text-sa-cream flex-shrink-0">
+        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-0 min-w-0">
           <h1 className="font-display text-2xl">Encargos</h1>
           <p className="font-mono text-xs uppercase tracking-wide text-sa-cream/60 truncate">
             {encargos.length} apartados · {piezasApartadas} piezas · {mxn(dinero)}
           </p>
         </div>
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
             onClick={() => setNuevo((v) => !v)}
             className={`${btn} bg-sa-cream text-sa-green-deep`}

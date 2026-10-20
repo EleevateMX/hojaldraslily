@@ -98,8 +98,8 @@ export function PedidosPendientes() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
-      <header className="flex items-center justify-between px-6 py-4 bg-sa-green-deep text-sa-cream flex-shrink-0">
+    <div className="h-dvh flex flex-col bg-sa-cream-paper overflow-hidden">
+      <header className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-3 md:py-4 bg-sa-green-deep text-sa-cream flex-shrink-0">
         <div className="flex items-center gap-4">
           <button onClick={() => navigate('/')} className="text-sa-cream/70 hover:text-sa-cream text-2xl">←</button>
           <div>
@@ -112,7 +112,7 @@ export function PedidosPendientes() {
           value={busqueda}
           onChange={(e) => setBusqueda(e.target.value)}
           placeholder="Buscar por folio o código…"
-          className="px-4 py-2.5 rounded-full bg-sa-cream-warm/10 border border-sa-cream/20 text-sa-cream placeholder:text-sa-cream/40 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sa-mint/40"
+          className="w-full sm:w-auto px-4 py-2.5 rounded-full bg-sa-cream-warm/10 border border-sa-cream/20 text-sa-cream placeholder:text-sa-cream/40 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-sa-mint/40"
         />
       </header>
 

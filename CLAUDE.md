@@ -154,6 +154,19 @@ Eso cambió dos cosas que no son de pantalla:
   al arrancar. Para abrir/cerrar turno se usa la propia caja, no los cinco
   toques del kiosko.
 
+**La caja también se usa en tableta y teléfono** (20/10/26). `PantallaDeVenta`
+(`apps/pos/src/components/pos/`) es la pantalla de venta separada de quien la
+alimenta, y es donde vive la forma para cada aparato: en PC y tableta
+acostada (`lg`, 1024 px o más) el ticket va al lado del catálogo; en teléfono
+y tableta parada el catálogo ocupa todo y el ticket es **una barra abajo**
+con lo que lleva y el total, que al tocarla sube como hoja con su «Cobrar».
+La cabecera guarda lo secundario (pedidos de kiosko, encargos, corte, salir)
+en un menú «☰» en angosto. El cobro se apila igual: método arriba, ticket y
+«Confirmar» abajo. Se mira con `apps/pos/mirar/caja.html` (la caja entera
+con un turno y tres cosas en el ticket), y para los tres anchos a la vez hay
+que usar **iframes**: Chromium sin cabeza no baja la ventana de ~500 px, pero
+un iframe de 390 sí tiene su propio viewport y sus `sm:`/`lg:` responden.
+
 Y **Admin se usa desde el teléfono**: en pantallas angostas la barra lateral
 se vuelve una cabecera con la sección actual y un botón que abre la lista
 completa. Antes era una tira con scroll que enseñaba tres secciones de
@@ -686,6 +699,7 @@ empaquetador y se desvían solas:
 | Algo se siente raro | Admin → **Diagnóstico** |
 | Actualizar el agente de impresión | Solo, al abrir el día siguiente |
 | Tener Admin en el teléfono | Abrirlo en Chrome → menú → **Instalar aplicación** (en iPhone: Compartir → Añadir a pantalla de inicio) |
+| Vender desde la tableta o el teléfono | La caja funciona igual: el catálogo ocupa la pantalla y el ticket es la **barra de abajo** («4 productos · $615 · Ver ticket»); al tocarla sube el ticket con su **Cobrar**. Lo demás (encargos, corte, salir) está en el botón **☰**. Si la tableta se bloquea, al abrirla sigue donde estaba |
 
 ---
 
@@ -882,6 +896,17 @@ empaquetador y se desvían solas:
 
 **Frontend**
 
+- **Una columna fija de 320 px en un teléfono de 390 deja 70 para todo lo
+  demás.** El cobro tenía el ticket en `w-80` al lado del método, y en el
+  teléfono los tres botones de Efectivo/Terminal/Mixto salían en una tira de
+  dos dedos, ilegibles; la caja tenía el ticket en `w-96` y aplastaba el
+  catálogo. Lo que es columna en PC es **fila apilada o hoja** en angosto
+  (`flex-col lg:flex-row`, y el ticket de la caja como barra abajo). Y el
+  logotipo de 110 px en una cabecera de 390 salía como una tira: en angosto
+  no va (`hidden md:block`); la marca ya está en el icono de la app. Lo
+  mismo en las estaciones: una fila de cuatro botones de «+1 molde» cabe en
+  el monitor y en el teléfono se parte en dos (`flex-wrap` con `min-w`). Se
+  vio con `mirar/caja.html` y `mirar/cobro.html` a 390, 820 y 1366.
 - **Una tableta bloqueada es una recarga.** Al bloquear la tableta el sistema
   descarta la página para ahorrar memoria, y al desbloquear la vuelve a cargar
   de cero. El cajero vivía solo en memoria (`usePosStore.empleado`), así que

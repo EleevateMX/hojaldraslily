@@ -204,7 +204,11 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
             <p className="font-mono text-sm uppercase tracking-wide">Nada por aquí</p>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          /* Dos columnas en teléfono, tres en tableta y cuatro en una PC
+             ancha: a 390 px tres tarjetas parten «Bolitas de Queso
+             Philadelphia» en cuatro renglones, y a 1366 con el ticket al
+             lado tres tarjetas de 300 px son más aire que pan. */
+          <div className="grid grid-cols-2 sm:grid-cols-3 2xl:grid-cols-4 gap-2 sm:gap-3">
             {porSabor.map(([sabor, variantes]) => {
               /**
                * La pieza suelta no se pinta como un tamano mas.
@@ -244,7 +248,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                   className={[
                     'rounded-sa border transition-all',
                     abierto
-                      ? 'col-span-3 bg-sa-cream-soft border-sa-green shadow-sa'
+                      ? 'col-span-full bg-sa-cream-soft border-sa-green shadow-sa'
                       : 'bg-white border-sa-green-ink/5 shadow-sa-sm hover:border-sa-green/30',
                   ].join(' ')}
                 >

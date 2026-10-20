@@ -366,10 +366,10 @@ export function Cobro() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
+    <div className="h-dvh flex flex-col bg-sa-cream-paper overflow-hidden">
       {/* Hero con total */}
       <header className="bg-sa-green-deep text-sa-cream flex-shrink-0">
-        <div className="flex items-center gap-4 px-6 py-3 border-b border-sa-cream/10">
+        <div className="flex items-center gap-4 px-4 md:px-6 py-2 md:py-3 border-b border-sa-cream/10">
           <button
             onClick={() => navigate('/')}
             className="text-sa-cream/70 hover:text-sa-cream transition-colors text-2xl"
@@ -385,21 +385,26 @@ export function Cobro() {
             </p>
           </div>
         </div>
-        <div className="px-6 py-6 text-center">
-          <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50 mb-2">Total a cobrar</p>
-          <p className="font-display text-7xl text-sa-cream leading-none">{mxn(totalNeto)}</p>
+        <div className="px-6 py-3 md:py-6 text-center">
+          <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50 mb-1 md:mb-2">Total a cobrar</p>
+          <p className="font-display text-5xl md:text-7xl text-sa-cream leading-none">{mxn(totalNeto)}</p>
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      {/* En PC y tableta acostada, el método a la izquierda y el ticket a la
+          derecha. En teléfono y tableta parada se apilan: el ticket con su
+          «Confirmar» queda abajo, a la altura del pulgar, y el método arriba
+          con scroll propio. Antes la columna fija de 320 px aplastaba los
+          tres botones a una tira de dos dedos. */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Izquierda: método de pago */}
-        <div className="flex-1 p-6 overflow-y-auto">
+        <div className="flex-1 min-h-0 p-4 md:p-6 overflow-y-auto">
           {/* Tres botones iguales: Efectivo, Terminal y Mixto. La casa lo
               pidió así —«que solo diga efectivo, terminal o mixto»— y tiene
               razón: la pregunta del mostrador es UNA, «¿cómo paga?», y las
               tres respuestas tienen que verse como tres respuestas, no como
               dos grandes y una chica escondida abajo. */}
-          <div className="grid grid-cols-3 gap-4 mb-5">
+          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-5">
             {METODOS.map((m) => (
               <button
                 key={m.key}
@@ -554,9 +559,9 @@ export function Cobro() {
         </div>
 
         {/* Derecha: resumen + confirmar */}
-        <div className="w-80 bg-white border-l border-sa-green-ink/10 flex flex-col p-5">
-          <h3 className="font-display text-lg text-sa-green-ink mb-3">Ticket</h3>
-          <div className="flex-1 overflow-y-auto space-y-1.5 mb-4 font-mono text-sm">
+        <div className="w-full lg:w-80 max-h-[46dvh] lg:max-h-none bg-white border-t lg:border-t-0 lg:border-l border-sa-green-ink/10 flex flex-col p-4 lg:p-5 flex-shrink-0">
+          <h3 className="hidden lg:block font-display text-lg text-sa-green-ink mb-3">Ticket</h3>
+          <div className="flex-1 min-h-0 overflow-y-auto space-y-1.5 mb-3 lg:mb-4 font-mono text-sm">
             {items.map((l) => (
               <div key={l.lineaId} className="py-1 border-b border-dashed border-sa-green-ink/10">
                 <div className="flex justify-between">
@@ -569,7 +574,7 @@ export function Cobro() {
               </div>
             ))}
           </div>
-          <div className="border-t border-sa-green-ink/15 pt-3 space-y-1 mb-4 font-mono text-sm">
+          <div className="border-t border-sa-green-ink/15 pt-2 lg:pt-3 space-y-1 mb-3 lg:mb-4 font-mono text-sm flex-shrink-0">
             <div className="flex justify-between text-sa-green-ink/60">
               <span>Subtotal</span>
               <span>{mxn(subtotal())}</span>
@@ -599,7 +604,7 @@ export function Cobro() {
           <button
             onClick={() => void confirmarPago()}
             disabled={!listo || procesando}
-            className="w-full bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 disabled:hover:bg-sa-green active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
+            className="w-full flex-shrink-0 bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 disabled:hover:bg-sa-green active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
           >
             {procesando ? 'Cobrando…' : `Confirmar pago ${mxn(totalNeto)}`}
           </button>

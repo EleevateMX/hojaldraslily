@@ -174,12 +174,12 @@ function Columna({
   vacio: string
 }) {
   return (
-    <section className="flex flex-col min-h-0">
+    <section className="flex flex-col lg:min-h-0">
       <div className="flex items-baseline gap-2 mb-3 px-1">
         <h2 className="font-display text-lg text-sa-green-ink">{titulo}</h2>
         <span className="font-mono text-sm text-sa-green-ink/40">{cuenta}</span>
       </div>
-      <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+      <div className="flex-1 lg:overflow-y-auto space-y-3 pr-1">
         {cuenta === 0 ? (
           <p className="font-body text-sm text-sa-green-ink/40 px-1 py-6">{vacio}</p>
         ) : (
@@ -297,20 +297,20 @@ export default function App() {
   const tarde = r?.tarde ?? 0
 
   return (
-    <div className="h-screen flex flex-col bg-sa-cream-paper text-sa-green-ink">
+    <div className="h-dvh flex flex-col bg-sa-cream-paper text-sa-green-ink">
       {/* La cabecera dice LO URGENTE en grande, como las de Producción y
           Empaque: las tres se leen desde el otro lado del cuarto y las tres se
           leen igual. Antes esta decía «Horno» en chico y escondía el número
           que de verdad importa en una esquina. */}
-      <header className="shrink-0 bg-sa-green text-sa-cream px-6 py-5 flex items-center gap-5">
+      <header className="shrink-0 bg-sa-green text-sa-cream px-4 md:px-6 py-4 md:py-5 flex flex-wrap items-center gap-x-5 gap-y-2">
         <img
           src={`${import.meta.env.BASE_URL}logo-negativo.png`}
           alt="Hojaldras Lily"
-          className="h-16 w-auto shrink-0"
+          className="h-12 md:h-16 w-auto shrink-0"
         />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[12rem]">
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">Horno</p>
-          <h1 className="font-display text-4xl leading-none mt-1">
+          <h1 className="font-display text-3xl md:text-4xl leading-none mt-1">
             {tarde > 0
               ? `${tarde} se pasó de su hora`
               : (r?.en_horno ?? 0) > 0
@@ -348,7 +348,10 @@ export default function App() {
         </div>
       )}
 
-      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_0.8fr] gap-5 p-5">
+      {/* Tres columnas en el monitor del horno; en un teléfono se apilan y la
+          página entera hace scroll, porque tres listas con scroll propio en
+          una pantalla de 800 px de alto son tres ventanitas de dos renglones. */}
+      <main className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[1.4fr_1fr_0.8fr] gap-5 p-4 md:p-5 overflow-y-auto lg:overflow-hidden">
         <Columna
           titulo="En el horno"
           cuenta={datos?.adentro.length ?? 0}

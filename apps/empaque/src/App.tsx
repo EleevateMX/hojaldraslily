@@ -460,17 +460,17 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-sa-cream-paper text-sa-green-ink">
-      <header className="bg-sa-green-deep text-sa-cream px-6 py-5 flex items-center gap-5">
+      <header className="bg-sa-green-deep text-sa-cream px-4 md:px-6 py-4 md:py-5 flex flex-wrap items-center gap-x-5 gap-y-2">
         <img
           src={`${import.meta.env.BASE_URL}logo-negativo.png`}
           alt="Hojaldras Lily"
-          className="h-16 w-auto"
+          className="h-12 md:h-16 w-auto"
         />
-        <div className="flex-1 min-w-0">
+        <div className="flex-1 min-w-[12rem]">
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-sa-banana">Empaque</p>
           {/* El titular es la cola, no el total. «12 encargos apartados» no
               dice si hay algo que hacer; «faltan 3 por empacar» sí. */}
-          <h1 className="font-display text-4xl leading-none mt-1">
+          <h1 className="font-display text-3xl md:text-4xl leading-none mt-1">
             {porEmpacar.length > 0
               ? `Faltan ${porEmpacar.length} por empacar`
               : listos.length > 0
@@ -494,7 +494,7 @@ export default function App() {
         </button>
       </header>
 
-      <main className="p-6 space-y-5 max-w-5xl mx-auto">
+      <main className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
         {error && (
           <p className="font-body bg-sa-strawberry/15 border-l-4 border-sa-strawberry rounded-sa px-4 py-3">
             {error}

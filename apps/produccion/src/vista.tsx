@@ -182,8 +182,8 @@ export function Renglon({
         listo ? 'bg-sa-mint/10 border-sa-mint/50' : 'bg-white border-sa-green-ink/10',
       ].join(' ')}
     >
-      <div className="flex items-center gap-4">
-        {foto && <img src={foto} alt="" className="w-16 h-16 object-contain shrink-0" />}
+      <div className="flex items-center gap-3 md:gap-4">
+        {foto && <img src={foto} alt="" className="hidden sm:block w-16 h-16 object-contain shrink-0" />}
         <div className="min-w-0 flex-1">
           <p className="font-display text-2xl leading-tight text-sa-green-ink">{item.sabor}</p>
           <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
@@ -215,13 +215,16 @@ export function Renglon({
         </div>
       </div>
 
-      <div className="flex items-center gap-2 mt-4">
+      {/* En el monitor de la mesa, los cuatro en una fila. En un teléfono se
+          parten en dos filas: a 390 px una sola fila dejaba «+1», «+2» y «Ya»
+          sin la palabra que dice qué suman. */}
+      <div className="flex flex-wrap items-center gap-2 mt-4">
         {[1, 2].map((n) => (
           <button
             key={n}
             disabled={ocupado}
             onClick={() => onMarcar(item.armados + n)}
-            className="flex-1 h-14 rounded-sa bg-sa-green text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-50"
+            className="flex-1 min-w-[7.5rem] h-14 rounded-sa bg-sa-green text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-50"
           >
             +{n} {unidad}
             {n === 1 ? '' : 's'}
@@ -232,7 +235,7 @@ export function Renglon({
         <button
           disabled={ocupado || listo}
           onClick={() => onMarcar(item.moldes)}
-          className="flex-[1.4] h-14 rounded-sa bg-sa-green-deep text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-30"
+          className="flex-[1.4] min-w-[9rem] h-14 rounded-sa bg-sa-green-deep text-sa-cream font-display text-lg active:scale-95 transition-transform disabled:opacity-30"
         >
           Ya está
         </button>
@@ -300,8 +303,8 @@ export function Tarjeta({
 
   return (
     <section className="bg-sa-cream-soft rounded-sa-lg p-5 shadow-sa">
-      <div className="flex items-baseline justify-between gap-4 mb-1">
-        <p className="font-display text-2xl text-sa-green-ink">Orden #{orden.folio}</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 mb-1">
+        <p className="font-display text-2xl text-sa-green-ink whitespace-nowrap">Orden #{orden.folio}</p>
         {/* La hora manda sobre el folio: es lo que decide qué se hace
             primero. Lo que se pasó va en carmín profundo, que es el color de
             la alarma de la casa — el acento rosa se ve despintado a un metro

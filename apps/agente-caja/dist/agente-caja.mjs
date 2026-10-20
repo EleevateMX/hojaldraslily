@@ -173,12 +173,17 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
       for (const l of envolver(parte)) L.push(centrar(l.trim()));
     }
   }
-  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean);
+  const avisos = lineasDeAvisos(negocio);
   if (avisos.length) {
     L.push(regla());
     for (const a of avisos) for (const l of envolver(a)) L.push(centrar(l.trim()));
   }
   return L;
+}
+function lineasDeAvisos(negocio) {
+  const horario = (negocio.horario ?? "").trim();
+  const avisos = (negocio.avisos ?? []).map((a) => a.trim()).filter(Boolean);
+  return horario ? [`Horario: ${horario}`, ...avisos] : avisos;
 }
 function hora(iso) {
   if (!iso) return "";

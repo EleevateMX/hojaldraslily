@@ -3,11 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { usePosStore } from '@/store/posStore'
 import { sb } from '../lib/sb'
 import { listarAlmacenes, listarCajas, corteAbierto, abrirCaja } from '@lily/supabase'
-import { AvisoDeConexion } from '@/components/pos/AvisoDeConexion'
 import { ContarEfectivo, CONTEO_VACIO } from '@/components/pos/ContarEfectivo'
-import { CatalogoBusqueda } from '@/components/pos/CatalogoBusqueda'
-import { OrdenPanel } from '@/components/pos/OrdenPanel'
-import { PanelDeProduccion } from '../components/pos/PanelDeProduccion'
+import { PantallaDeVenta } from '@/components/pos/PantallaDeVenta'
 import { useProductosPOS } from '@/hooks/useProductosPOS'
 import { mensajeDeError, sumaConteo, hayConteo, horaEnMerida, type Conteo } from '@lily/utils'
 import { conRespaldo } from '../lib/respaldo'
@@ -180,91 +177,19 @@ export function Caja() {
 
   // --- Venta (corte abierto) ---
   return (
-    <div className="h-screen flex flex-col bg-sa-cream-paper overflow-hidden">
-      <AvisoDeConexion />
-      <header className="flex items-center justify-between px-5 py-2.5 bg-sa-green-deep text-sa-cream flex-shrink-0 border-b border-sa-cream/10">
-        <div className="flex items-center gap-3">
-          <img src={`${import.meta.env.BASE_URL}logo-negativo.png`} alt="Hojaldras Lily" className="h-[110px] w-auto -my-6" />
-          <span className="font-mono text-xs uppercase tracking-widest text-sa-cream/50">
-            {almacen?.nombre ?? 'Caja'}
-          </span>
-        </div>
-        <div className="flex items-center gap-4">
-          {/* De donde viene la venta. Rappi cobra otra lista de precios --
-              la plataforma se lleva su comision-- y el ticket tiene que
-              salir con ESE precio para que el corte cuadre contra lo que la
-              plataforma deposita. Vuelve a Mostrador solo al cobrar. */}
-          <div className="flex items-center rounded-full bg-sa-cream/10 p-1">
-            {([
-              { k: 'pos' as const, t: 'Mostrador' },
-              { k: 'rappi' as const, t: 'Rappi' },
-            ]).map((c) => (
-              <button
-                key={c.k}
-                onClick={() => setCanal(c.k)}
-                className={[
-                  'font-mono text-xs uppercase tracking-wide px-4 py-1.5 rounded-full transition-colors',
-                  canal === c.k ? 'bg-sa-cream text-sa-green-deep' : 'text-sa-cream/70',
-                ].join(' ')}
-              >
-                {c.t}
-              </button>
-            ))}
-          </div>
-          <span className="font-mono text-sm text-sa-cream/70">{hora}</span>
-          <span className="font-display text-lg text-sa-cream">
-            {empleado?.nombre.split(' ')[0]}
-          </span>
-          {/* El puesto de mando de la produccion: que hay en el horno, que
-              queda en moldes, y mandar a hacer mas. Un boton y un cajon, no
-              tres ventanas -- la caja no navega a otra pagina con un ticket a
-              medias. */}
-          <PanelDeProduccion />
-          <button
-            onClick={() => navigate('/pendientes')}
-            className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"
-          >
-            Pedidos de kiosko
-          </button>
-          {/* El otro rubro de la caja: lo apartado para despues. Va junto a
-              los pedidos de kiosko porque son las dos colas que el cajero
-              revisa, no algo de configuracion. */}
-          <button
-            onClick={() => navigate('/encargos')}
-            className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"
-          >
-            Encargos
-          </button>
-          <button
-            onClick={() => navigate('/corte')}
-            className="font-mono text-xs uppercase tracking-wide bg-sa-cream-warm/10 hover:bg-sa-cream-warm/20 text-sa-cream px-4 py-2 rounded-full transition-colors border border-sa-cream/20"
-          >
-            Corte de caja
-          </button>
-          <button
-            onClick={salir}
-            className="font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-4 py-2 rounded-full transition-colors border border-sa-strawberry/30"
-          >
-            Salir
-          </button>
-        </div>
-      </header>
-
-      <div className="flex-1 flex overflow-hidden gap-3 p-3">
-        <div className="flex-1 flex flex-col overflow-hidden bg-sa-cream-soft rounded-sa shadow-sa-sm">
-          {loading ? (
-            <div className="flex items-center justify-center h-full">
-              <p className="font-mono text-sm text-sa-green-ink/50 animate-pulse">Cargando menú…</p>
-            </div>
-          ) : (
-            <CatalogoBusqueda productos={productos} categorias={categorias} extras={extras} productosExtra={productosExtra} />
-          )}
-        </div>
-
-        <div className="w-96 flex-shrink-0 flex flex-col bg-white rounded-sa shadow-sa-sm overflow-hidden">
-          <OrdenPanel onCobrar={() => navigate('/cobro')} productos={productos} />
-        </div>
-      </div>
-    </div>
+    <PantallaDeVenta
+      productos={productos}
+      productosExtra={productosExtra}
+      extras={extras}
+      categorias={categorias}
+      loading={loading}
+      hora={hora}
+      almacenNombre={almacen?.nombre ?? 'Caja'}
+      empleadoNombre={empleado?.nombre.split(' ')[0] ?? ''}
+      canal={canal}
+      setCanal={setCanal}
+      onIr={(ruta) => navigate(ruta)}
+      onSalir={salir}
+    />
   )
 }

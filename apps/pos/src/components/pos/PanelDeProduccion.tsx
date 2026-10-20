@@ -301,7 +301,10 @@ export function PanelDeProduccion() {
           {/* Un velo para cerrar tocando fuera: en táctil no hay «clic
               afuera» que se sienta natural sin esto. */}
           <div className="fixed inset-0 z-40" onClick={() => setAbierto(false)} />
-          <div className="absolute right-0 top-full mt-2 z-50 w-[28rem] max-h-[85vh] overflow-y-auto rounded-sa-lg bg-white shadow-sa-lg border border-sa-green-ink/10 text-left">
+          {/* En PC cuelga del botón; en teléfono y tableta parada se pega a
+              los bordes de la pantalla, porque 28 rem no caben al lado del
+              botón y el cajón salía cortado por la izquierda. */}
+          <div className="fixed inset-x-2 top-[4.5rem] lg:absolute lg:inset-x-auto lg:right-0 lg:top-full lg:mt-2 z-50 lg:w-[28rem] max-h-[85dvh] overflow-y-auto rounded-sa-lg bg-white shadow-sa-lg border border-sa-green-ink/10 text-left">
             {error && (
               <p className="font-body text-sm bg-sa-strawberry/15 border-l-4 border-sa-strawberry px-4 py-3">
                 {error}
