@@ -96,6 +96,36 @@ const entrega: TicketData = {
   recibido: 600,
 }
 
+/** Venta con tarjeta por la terminal de Banorte: el voucher del Anexo VII. */
+const tarjetaBanorte: TicketData = {
+  folio: 1045,
+  fecha: new Date('2026-10-22T14:52:00'),
+  cajero: 'Rosa M.',
+  canal: 'Caja',
+  items: [
+    { cantidad: 1, nombre: 'Jamón y Queso · Grande · 48 cuadros', precioUnitario: 540 },
+    { cantidad: 1, nombre: 'Café de olla', precioUnitario: 35 },
+  ],
+  metodoPago: 'Terminal',
+  tarjeta: {
+    afiliacion: '7156971',
+    terminalId: 'VF660P01',
+    controlNumber: 'L1045TQ9F2',
+    autorizacion: '123456',
+    referencia: '000012345678',
+    marca: 'VISA',
+    tipo: 'CREDITO',
+    banco: 'BANORTE',
+    pan: '4152 31** **** 9876',
+    entrada: 'CHIP',
+    pin: '1',
+    aid: 'A0000000031010',
+    aplicacion: 'VISA CREDITO',
+    tvr: '0000008000',
+    tsi: 'E800',
+  },
+}
+
 const Muestra = ({ t, rotulo }: { t: TicketData; rotulo: string }) => (
   <div>
     <p style={{
@@ -116,6 +146,7 @@ createRoot(document.getElementById('root')!).render(
     </p>
     <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <Muestra t={mostrador} rotulo="Venta en mostrador · Efectivo" />
+      <Muestra t={tarjetaBanorte} rotulo="Venta con tarjeta · Voucher Banorte (Anexo VII)" />
       <Muestra t={encargo} rotulo="Encargo · Pago mixto" />
       <Muestra t={entrega} rotulo="Entrega de encargo · con anticipo y algo más" />
     </div>
