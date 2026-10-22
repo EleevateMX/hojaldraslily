@@ -33,7 +33,42 @@ la API**, y así presionar el trámite del login de la API con evidencia.
    - Deja `PAYWORKS_MODE=AUT` para probar sin cobrar.
 4. Abre una terminal en esta carpeta y corre `npm install`.
 
-## Probar (sin tocar la caja)
+## Probar desde una PC Windows cualquiera (sin ir a la tienda)
+
+Sirve cualquier PC con Windows, **con una condición: tiene que estar en el
+mismo WiFi que la pinpad** (el mismo del que, desde la Mac, el `nc` dio
+«success»). Si está en otra red, no la alcanza.
+
+Pasos:
+
+1. Copia esta carpeta (`agente-banorte`) a la PC Windows.
+2. Pon el `PINPAD.TPV` real dentro de la carpeta.
+3. Doble clic en **`probar.bat`**. Te pregunta la IP de la pinpad, el usuario
+   y la contraseña de Payworks (el group puede ir vacío para esta prueba) y
+   hace la **carga de llave**, que no cobra. Si sale `APROBADA`, la terminal
+   conecta y quedó con llave.
+
+### Si solo tienes una Mac: Windows en una máquina virtual
+
+Como la Mac ya está en el WiFi de la pinpad, puedes correr Windows dentro de
+la Mac y la VM alcanza la pinpad por esa misma red. Receta corta con **UTM**
+(gratis):
+
+1. Instala **UTM** (`mac.getutm.app`) o Parallels.
+2. En un Mac con chip Apple (M1/M2/M3), baja **Windows 11 ARM** (UTM tiene un
+   asistente que lo descarga). En un Mac Intel, Windows x64.
+3. En la red de la VM elige **Bridged** (puente), no NAT: así la VM aparece
+   como un equipo más en el WiFi y puede ver la pinpad.
+4. Dentro de Windows: instala Node.js LTS (`nodejs.org`), copia esta carpeta y
+   el `PINPAD.TPV`, y doble clic en `probar.bat`.
+
+> Nota de arquitectura: el `PINPAD.TPV` tiene que ser de la misma plataforma
+> que el Windows de la VM. Casi siempre el DLL de Banorte es x86 (32 bits) y
+> corre en Windows x64 sin problema; en Windows ARM podría no cargar. Si
+> `probar.bat` dice que no pudo cargar el DLL, usa un Windows x64 (VM en Mac
+> Intel, o la PC de la tienda).
+
+## Probar por línea de comandos (si prefieres la consola)
 
 En orden, del más inofensivo al que mueve dinero:
 

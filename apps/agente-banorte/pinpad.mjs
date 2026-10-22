@@ -132,7 +132,9 @@ export function abrirPinpad(cfg) {
     conectar()
     PPSetUser(cfg.user)
     PPSetPassword(cfg.password)
-    PPSetGroup(cfg.group)
+    // El `group` no va en la carga de llave (el ejemplo del manual no lo
+    // trae); sí en venta/cancelación. Se manda solo si está puesto.
+    if (cfg.group) PPSetGroup(cfg.group)
     PPSetMode(cfg.mode)
     PPSetCommand(comando)
     PPSetControlNumber(controlNumber)
