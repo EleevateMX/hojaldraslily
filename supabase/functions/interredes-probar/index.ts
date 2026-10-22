@@ -60,6 +60,20 @@ async function conIntermedio(username: string, password: string): Promise<Intent
   }
 }
 
+/**
+ * Cómo se ve el usuario sin decir cuál es: largo, y si trae espacios o
+ * caracteres raros al principio o al final. Un secreto pegado con un
+ * espacio de más es la forma más común de «no existe» con el usuario
+ * correcto.
+ */
+function formaDe(s: string) {
+  return {
+    largo: s.length,
+    con_espacios: s !== s.trim(),
+    con_raros: /[^\x20-\x7e]/.test(s),
+  }
+}
+
 Deno.serve(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
 
@@ -73,10 +87,25 @@ Deno.serve(async (req: Request) => {
     if (!(e instanceof InterredesSinCredenciales)) throw e
   }
 
+  // Variantes del USUARIO a probar con la misma contraseña de los secrets
+  // (hasta tres por llamada, para no martillar la API del proveedor): por
+  // ejemplo el número de afiliación, o el usuario sin espacios.
+  let variantes: string[] = []
+  try {
+    const body = await req.json()
+    if (Array.isArray(body?.usernames)) variantes = body.usernames.map(String).slice(0, 3)
+  } catch {
+    /* sin cuerpo */
+  }
+
   const [a_secas, con_intermedio] = await Promise.all([
     aSecas(username, password),
     conIntermedio(username, password),
   ])
+  const otros_usuarios: Record<string, Intento> = {}
+  for (const u of variantes) {
+    otros_usuarios[u] = credenciales === 'secrets' ? await conIntermedio(u, password) : { ok: false, error: 'sin contraseña en secrets' }
+  }
 
   // Entrar no es cobrar: para la venta hacen falta además las credenciales
   // de Payworks, la serie de la pinpad, el grupo y el modo. Se dice cuáles
@@ -85,7 +114,15 @@ Deno.serve(async (req: Request) => {
 
   return new Response(
     JSON.stringify({
-      base: INTERREDES_BASE, credenciales, a_secas, con_intermedio, faltan_para_cobrar, cuando: new Date().toISOString(),
+      base: INTERREDES_BASE,
+      credenciales,
+      usuario: credenciales === 'secrets' ? formaDe(username) : null,
+      contrasena: credenciales === 'secrets' ? formaDe(password) : null,
+      a_secas,
+      con_intermedio,
+      otros_usuarios,
+      faltan_para_cobrar,
+      cuando: new Date().toISOString(),
     }),
     { headers: { ...corsHeaders, 'content-type': 'application/json' } },
   )
