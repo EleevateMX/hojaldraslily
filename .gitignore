@@ -44,3 +44,7 @@ apps/pos/mirar/fuentes/
 
 # Los instaladores que Admin sirve: se copian en cada build desde scripts/.
 apps/admin/public/descargas/
+
+# El agente de Banorte se instala con npm en la PC de la tienda; su lock de
+# npm no va al repo (aqui mandamos con pnpm, como el agente de tickets).
+apps/agente-banorte/package-lock.json
