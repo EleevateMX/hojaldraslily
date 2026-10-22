@@ -90,13 +90,16 @@ async function main() {
 
   try {
     if (comando === 'llave') {
-      console.log(resumen(cfg, 'OBTENER_LLAVE', pinpad.cargarLlave(numeroDeControl('LLAVE'))))
+      const r = pinpad.cargarLlave(numeroDeControl('LLAVE'))
+      console.log(resumen(cfg, 'OBTENER_LLAVE', r))
+      pista(cfg, r)
     } else if (comando === 'venta') {
       const monto = args[0]
       if (!monto) { console.error('Uso: node index.mjs venta <monto en pesos, ej 10.00>'); process.exit(1) }
       const r = pinpad.venta(numeroDeControl('L'), monto)
       console.log(resumen(cfg, 'VENTA', r))
       if (r.aprobado) console.log('Voucher:', JSON.stringify(voucherDesde(r.campos), null, 2))
+      else pista(cfg, r)
     } else if (comando === 'verificar') {
       if (!args[0]) { console.error('Uso: node index.mjs verificar <numeroDeControl>'); process.exit(1) }
       console.log(resumen(cfg, 'VERIFICACION', pinpad.verificar(args[0])))
@@ -111,6 +114,27 @@ async function main() {
   } catch (e) {
     console.error('La transacción falló:', e.message)
     process.exit(1)
+  }
+}
+
+/** Cuando algo no sale aprobado, una pista de qué revisar, en cristiano. */
+function pista(cfg, r) {
+  if (r.resultado === 'A') return
+  if (r.resultado === 'T' || r.resultado === '?') {
+    console.log(
+      '\nLa pinpad no contestó. Revisa:\n' +
+      `  - Que la IP y el puerto sean los de la pinpad (ahora: ${cfg.com || `${cfg.ip}:${cfg.port}`}).\n` +
+      '    La IP la ves en la pinpad: Configurar -> Reporte de parametros (clave 86279).\n' +
+      '  - Que esta computadora esté en el MISMO WiFi que la pinpad.\n' +
+      '  - Que la pinpad esté encendida y en su pantalla de espera.\n' +
+      '  - Que PINPAD.TPV sea el correcto y Node tenga la misma arquitectura (32/64 bits).',
+    )
+  } else if (r.resultado === 'R' || r.resultado === 'D') {
+    console.log(
+      '\nLa pinpad SÍ contestó, pero la operación no se aprobó.\n' +
+      '  Mira el "Motivo" de arriba. Suele ser credenciales de Payworks (usuario/grupo),\n' +
+      '  o que la afiliación aún no está lista en producción. Eso lo confirma Banorte/TPV Solutions.',
+    )
   }
 }
 
