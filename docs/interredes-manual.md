@@ -33,6 +33,21 @@ un login **aparte** que TPV Solutions emite tras dar de alta el comercio en
 **TPVAdmin**; ese alta es lo que falta. Dos caminos, dos credenciales: la
 que tenemos es la del DLL; la que falta es la de la API.
 
+**Y ya existe el agente del camino DLL** (`apps/agente-banorte/`, 22/10):
+un programa de Node para la PC de la tienda que carga `PINPAD.TPV` con koffi
+(FFI) y habla directo a la pinpad por IP:1818 con el usuario motor. Es para
+**probar que la terminal conecta y cobra sin esperar el alta de la API** y
+presionar ese trámite con evidencia. Corre `node index.mjs llave` (carga de
+llaves, no cobra) y `venta <monto>` en modo AUT. **No se pudo probar aquí**
+—no tenemos el DLL ni la pinpad ni Windows—; las firmas salieron del Anexo
+IV y el uso de koffi se validó contra libc. Dos cosas se ajustan en el primer
+arranque desde el `.env`: `GETTER_STYLE` (los getters vienen en dos familias,
+`PPVBGet*` con buffer y `PPGet*` que devuelven) y que el importe no salga
+corrido. El DLL es de Windows: este camino ata el cobro a la PC encendida,
+por eso el preferido sigue siendo la API. Si al final gana el DLL, la
+integración con la caja en la nube va por **cola** (como el agente de
+tickets), no exponiendo un puerto local.
+
 Se le preguntó a la API desde el mismo sitio desde el que cobraría la caja
 —una Edge Function— con un usuario inventado, y contestó:
 

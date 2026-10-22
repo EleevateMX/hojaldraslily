@@ -1,0 +1,19 @@
+{
+  "name": "@lily/agente-banorte",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Agente local de cobro con la terminal de Banorte por el DLL PINPAD.TPV (Interredes, camino directo).",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "llave": "node index.mjs llave",
+    "venta": "node index.mjs venta",
+    "serve": "node index.mjs serve"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "koffi": "2.9.0"
+  }
+}
