@@ -18,6 +18,21 @@ trabajo contra el ambiente de pruebas (§5).
 
 ## 0. Comprobado el 20/10: la API contesta desde Supabase
 
+**El 22/10 quedó claro de qué es la credencial que dio Banorte, y por qué
+no abre la API.** El usuario motor y su contraseña (más la «llave») son del
+camino **DLL/directo**, no del login de la API. Corroborado contra el manual:
+el DLL (Anexo III/IV, `PINPAD.TPV`) habla **directo a la pinpad** —`PPSetCommPort`
+o `PPSetIPAddressPort` al puerto 1818— y se autentica con `PPSetUser` /
+`PPSetPassword` (el usuario motor) y `PPSetGroup`; **no toca
+`posbridgetpv` ni el `/login`**. Por eso TPV Solutions dice, con razón, que
+«con eso funciona por DLL». Pero el DLL es una librería de **Windows** que
+corre en la PC de la tienda: para una caja en la nube habría que montar un
+puente local (modelo del agente de Clip), atando el cobro a que la PC esté
+encendida. El camino de la API (Anexo IX), que es el que tenemos, necesita
+un login **aparte** que TPV Solutions emite tras dar de alta el comercio en
+**TPVAdmin**; ese alta es lo que falta. Dos caminos, dos credenciales: la
+que tenemos es la del DLL; la que falta es la de la API.
+
 Se le preguntó a la API desde el mismo sitio desde el que cobraría la caja
 —una Edge Function— con un usuario inventado, y contestó:
 
