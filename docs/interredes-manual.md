@@ -231,6 +231,17 @@ esté certificado.)*
 6. **El cierre de lote** (`settlement` por `group`), si Banorte lo exige
    desde la caja y no lo hace solo la pinpad. Se sabrá en la certificación.
 
+**La pinpad que instaló TPV Solutions** (22/10/26, reporte de servicio
+folio 015117, ODT 2869608): es una **Verifone V660p (Android)**, no la PAX
+A920Pro del manual, con la aplicación de Interredes **PIPA36A1** (la misma
+familia que el manual llama PIPA35J), aplicativo «Retail», serie
+**713537969** (así, sin guiones, va en `PINPAD_SERIAL`: ya son 9 dígitos),
+afiliación **7156971**. La pantalla dice «Llave no inyectada, cargar
+llave» y muestra un «Folio: 1330616» que no es la serie ni la afiliación:
+probablemente es su alta en el TPVAdmin, y es candidato a ser el `group`
+— hay que confirmarlo con TPV Solutions, no suponerlo. La carga de llaves
+es justo `interredes-llave`, pero necesita antes el `login` de la API.
+
 **Los dos usuarios, con los nombres que usa Banorte** (22/10): el **usuario
 motor** es el que manda las transacciones —es `PAYWORKS_USER` /
 `PAYWORKS_PASSWORD`, el que va dentro de cada venta—; el **usuario
