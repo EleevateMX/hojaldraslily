@@ -219,12 +219,24 @@ esté certificado.)*
    `interredes-cancelar`, que ya existe.
 4. **La devolución** (`refund`, para otro día) — sin botón ni función
    todavía; hoy es un trámite con el banco.
-5. **La matriz de certificación**: correr contra `AUT` las transacciones que
-   el laboratorio pida (venta, cancelación, devolución, verificación, cierre)
-   y llenar el Excel con afiliación, número de control, referencia, fecha y
-   hora de cada una. Eso es un día de la casa con nosotros al lado.
+5. **La certificación**, como la explicó Banorte el 22/10: **cuatro
+   operaciones con su voucher** —carga de llaves, verificación, venta con
+   chip y venta contactless— y se hace **en producción** (`PRD`), con
+   tarjeta de verdad y montos chicos, cuando terminemos nuestras pruebas.
+   Las cuatro ya existen: `interredes-llave` (carga de llaves, gerencia),
+   la verificación dentro de `interredes-cobrar`, y las dos ventas son la
+   caja con «Terminal». Falta un botón de **verificación suelta** para
+   enseñársela al laboratorio, y llenar la matriz con afiliación, número de
+   control, referencia, fecha y hora de cada una.
 6. **El cierre de lote** (`settlement` por `group`), si Banorte lo exige
    desde la caja y no lo hace solo la pinpad. Se sabrá en la certificación.
+
+**Los dos usuarios, con los nombres que usa Banorte** (22/10): el **usuario
+motor** es el que manda las transacciones —es `PAYWORKS_USER` /
+`PAYWORKS_PASSWORD`, el que va dentro de cada venta—; el **usuario
+multicuentas** (multicobros) es el de la consola de reportes y no entra en
+ninguna venta. Y aparte están los de la **API de TPV Solutions**, que ni
+Banorte ni Payworks ven: esos abren el `login`.
 
 ---
 

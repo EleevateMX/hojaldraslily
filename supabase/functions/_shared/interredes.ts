@@ -441,6 +441,24 @@ export async function ventaInterredes(cfg: ConfigInterredes, p: { controlNumber:
 }
 
 /**
+ * Carga de llaves (`/transaction/key`): la pinpad le pide a Payworks su
+ * llave de cifrado. Es lo primero que se hace con una pinpad nueva y es una
+ * de las cuatro operaciones que el laboratorio pide ver en la certificación
+ * (llave, verificación, venta con chip, venta contactless). No cobra nada.
+ */
+export async function cargarLlaveInterredes(cfg: ConfigInterredes, p: { controlNumber: string }): Promise<ResultadoTerminal> {
+  const crudo = await llamarInterredes(cfg, '/transaction/key', {
+    controlNumber: p.controlNumber,
+    mode: cfg.modo,
+    user: cfg.payworks.user,
+    password: cfg.payworks.password,
+    serialPinpad: cfg.serial,
+    timeout: '90',
+  })
+  return leerResultado(crudo)
+}
+
+/**
  * Cancelación del día (`void`): deshace una venta aprobada hoy. Pide la
  * `paywReference` y el `authCode` de la venta original.
  */

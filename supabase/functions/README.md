@@ -16,6 +16,7 @@ hasta que Banorte quede certificado, sin secretos y sin nadie que las llame.
 | `interredes-probar` | ¿Contesta la API de Banorte desde aquí, y qué secretos faltan para cobrar? (`docs/interredes-manual.md` §0) | sí |
 | `interredes-cobrar` | La caja manda el importe a la pinpad y, si se aprueba, la venta entra por `fn_cobrar_orden` / `_mixto` / `fn_encargo_entregar_con_venta`. Solo con sesión del personal | sí |
 | `interredes-cancelar` | Cancelación del día (`void`) de un cobro de Banorte. Solo gerencia | sí |
+| `interredes-llave` | Carga de llaves de la pinpad (`/transaction/key`); primera operación de la certificación. Solo gerencia | sí |
 | `clip-crear-cobro` | Inicia un cobro en la terminal Clip | **no** |
 | `clip-estado-cobro` | Pregunta a Clip el estado real de un intento | sí (sin secretos) |
 | `clip-cancelar-cobro` | Cancela el intento en la terminal Clip | sí (sin secretos) |
