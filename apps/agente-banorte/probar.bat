@@ -14,10 +14,15 @@ if errorlevel 1 (
   exit /b 1
 )
 
-if not exist "PINPAD.TPV" (
+REM El kit de Banorte trae Pinpad.dll (64 bits) y Pinpad.tpv (32 bits).
+REM Preferimos el .dll de 64 bits, que es el que va con el Node normal.
+set "DLL_PATH="
+if exist "Pinpad.dll" set "DLL_PATH=.\Pinpad.dll"
+if not defined DLL_PATH if exist "Pinpad.tpv" set "DLL_PATH=.\Pinpad.tpv"
+if not defined DLL_PATH (
   echo.
-  echo Falta el archivo PINPAD.TPV en esta carpeta.
-  echo Copia aqui el DLL que dio Banorte / TPV Solutions y vuelve a intentar.
+  echo Falta el DLL de Banorte en esta carpeta.
+  echo Copia aqui Pinpad.dll ^(64 bits^) o Pinpad.tpv ^(32 bits^) y vuelve a intentar.
   echo.
   pause
   exit /b 1
@@ -44,10 +49,13 @@ set /p PAYWORKS_GROUP=Group (opcional para la llave, deja vacio si no lo tienes)
 
 set "PINPAD_PORT=1818"
 set "PAYWORKS_MODE=AUT"
-set "DLL_PATH=.\PINPAD.TPV"
+REM DLL_PATH ya quedo fijado arriba segun el archivo que haya (.dll o .tpv).
 
 echo.
+echo Usando DLL: %DLL_PATH%
 node index.mjs llave
 echo.
 echo (Si salio APROBADA, la pinpad conecto y cargo la llave.)
+echo (Si dice "No se pudo cargar el DLL", falta el Visual C++ Redistributable:
+echo  https://aka.ms/vs/17/release/vc_redist.x64.exe )
 pause

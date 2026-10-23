@@ -48,3 +48,9 @@ apps/admin/public/descargas/
 # El agente de Banorte se instala con npm en la PC de la tienda; su lock de
 # npm no va al repo (aqui mandamos con pnpm, como el agente de tickets).
 apps/agente-banorte/package-lock.json
+# Los binarios del DLL de Banorte NUNCA van al repo (es público y son de ellos).
+# Los pone la casa en la carpeta del agente, en la PC de la tienda.
+apps/agente-banorte/Pinpad.dll
+apps/agente-banorte/Pinpad.tpv
+apps/agente-banorte/*.dll
+apps/agente-banorte/*.tpv

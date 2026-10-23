@@ -28,7 +28,7 @@ function cfgDesdeEnv() {
   const falta = []
   const req = (k) => { const v = process.env[k]?.trim(); if (!v) falta.push(k); return v }
   const cfg = {
-    dllPath: process.env.DLL_PATH?.trim() || './PINPAD.TPV',
+    dllPath: process.env.DLL_PATH?.trim() || './Pinpad.dll',
     ip: process.env.PINPAD_IP?.trim() || null,
     port: process.env.PINPAD_PORT?.trim() || '1818',
     com: process.env.PINPAD_COM?.trim() || null,
@@ -37,7 +37,7 @@ function cfgDesdeEnv() {
     // El group no hace falta para la carga de llave; sí para venta. Opcional.
     group: process.env.PAYWORKS_GROUP?.trim() || '',
     mode: (process.env.PAYWORKS_MODE?.trim() || 'AUT').toUpperCase(),
-    getterStyle: (process.env.GETTER_STYLE?.trim() || 'buffer').toLowerCase(),
+    getterStyle: (process.env.GETTER_STYLE?.trim() || 'return').toLowerCase(),
     timeout: process.env.TIMEOUT?.trim() || '90',
     puertoHttp: Number(process.env.PUERTO_HTTP?.trim() || '8099'),
   }
@@ -85,7 +85,16 @@ async function main() {
     pinpad = abrirPinpad(cfg)
   } catch (e) {
     console.error('No se pudo cargar el DLL:', e.message)
-    console.error('Revisa que PINPAD.TPV esté junto a este programa y que Node sea de 32 o 64 bits según el DLL.')
+    console.error(
+      'Revisa tres cosas:\n' +
+      `  1. Que el archivo exista junto a este programa (ahora busca: ${cfg.dllPath}).\n` +
+      '     El kit de Banorte trae Pinpad.dll (64 bits) y Pinpad.tpv (32 bits).\n' +
+      '  2. Que Node sea de la MISMA arquitectura que el archivo: Node x64 con\n' +
+      '     Pinpad.dll (lo normal), o Node de 32 bits con Pinpad.tpv.\n' +
+      '  3. Que esté instalado el "Microsoft Visual C++ Redistributable"\n' +
+      '     (x64 para el .dll): https://aka.ms/vs/17/release/vc_redist.x64.exe\n' +
+      '     Sin él, Windows no encuentra MSVCP140.dll y el DLL no carga.',
+    )
     process.exit(1)
   }
 
@@ -129,7 +138,7 @@ function pista(cfg, r) {
       '    La IP la ves en la pinpad: Configurar -> Reporte de parametros (clave 86279).\n' +
       '  - Que esta computadora esté en el MISMO WiFi que la pinpad.\n' +
       '  - Que la pinpad esté encendida y en su pantalla de espera.\n' +
-      '  - Que PINPAD.TPV sea el correcto y Node tenga la misma arquitectura (32/64 bits).',
+      '  - Que el DLL (Pinpad.dll/Pinpad.tpv) sea el correcto y Node tenga la misma arquitectura (32/64 bits).',
     )
   } else if (r.resultado === 'R' || r.resultado === 'D') {
     console.log(

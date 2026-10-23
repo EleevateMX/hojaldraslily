@@ -10,18 +10,18 @@
 // un DLL directo, así que se usa koffi (FFI). Este agente corre en la PC de
 // la tienda, igual que el de tickets y el de etiquetas.
 //
-// TODO lo que sabe este archivo salió del manual de Interredes, Anexos III,
-// IV y V. Las firmas son las del Anexo IV (VB.NET: `__cdecl`, cadenas ANSI);
-// los comandos y modos, del Anexo V. **No se ha podido probar contra el DLL
-// real ni contra la pinpad** —no los tenemos aquí—, así que los dos puntos
-// que el manual deja ambiguos se dejan configurables para ajustarlos en el
+// Los nombres de las funciones están VERIFICADOS contra el DLL real que entregó
+// Banorte (23/10/26): `Pinpad.dll` (64 bits) y `Pinpad.tpv` (32 bits) exportan
+// exactamente estos 74 símbolos `PP*`, en las dos familias de getters. Lo que
+// NO se puede comprobar sin la pinpad —no la tenemos aquí— son dos cosas de
+// comportamiento, que por eso se dejan configurables y se confirman en el
 // primer arranque sin tocar código:
 //
-//   1. Cómo leen los getters. El Anexo IV muestra DOS familias: `PPVBGet*`
-//      que reciben un buffer (StringBuilder, estilo .NET) y `PPGet*` que
-//      devuelven el char* (estilo Delphi/C). Por defecto usamos el de buffer
-//      (`GETTER_STYLE=buffer`), que es el que viene con firma explícita; si
-//      el DLL solo exporta los que devuelven, se cambia a `GETTER_STYLE=return`.
+//   1. Cómo leen los getters. El DLL trae DOS familias (confirmado en sus
+//      exports): `PPGet*` que devuelven el char* (estilo Delphi/C) y `PPVBGet*`
+//      que reciben un buffer (StringBuilder, estilo .NET). Por defecto usamos
+//      los `PPGet*` (`GETTER_STYLE=return`), los más directos para koffi; si
+//      algún campo saliera vacío, se cambia a `GETTER_STYLE=buffer`.
 //   2. El importe. `PPSetTransactionAmount` recibe un `float` (Single). Va en
 //      PESOS con centavos como decimales (43.01 = $43.01). Si el primer
 //      cobro de prueba sale con el monto corrido, se revisa aquí.
@@ -47,6 +47,9 @@ const CAMPOS_RESPUESTA = {
   appId: 'AppID',
   tvr: 'TVR',
   entryMode: 'EntryMode',
+  serialPinpad: 'SerialPinpad',
+  pinRequested: 'PINRequested',
+  dllVersion: 'DLLVersion',
   cardExpireDate: 'CardExpireDate',
   custReqDate: 'CustReqDate',
   authReqDate: 'AuthReqDate',
@@ -217,7 +220,8 @@ export function voucherDesde(campos) {
     banco: campos.issuingBank ?? null,
     pan: campos.pan ?? null,
     entrada: campos.entryMode ?? null,
-    pin: null, // la validación de PIN sale del voucher del DLL; se ajusta al certificar
+    pin: campos.pinRequested ?? null, // PPGetPINRequested: si la operación pidió NIP
+    serie: campos.serialPinpad ?? null,
     aid: campos.appId ?? null,
     aplicacion: campos.appPrefName ?? campos.appLabel ?? null,
     tvr: campos.tvr ?? null,
