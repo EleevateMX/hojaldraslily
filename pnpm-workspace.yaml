@@ -1,4 +1,9 @@
 packages:
   - apps/*
+  # El agente de Banorte es un programa standalone de la PC de la tienda (usa
+  # koffi/FFI, sin deps del monorepo) y se instala con su propio `npm install`,
+  # igual que agente-impresion. Fuera del workspace para no pedir sus deps en el
+  # pnpm-lock.yaml ni romper el `--frozen-lockfile` del CI.
+  - '!apps/agente-banorte'
   - packages/*
   - supabase/seed
