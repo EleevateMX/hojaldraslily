@@ -41,10 +41,27 @@ export default tseslint.config(
     },
   },
   {
-    // Utilidades de línea de comandos: corren en Node, no en el navegador.
-    files: ['scripts/**/*.mjs'],
+    // Node, no navegador: utilidades de línea de comandos, empaquetadores y
+    // los agentes de la PC de la tienda. agente-banorte usa Buffer para leer
+    // los campos del DLL. (agente-banorte está fuera del workspace de pnpm,
+    // pero igual se lintea porque vive en el repo.)
+    files: ['scripts/**/*.mjs', 'apps/agente-banorte/**/*.mjs', 'apps/agente-caja/**/*.mjs'],
     languageOptions: {
-      globals: { console: 'readonly', process: 'readonly', URL: 'readonly' },
+      globals: { console: 'readonly', process: 'readonly', URL: 'readonly', Buffer: 'readonly' },
     },
+  },
+  {
+    // verificar-instalables.mjs evalúa código DENTRO del navegador con
+    // Playwright (page.evaluate): ahí viven navigator, document y fetch.
+    files: ['scripts/verificar-instalables.mjs'],
+    languageOptions: {
+      globals: { navigator: 'readonly', document: 'readonly', fetch: 'readonly' },
+    },
+  },
+  {
+    // Las pruebas del agente de caja comparan bytes ESC/POS crudos: las
+    // expresiones regulares traen caracteres de control a propósito.
+    files: ['apps/agente-caja/**/*.test.ts'],
+    rules: { 'no-control-regex': 'off' },
   },
 )
