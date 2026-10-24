@@ -37,7 +37,8 @@ la API**, y así presionar el trámite del login de la API con evidencia.
    `DLL_PATH`. La regla: Node y DLL, **la misma arquitectura**.
 4. Copia `.env.example` a **`.env`** y llena los datos:
    - `PINPAD_IP`: la IP de la pinpad en la red de la tienda (la ves en la
-     pinpad: menú Configurar → Reporte de parámetros, clave `86279`).
+     pinpad: botón verde ×2 → 1 Configurar, clave `26813` → 3 Reporte de
+     parámetros, clave `86279`).
    - `PAYWORKS_USER`, `PAYWORKS_PASSWORD`, `PAYWORKS_GROUP`: las de Banorte.
    - Deja `PAYWORKS_MODE=AUT` para probar sin cobrar.
 5. Abre una terminal en esta carpeta y corre `npm install`.

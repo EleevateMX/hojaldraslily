@@ -135,7 +135,8 @@ function pista(cfg, r) {
     console.log(
       '\nLa pinpad no contestó. Revisa:\n' +
       `  - Que la IP y el puerto sean los de la pinpad (ahora: ${cfg.com || `${cfg.ip}:${cfg.port}`}).\n` +
-      '    La IP la ves en la pinpad: Configurar -> Reporte de parametros (clave 86279).\n' +
+      '    La IP la ves en la pinpad: boton verde x2 -> 1 Configurar (clave 26813)\n' +
+      '    -> 3 Reporte de parametros (clave 86279).\n' +
       '  - Que esta computadora esté en el MISMO WiFi que la pinpad.\n' +
       '  - Que la pinpad esté encendida y en su pantalla de espera.\n' +
       '  - Que el DLL (Pinpad.dll/Pinpad.tpv) sea el correcto y Node tenga la misma arquitectura (32/64 bits).',
