@@ -10,6 +10,7 @@
  */
 
 import { NEGOCIO_DEFAULT } from './ticketTipos'
+import { LOGO_TICKET } from './logoTicket'
 import type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
 import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher } from './ticketLineas'
 
@@ -149,13 +150,12 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   const logo =
     negocio.mostrarLogo === false
       ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:14px;letter-spacing:.24em;text-transform:uppercase;line-height:1">${esc(negocio.nombre)}</div>`
-      : `<div style="display:flex;justify-content:center;align-items:baseline;line-height:1">
-           <span style="font-family:Jost,sans-serif;font-weight:300;font-size:17px">Hojaldras</span><span style="font-family:Yellowtail,cursive;font-size:30px;margin-left:-5px;transform:translateY(4px);display:inline-block">Lily</span>
-         </div>`
-  // Ojo con el aire de abajo: la cola de la «y» de Yellowtail baja fuera de su
-  // caja y, con los 6 px del diseño, tocaba la línea de la sucursal. En
-  // pantalla se perdona; en térmica a 203 dpi los dos trazos se funden y sale
-  // una mancha. Por eso ese margen es de 10 px y no de 6.
+      : `<img src="${LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:210px;max-width:85%;height:auto;display:block;margin:0 auto" />`
+  // El logotipo es la imagen real de la marca (negro sobre blanco, recortada al
+  // trazo), incrustada como data URI para que imprima sin red. Antes se
+  // recreaba con Jost + Yellowtail; una imagen sale igual en cualquier equipo y
+  // no depende de que carguen las fuentes de Google. Con `mostrarLogo = false`
+  // se cae al nombre en versalitas, como antes.
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Ticket ${esc(data.folio)}</title>
