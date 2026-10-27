@@ -8,6 +8,7 @@ import { createClient } from "@supabase/supabase-js";
 // ../../packages/ui/src/ticketTipos.ts
 var NEGOCIO_DEFAULT = {
   nombre: "Hojaldras Lily",
+  slogan: "Tradici\xF3n que une generaciones",
   sucursal: "Miguel Alem\xE1n",
   direccion: "Calle 29-A #183 por Av. 22\nCol. Miguel Alem\xE1n, M\xE9rida, Yuc.",
   telefono: "999 926 71 51",
@@ -122,6 +123,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   const { centrar, parear, regla, envolver } = formato(ancho);
   const L = [];
   L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
+  if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
   for (const renglon of (negocio.direccion ?? "").split("\n")) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()));
@@ -421,6 +423,22 @@ function negocioDelTrabajo(payload, porOmision) {
   );
   return { ...porOmision, ...limpio };
 }
+function logoDelNegocio(neg) {
+  if (neg.mostrarLogo === false) return null;
+  const r = neg.logoRaster;
+  if (!r || typeof r !== "object") return null;
+  const ancho = Number(r.ancho) | 0;
+  const alto = Number(r.alto) | 0;
+  if (ancho <= 0 || alto <= 0 || typeof r.datos !== "string") return null;
+  let datos;
+  try {
+    datos = new Uint8Array(Buffer.from(r.datos, "base64"));
+  } catch {
+    return null;
+  }
+  if (datos.length !== Math.ceil(ancho / 8) * alto) return null;
+  return { datos, ancho, alto };
+}
 function esPayloadDeTicket(p) {
   if (!p || typeof p !== "object") return false;
   const d = p;
@@ -458,8 +476,9 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
       `El trabajo ${trabajo.id} no trae un ticket que se pueda imprimir (falta folio, items o metodoPago).`
     );
   }
+  const img = logo ?? logoDelNegocio(neg);
   const b = new ConstructorEscPos().inicializar();
-  if (logo) b.alinear(1).logo(logo).linea();
+  if (img) b.alinear(1).logo(img).linea();
   b.alinear(0);
   for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l);
   return b.cortar().construir();

@@ -150,7 +150,11 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   const logo =
     negocio.mostrarLogo === false
       ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:14px;letter-spacing:.24em;text-transform:uppercase;line-height:1">${esc(negocio.nombre)}</div>`
-      : `<img src="${LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:210px;max-width:85%;height:auto;display:block;margin:0 auto" />`
+      : `<img src="${negocio.logo || LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:210px;max-width:85%;height:auto;display:block;margin:0 auto" />`
+  // El lema de la casa, debajo del logotipo. Vacío = no se pinta.
+  const slogan = negocio.slogan?.trim()
+    ? `<div style="font-family:Jost,sans-serif;font-size:10px;font-style:italic;margin-top:4px">${esc(negocio.slogan.trim())}</div>`
+    : ''
   // El logotipo es la imagen real de la marca (negro sobre blanco, recortada al
   // trazo), incrustada como data URI para que imprima sin red. Antes se
   // recreaba con Jost + Yellowtail; una imagen sale igual en cualquier equipo y
@@ -188,6 +192,7 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
 
   <div class="center">
     ${logo}
+    ${slogan}
     ${negocio.sucursal ? `<div style="font-size:10px;margin-top:10px">Sucursal ${esc(negocio.sucursal)}</div>` : ''}
     <div style="font-size:9px;line-height:1.4;margin-top:2px">
       ${direccion}${direccion && negocio.telefono ? '<br />' : ''}${negocio.telefono ? `Tel. ${esc(negocio.telefono)}` : ''}

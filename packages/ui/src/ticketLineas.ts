@@ -241,6 +241,9 @@ export function armarTicket(
   // papel y calor. Lo que sostiene la identidad sin color es el nombre al
   // doble de tamaño — que es lo que se lee aunque el logo no salga.
   L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: 'centro' }))
+  // El lema, debajo del nombre: identidad de la casa, lo que amarra el nombre
+  // al negocio. Se envuelve si no cabe en el ancho del papel.
+  if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
   // La dirección trae saltos de línea propios: se respetan y además se
   // envuelve lo que no quepa.

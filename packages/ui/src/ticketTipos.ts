@@ -16,6 +16,8 @@
 export interface TicketNegocio {
   nombre: string
   sucursal?: string
+  /** El lema de la casa, debajo del nombre. Vacío = no se imprime. */
+  slogan?: string
   /** Una línea por renglón: se parte por salto, no por ancho. */
   direccion?: string
   telefono?: string
@@ -46,6 +48,24 @@ export interface TicketNegocio {
   horario?: string
   /** `false` imprime el nombre en versalitas en vez del logotipo. */
   mostrarLogo?: boolean
+  /**
+   * El logotipo como data URI (PNG, negro sobre blanco). Vacío = se usa el
+   * logo de la casa que viene en el código (`LOGO_TICKET`). Se edita en
+   * Admin → Sistema y viaja DENTRO de cada trabajo de impresión, así que
+   * cambiarlo ahí cambia el papel sin tocar la PC de la tienda. La pantalla
+   * lo pinta como `<img>`. El AGENTE no decodifica PNG —no se le mete un
+   * decodificador ni una dependencia—: para la térmica usa `logoRaster`.
+   */
+  logo?: string
+  /**
+   * El logotipo YA rasterizado para la térmica, que Admin saca del archivo
+   * subido con un canvas: `datos` son los bytes empacados 1 bit por pixel
+   * (1 = negro, filas alineadas a byte, MSB primero) en base64, y `ancho`/
+   * `alto` en puntos. El agente solo lo desempaca y lo manda con `GS v 0`.
+   * Así el trabajo de imagen lo hace quien tiene canvas (el navegador) y el
+   * agente queda sin decodificador de PNG. Vacío = no hay logo en el papel.
+   */
+  logoRaster?: { ancho: number; alto: number; datos: string }
   /** `false` esconde quién cobró. Sirve para aclaraciones, así que viene encendido. */
   mostrarCajero?: boolean
 }
@@ -130,6 +150,7 @@ export interface TicketData {
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */
 export const NEGOCIO_DEFAULT: TicketNegocio = {
   nombre: 'Hojaldras Lily',
+  slogan: 'Tradición que une generaciones',
   sucursal: 'Miguel Alemán',
   direccion: 'Calle 29-A #183 por Av. 22\nCol. Miguel Alemán, Mérida, Yuc.',
   telefono: '999 926 71 51',

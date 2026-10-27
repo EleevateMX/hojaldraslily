@@ -10,6 +10,8 @@ import type { ConfiguracionKiosko, ModoPagoKiosko } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
 import { BotonActualizarPantallas } from '../BotonActualizarPantallas'
 import { mensajeDeError } from '@lily/utils'
+import { ticketHTML, NEGOCIO_DEFAULT, type TicketData, type TicketNegocio } from '@lily/ui'
+import { prepararLogo } from '../lib/logoTicket'
 
 interface Indicador {
   label: string
@@ -257,11 +259,27 @@ export default function Sistema() {
  * solo en el papel: «Por higiene no se hacen cambios» metido en un párrafo
  * no lo lee nadie.
  */
+/** Un ticket de ejemplo para la vista previa: lo real, en chico. */
+function ticketDeEjemplo(): TicketData {
+  return {
+    folio: 20,
+    fecha: new Date(),
+    canal: 'Caja',
+    items: [
+      { cantidad: 1, nombre: 'Fiesta · Mini · 12 cuadros', precioUnitario: 225 },
+      { cantidad: 2, nombre: 'Guayaba · Chica · 24 cuadros', precioUnitario: 180 },
+    ],
+    metodoPago: 'Efectivo',
+    recibido: 600,
+  }
+}
+
 function DatosDelTicketPanel() {
   const [datos, setDatos] = useState<DatosDelTicket | null>(null)
   const [avisos, setAvisos] = useState('')
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
+  const [subiendoLogo, setSubiendoLogo] = useState(false)
   const [msg, setMsg] = useState<{ ok?: string; error?: string }>({})
 
   useEffect(() => {
@@ -304,6 +322,35 @@ function DatosDelTicketPanel() {
     }
   }
 
+  async function cambiarLogo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = '' // deja volver a subir el mismo archivo si hace falta
+    if (!file) return
+    setSubiendoLogo(true); setMsg({})
+    try {
+      const { logo, logoRaster } = await prepararLogo(file)
+      // Al subir uno, se enciende el imprimirlo: para eso se subió.
+      setDatos((d) => ({ ...(d ?? {}), logo, logoRaster, mostrarLogo: true }))
+      setMsg({ ok: 'Logo listo. Míralo en la vista previa y dale Guardar.' })
+    } catch (err) {
+      setMsg({ error: mensajeDeError(err) })
+    } finally {
+      setSubiendoLogo(false)
+    }
+  }
+
+  // El negocio tal como va a salir, para la vista previa: lo de la casa por
+  // debajo, lo que se está editando por encima, y los avisos del textarea.
+  const negocioPreview: TicketNegocio = {
+    ...NEGOCIO_DEFAULT,
+    ...(datos ?? {}),
+    avisos: avisos.split('\n').map((s) => s.trim()).filter(Boolean),
+  }
+  // La plantilla auto-imprime (`window.print()`) al cargar: en una vista
+  // previa eso dispararía el diálogo de impresión, así que se le quita.
+  const previewHtml = ticketHTML(ticketDeEjemplo(), negocioPreview, 1)
+    .replace('onload="window.print()"', '')
+
   return (
     <Panel title="Lo que dice el ticket" className="mb-8">
       <p className={`text-sm mb-4 ${cx.muted}`}>
@@ -317,6 +364,7 @@ function DatosDelTicketPanel() {
       ) : (
         <form onSubmit={guardar} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {campo('nombre', 'Nombre', 'Hojaldras Lily')}
+          {campo('slogan', 'Lema (debajo del logo)', 'Tradición que une generaciones')}
           {campo('sucursal', 'Sucursal', 'Miguel Alemán')}
           {campo('direccion', 'Dirección (un renglón por línea)', 'Calle 29-A #183 por Av. 22', true)}
           {campo('telefono', 'Teléfono', '999 926 71 51')}
@@ -334,6 +382,43 @@ function DatosDelTicketPanel() {
               onChange={(e) => setAvisos(e.target.value)}
             />
           </Field>
+          {/* ---- El logotipo ---- */}
+          <div className="sm:col-span-2 border-t border-sa-green-ink/15 pt-4">
+            <div className="text-sm font-semibold text-sa-green-ink mb-1">Logotipo del ticket</div>
+            <p className={`text-xs mb-3 ${cx.muted}`}>
+              Sube un PNG o JPG (de preferencia negro sobre fondo transparente o blanco). Sale
+              arriba del ticket, centrado. Para la térmica se convierte solo a blanco y negro.
+            </p>
+            <div className="flex flex-wrap items-center gap-4">
+              <div className="w-[160px] h-[90px] grid place-items-center bg-white border border-sa-green-ink/15 rounded">
+                {datos?.logo
+                  ? <img src={datos.logo} alt="Logo" className="max-w-full max-h-full" />
+                  : <span className={`text-xs ${cx.muted}`}>Sin logo</span>}
+              </div>
+              <div className="flex flex-col gap-2">
+                <label className={`${cx.btnSec} cursor-pointer text-center`}>
+                  {subiendoLogo ? 'Procesando…' : (datos?.logo ? 'Cambiar logo' : 'Subir logo')}
+                  <input type="file" accept="image/png,image/jpeg" className="hidden"
+                    disabled={subiendoLogo} onChange={cambiarLogo} />
+                </label>
+                {datos?.logo && (
+                  <button type="button" className="text-xs text-sa-green-deep underline"
+                    onClick={() => setDatos((d) => ({ ...(d ?? {}), logo: undefined, logoRaster: undefined }))}>
+                    Quitar el logo
+                  </button>
+                )}
+              </div>
+            </div>
+            <label className="flex items-center gap-2 text-sm text-sa-green-ink mt-3">
+              <input
+                type="checkbox"
+                checked={datos?.mostrarLogo !== false}
+                onChange={(e) => setDatos({ ...datos, mostrarLogo: e.target.checked })}
+              />
+              Imprimir el logo arriba del ticket (si se apaga, sale el nombre en grande)
+            </label>
+          </div>
+
           <label className="flex items-center gap-2 text-sm text-sa-green-ink sm:col-span-2">
             <input
               type="checkbox"
@@ -342,6 +427,23 @@ function DatosDelTicketPanel() {
             />
             Imprimir el nombre de quien cobró
           </label>
+
+          {/* ---- Vista previa ---- */}
+          <div className="sm:col-span-2 border-t border-sa-green-ink/15 pt-4">
+            <div className="text-sm font-semibold text-sa-green-ink mb-2">Vista previa del ticket</div>
+            <p className={`text-xs mb-3 ${cx.muted}`}>
+              Un ticket de ejemplo con lo que está escrito arriba. El papel real es de 80&nbsp;mm.
+            </p>
+            <div className="inline-block bg-sa-cream-soft p-3 rounded border border-sa-green-ink/15">
+              <iframe
+                title="Vista previa del ticket"
+                srcDoc={previewHtml}
+                className="bg-white border border-sa-green-ink/15"
+                style={{ width: 320, height: 540 }}
+              />
+            </div>
+          </div>
+
           <div className="sm:col-span-2">
             <button className={cx.btnPrimary} disabled={guardando} type="submit">
               {guardando ? 'Guardando…' : 'Guardar'}

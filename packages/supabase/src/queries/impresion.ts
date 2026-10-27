@@ -300,6 +300,7 @@ export function suscribirTrabajosImpresion(sb: ClienteLily, onCambio: () => void
  */
 export interface DatosDelTicket {
   nombre?: string
+  slogan?: string
   sucursal?: string
   direccion?: string
   telefono?: string
@@ -309,6 +310,12 @@ export interface DatosDelTicket {
   avisos?: string[]
   horario?: string
   mostrarCajero?: boolean
+  /** Logotipo para la pantalla y el navegador (PNG data URI). */
+  logo?: string
+  /** El mismo logo ya en blanco y negro para la térmica (bytes 1bpp en base64). */
+  logoRaster?: { ancho: number; alto: number; datos: string }
+  /** `false` = no imprimir el logo arriba (sale el nombre en grande). */
+  mostrarLogo?: boolean
 }
 
 export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {

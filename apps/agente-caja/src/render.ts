@@ -54,6 +54,38 @@ export interface TrabajoCaja {
 }
 
 /**
+ * El logo para la térmica, sacado de lo que Admin dejó en `negocio.logoRaster`.
+ *
+ * El navegador ya hizo el trabajo pesado: cargó el PNG en un canvas, lo pasó a
+ * blanco y negro y empacó los bytes 1 bit por pixel. Aquí solo se
+ * base64-decodifica y se entrega como `LogoRaster`, para que el agente no
+ * cargue un decodificador de PNG ni una dependencia que compilar en la PC.
+ *
+ * `mostrarLogo === false` apaga el logo y deja el nombre en grande —la red de
+ * seguridad si el raster sale mal en una impresora concreta y la casa prefiere
+ * el texto—. Un raster con medidas que no cuadran con los bytes se descarta en
+ * vez de mandar basura a cortar la imagen a media altura.
+ */
+export function logoDelNegocio(neg: TicketNegocio): LogoRaster | null {
+  if (neg.mostrarLogo === false) return null
+  const r = neg.logoRaster
+  if (!r || typeof r !== 'object') return null
+  const ancho = Number(r.ancho) | 0
+  const alto = Number(r.alto) | 0
+  if (ancho <= 0 || alto <= 0 || typeof r.datos !== 'string') return null
+  let datos: Uint8Array
+  try {
+    datos = new Uint8Array(Buffer.from(r.datos, 'base64'))
+  } catch {
+    return null
+  }
+  // Los bytes tienen que cuadrar EXACTO con las medidas, o la imagen sale
+  // corrida: cada fila es ceil(ancho/8) bytes.
+  if (datos.length !== Math.ceil(ancho / 8) * alto) return null
+  return { datos, ancho, alto }
+}
+
+/**
  * Qué es un payload de ticket.
  *
  * Se valida lo mínimo que hace falta para no imprimir basura: el resto lo
@@ -134,8 +166,11 @@ export function construirDocumento(
     )
   }
 
+  // El logo explícito (una prueba, un test) manda; si no, el que Admin dejó
+  // en los datos del negocio, ya rasterizado y viajando dentro del trabajo.
+  const img = logo ?? logoDelNegocio(neg)
   const b = new ConstructorEscPos().inicializar()
-  if (logo) b.alinear(1).logo(logo).linea()
+  if (img) b.alinear(1).logo(img).linea()
 
   b.alinear(0)
   for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l)
