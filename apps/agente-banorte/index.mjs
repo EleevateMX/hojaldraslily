@@ -34,7 +34,8 @@ function cfgDesdeEnv() {
     com: process.env.PINPAD_COM?.trim() || null,
     user: req('PAYWORKS_USER'),
     password: req('PAYWORKS_PASSWORD'),
-    // El group no hace falta para la carga de llave; sí para venta. Opcional.
+    // El group es HOTELERO: una panadería no lo necesita (ni en llave ni en
+    // venta). Opcional; si algún día se requiere, se pone en el .env.
     group: process.env.PAYWORKS_GROUP?.trim() || '',
     mode: (process.env.PAYWORKS_MODE?.trim() || 'AUT').toUpperCase(),
     getterStyle: (process.env.GETTER_STYLE?.trim() || 'return').toLowerCase(),
@@ -106,7 +107,7 @@ async function main() {
     } else if (comando === 'venta') {
       const monto = args[0]
       if (!monto) { console.error('Uso: node index.mjs venta <monto en pesos, ej 10.00>'); process.exit(1) }
-      if (!cfg.group) console.log('Aviso: PAYWORKS_GROUP está vacío; una venta suele necesitarlo. Si la pinpad lo pide, agrégalo al .env.')
+      // El group es HOTELERO (27/10): una panadería no lo necesita. Vacío está bien.
       const r = pinpad.venta(numeroDeControl('L'), monto)
       console.log(resumen(cfg, 'VENTA', r))
       if (r.aprobado) console.log('Voucher:', JSON.stringify(voucherDesde(r.campos), null, 2))

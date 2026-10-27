@@ -1429,9 +1429,15 @@ real, se inclinó por el camino del **DLL** (`apps/agente-banorte`, `PINPAD.TPV`
 vía koffi) y no por la API REST. Consecuencia concreta pedida: `customerRef5 =
 'PaxInterredAPI'` —que el manual exige «siempre»— es **solo de la API**, así
 que se quitó del DLL (`pinpad.mjs`); en `_shared/interredes.ts` (la API) se
-queda. Lo que sigue bloqueando el cobro en vivo es lo de siempre: el `group` y
-la afiliación habilitada para ventas (PAYW-6001). El código de la API queda
-desplegado como referencia hasta que se decida de plano.
+queda. Y el **`group` es OPCIONAL** (27/10): la casa confirmó con el banco que
+es para escenarios **hoteleros**; una panadería no lo usa, así que ya NO se
+exige ni se manda vacío (ni en la API ni en el DLL), y **PAYW-6001 NO era por
+el group**. Lo único que bloquea el cobro en vivo es la **afiliación habilitada
+para ventas** (la regla antifraude que da PAYW-6001); las pruebas van con
+montos chicos (**$1**, que el código ya acepta: solo exige monto > 0). El código
+de la API queda desplegado como referencia; si se vuelve a la API, hay que
+**re-desplegar** las Edge Functions para que el group deje de exigirse también
+en lo desplegado.
 
 **Transferencia e Inbursa** (segunda terminal) son dos métodos manuales más
 (audio de Kenny, 26/10): se cobran a mano en su aparato/cuenta y se registran

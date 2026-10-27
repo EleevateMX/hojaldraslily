@@ -115,7 +115,11 @@ export interface ConfigInterredes {
   payworks: { user: string; password: string }
   /** Número de serie de la pinpad, como lo quiere Payworks («0» + últimos 8 en PAX). */
   serial: string
-  /** Grupo/caja al que pertenece la terminal; va en cada venta y en el cierre. */
+  /**
+   * Grupo/caja de la terminal. OPCIONAL (27/10): la casa confirmó con el banco
+   * que el `group` es para escenarios HOTELEROS; una panadería no lo necesita.
+   * Vacío = no se exige ni se manda. PAYW-6001 NO era por esto.
+   */
   group: string
   modo: ModoInterredes
 }
@@ -133,14 +137,14 @@ export function configInterredes(): ConfigInterredes {
   if (!payworks.user) faltan.push('PAYWORKS_USER')
   if (!payworks.password) faltan.push('PAYWORKS_PASSWORD')
   if (!serial) faltan.push('PINPAD_SERIAL')
-  if (!group) faltan.push('PAYWORKS_GROUP')
+  // PAYWORKS_GROUP ya NO se exige: es hotelero. Si está, se usa; si no, vacío.
   if (!modo || !['PRD', 'AUT', 'DEC', 'RND'].includes(modo)) faltan.push('PAYWORKS_MODE (PRD | AUT | DEC | RND)')
   if (faltan.length) throw new InterredesSinCredenciales(faltan)
   return {
     api: { username: api.username!, password: api.password! },
     payworks: { user: payworks.user!, password: payworks.password! },
     serial: serial!,
-    group: group!,
+    group: group ?? '',
     modo: modo as ModoInterredes,
   }
 }
@@ -416,7 +420,8 @@ function base(cfg: ConfigInterredes, controlNumber: string) {
     customerRef3: '',
     // Lo exige el manual, siempre con este valor exacto.
     customerRef5: 'PaxInterredAPI',
-    group: cfg.group,
+    // El group solo va si está puesto (es hotelero; una panadería no lo usa).
+    ...(cfg.group ? { group: cfg.group } : {}),
     mode: cfg.modo,
     user: cfg.payworks.user,
     password: cfg.payworks.password,
