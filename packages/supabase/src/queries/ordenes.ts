@@ -167,7 +167,42 @@ export interface VentaDelTurno {
   pagado: boolean
   estado: string
   cancelada_motivo: string | null
+  modificada_en: string | null
   items: { nombre: string; cantidad: number; precio: number }[]
+}
+
+/** Lo que devuelve una modificación: el folio nuevo y los montos para el ticket. */
+export interface ResultadoModificacion {
+  orden_id: string
+  folio: number
+  total_nuevo: number
+  credito: number
+  diferencia: number
+}
+
+/**
+ * Modifica una venta del turno: la reemplaza por una con los `items` nuevos y
+ * cobra la diferencia. El crédito (lo que ya había pagado) se aplica como
+ * anticipo. Atómico en el servidor. `autorizadoPor` es el gerente del PIN.
+ */
+export async function cobrarModificacion(
+  sb: ClienteLily,
+  ordenVieja: string,
+  items: { producto_id: string; cantidad: number }[],
+  metodo: MetodoPago,
+  autorizadoPor: string,
+  canal: 'pos' | 'rappi' = 'pos',
+  descuento = 0,
+): Promise<ResultadoModificacion> {
+  const filas = await rpc<ResultadoModificacion[]>(sb, 'fn_cobrar_modificacion', {
+    p_orden_vieja: ordenVieja,
+    p_items: items,
+    p_metodo: metodo,
+    p_autorizado_por: autorizadoPor,
+    p_canal: canal,
+    p_descuento: descuento,
+  })
+  return filas[0]
 }
 
 /** Lo vendido (y lo cancelado) del turno, de lo más reciente a lo más viejo. */

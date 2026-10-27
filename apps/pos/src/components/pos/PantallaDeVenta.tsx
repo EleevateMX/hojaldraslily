@@ -54,6 +54,9 @@ export function PantallaDeVenta({
   const totalItems = usePosStore((s) => s.totalItems())
   const aCobrar = usePosStore((s) => s.aCobrar())
   const encargo = usePosStore((s) => s.encargo)
+  const modificacion = usePosStore((s) => s.modificacion)
+  const setModificacion = usePosStore((s) => s.setModificacion)
+  const limpiarOrden = usePosStore((s) => s.limpiarOrden)
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [ticketAbierto, setTicketAbierto] = useState(false)
 
@@ -80,6 +83,19 @@ export function PantallaDeVenta({
   return (
     <div className="h-dvh flex flex-col bg-sa-cream-paper overflow-hidden">
       <AvisoDeConexion />
+      {modificacion && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-sa-banana/25 border-b border-sa-banana/40 flex-shrink-0">
+          <span className="font-mono text-xs text-sa-green-ink">
+            Modificando la venta #{modificacion.folioVieja} · ya pagó {mxn(modificacion.credito)} · arma el nuevo pedido y cobra la diferencia
+          </span>
+          <button
+            onClick={() => { setModificacion(null); limpiarOrden() }}
+            className="font-mono text-xs uppercase tracking-wide text-sa-green-deep underline whitespace-nowrap"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
       <header className="flex items-center justify-between gap-2 px-3 lg:px-5 py-2 lg:py-2.5 bg-sa-green-deep text-sa-cream flex-shrink-0 border-b border-sa-cream/10">
         <div className="flex items-center gap-2 lg:gap-3 min-w-0">
           {/* En el teléfono no cabe el logotipo junto a los controles: a 390

@@ -7,6 +7,7 @@ import {
   cobrarOrden,
   cobrarOrdenMixto,
   entregarEncargoConVenta,
+  cobrarModificacion,
 } from '@lily/supabase'
 import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
 import { type TicketData } from '@lily/ui'
@@ -121,7 +122,7 @@ export function Cobro() {
   const navigate = useNavigate()
   const {
     empleado, almacen, corte,
-    items, encargo,
+    items, encargo, modificacion,
     subtotal, descuentoTotal, neto, aCobrar, limpiarOrden,
     canal, precioDe,
   } = usePosStore()
@@ -178,14 +179,23 @@ export function Cobro() {
   // Rappi: no se cobra aquí (paga la plataforma), no hay método ni mixto.
   const esRappi = canal === 'rappi'
   const rappiIdOk = /^\d{3,6}$/.test(rappiId.trim())
+  // Modificación: se cobra la DIFERENCIA contra lo ya pagado (el crédito). El
+  // nuevo total es el del carrito. Si la nueva es más barata, no se puede por
+  // aquí (habría que devolver): se manda a Cancelar.
+  const difModif = modificacion ? Math.round((neto() - modificacion.credito) * 100) / 100 : null
+  const modifMasBarata = difModif != null && difModif < -0.01
+  // Lo que la pantalla cobra: en una modificación, la diferencia (nunca < 0).
+  const montoACobrar = difModif != null ? Math.max(0, difModif) : totalNeto
   const metodoSel = METODOS.find((m) => m.key === metodo)!
   const recibidoNum = parseFloat(recibido) || 0
-  const cambio = recibidoNum - totalNeto
+  const cambio = recibidoNum - montoACobrar
   const efectivoMixto = Math.round((parseFloat(parteEfectivo) || 0) * 100) / 100
   const tarjetaMixto = Math.round((totalNeto - efectivoMixto) * 100) / 100
   const mixtoValido = mixto && efectivoMixto > 0 && tarjetaMixto > 0
   const listo = esRappi
     ? rappiIdOk && totalNeto > 0
+    : modificacion
+    ? !modifMasBarata && (metodo !== 'efectivo' || montoACobrar <= 0 || recibidoNum >= montoACobrar)
     : mixto
     ? mixtoValido
     : metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
@@ -211,7 +221,9 @@ export function Cobro() {
       // descuento: el cliente pagó ese dinero y el negocio lo cobró. En el
       // descuento diría que se le regalaron $200 que están en el cajón
       // desde el lunes.
-      anticipo: encargo?.anticipo || undefined,
+      // El crédito de una modificación se muestra igual que el anticipo de un
+      // encargo: «ya pagó $X», y el TOTAL del papel baja a la diferencia.
+      anticipo: encargo?.anticipo || modificacion?.credito || undefined,
       // El nombre primero: el recuadro del papel ya dice «ENCARGO PARA», y
       // lo que se lee a un metro en el mostrador es a quién se le entrega.
       // El folio va detrás, que es con lo que se concilia después.
@@ -370,6 +382,28 @@ export function Cobro() {
         })
         ordenViva.current = null
         await sacarTicket(orden.id, armarDatosDelTicket(orden.folio))
+        limpiarOrden()
+        navigate('/', { replace: true })
+        return
+      }
+
+      // --- Modificación (cancelar y rearmar) ---
+      // El servidor lo hace TODO atómico: deja la venta vieja a crédito (su pan
+      // vuelve al inventario, su dinero se queda en el corte) y cobra la
+      // diferencia de la nueva. Un solo método, sin pinpad: la diferencia se
+      // cobra a mano (si fuera tarjeta, en la terminal del banco).
+      if (modificacion) {
+        yaTocamosElServidor = true
+        const r = await cobrarModificacion(
+          sb,
+          modificacion.ordenVieja,
+          items.map((l) => ({ producto_id: l.producto.id, cantidad: l.cantidad })),
+          metodo,
+          modificacion.autorizadoPor,
+          canal,
+          descuentoTotal(),
+        )
+        await sacarTicket(r.orden_id, armarDatosDelTicket(r.folio))
         limpiarOrden()
         navigate('/', { replace: true })
         return
@@ -657,8 +691,15 @@ export function Cobro() {
           </div>
         </div>
         <div className="px-6 py-3 md:py-6 text-center">
-          <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50 mb-1 md:mb-2">Total a cobrar</p>
-          <p className="font-display text-5xl md:text-7xl text-sa-cream leading-none">{mxn(totalNeto)}</p>
+          <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50 mb-1 md:mb-2">
+            {modificacion ? 'Diferencia a cobrar' : 'Total a cobrar'}
+          </p>
+          <p className="font-display text-5xl md:text-7xl text-sa-cream leading-none">{mxn(montoACobrar)}</p>
+          {modificacion && (
+            <p className="font-mono text-xs text-sa-cream/60 mt-1">
+              Modificando #{modificacion.folioVieja} · ya pagó {mxn(modificacion.credito)} · nuevo total {mxn(neto())}
+            </p>
+          )}
         </div>
       </header>
 
@@ -716,22 +757,34 @@ export function Cobro() {
                 <span className="font-display text-lg">{m.label}</span>
               </button>
             ))}
-            <button
-              onClick={() => { setMixto(true); setParteEfectivo(''); setRechazo(null); setError(null) }}
-              aria-pressed={mixto}
-              className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
-                mixto
-                  ? 'bg-sa-green text-sa-cream shadow-sa'
-                  : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
-              }`}
-            >
-              <IconoMixto />
-              <span className="font-display text-lg">Mixto</span>
-              <span className="font-mono text-[10px] uppercase tracking-wide opacity-70 -mt-1">
-                una parte y otra parte
-              </span>
-            </button>
+            {/* En una modificación se cobra la diferencia con UN solo método. */}
+            {!modificacion && (
+              <button
+                onClick={() => { setMixto(true); setParteEfectivo(''); setRechazo(null); setError(null) }}
+                aria-pressed={mixto}
+                className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
+                  mixto
+                    ? 'bg-sa-green text-sa-cream shadow-sa'
+                    : 'bg-sa-cream-soft text-sa-green-ink hover:bg-sa-cream-warm'
+                }`}
+              >
+                <IconoMixto />
+                <span className="font-display text-lg">Mixto</span>
+                <span className="font-mono text-[10px] uppercase tracking-wide opacity-70 -mt-1">
+                  una parte y otra parte
+                </span>
+              </button>
+            )}
           </div>
+
+          {modifMasBarata && (
+            <div className="bg-sa-strawberry/10 border border-sa-strawberry/30 rounded-sa px-4 py-3 mb-4">
+              <p className="font-mono text-sm text-sa-strawberry">
+                La nueva venta es más barata que la original. Hay que devolver dinero:
+                regresa, cancela la venta #{modificacion?.folioVieja} y cóbrala de nuevo.
+              </p>
+            </div>
+          )}
 
           {/* Se captura SOLO el efectivo; el resto se calcula. Pedir los dos
               números deja teclear dos que no sumen el total, y eso lo rechaza
@@ -786,7 +839,7 @@ export function Cobro() {
           )}
 
           {/* Efectivo: recibido + cambio */}
-          {!mixto && metodo === 'efectivo' && totalNeto > 0 && (
+          {!mixto && metodo === 'efectivo' && montoACobrar > 0 && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
               <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
                 Recibido
@@ -797,12 +850,12 @@ export function Cobro() {
                   type="number"
                   value={recibido}
                   onChange={(e) => setRecibido(e.target.value)}
-                  placeholder={totalNeto.toFixed(2)}
+                  placeholder={montoACobrar.toFixed(2)}
                   className="w-full pl-10 pr-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
                 />
               </div>
               <div className="flex gap-2 mb-3">
-                {montosRapidos(totalNeto).map((v) => (
+                {montosRapidos(montoACobrar).map((v) => (
                   <button
                     key={v}
                     onClick={() => setRecibido(String(v))}
@@ -812,7 +865,7 @@ export function Cobro() {
                   </button>
                 ))}
                 <button
-                  onClick={() => setRecibido(totalNeto.toFixed(2))}
+                  onClick={() => setRecibido(montoACobrar.toFixed(2))}
                   className="flex-1 py-2.5 bg-sa-banana/40 hover:bg-sa-banana rounded-full font-mono text-sm text-sa-green-ink transition-colors"
                 >
                   Exacto
@@ -954,6 +1007,8 @@ export function Cobro() {
               ? 'Cobrando…'
               : esRappi
               ? `Cobrar e imprimir ${mxn(totalNeto)}`
+              : modificacion
+              ? `Cobrar diferencia ${mxn(montoACobrar)}`
               : `Confirmar pago ${mxn(totalNeto)}`}
           </button>
         </div>

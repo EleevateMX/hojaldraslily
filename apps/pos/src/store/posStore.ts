@@ -93,6 +93,14 @@ interface PosStore {
   setEncargo: (e: EncargoEnCarrito | null) => void
 
   /**
+   * La venta que se está MODIFICANDO (cancelar y rearmar). Cuando está puesta,
+   * el cajero rearma el ticket y al cobrar se cobra solo la diferencia contra
+   * `credito` (lo que ya había pagado). `autorizadoPor` es el gerente del PIN.
+   */
+  modificacion: { ordenVieja: string; folioVieja: number; credito: number; autorizadoPor: string } | null
+  setModificacion: (m: { ordenVieja: string; folioVieja: number; credito: number; autorizadoPor: string } | null) => void
+
+  /**
    * Mete un producto al ticket. `cuantos` existe para las piezas sueltas:
    * "+3 piezas" es un toque, no tres.
    */
@@ -133,6 +141,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       items: [],
       descuentoManual: null,
       encargo: null,
+      modificacion: null,
     }),
 
   almacen: null,
@@ -145,8 +154,10 @@ export const usePosStore = create<PosStore>((set, get) => ({
   items: [],
   descuentoManual: null,
   encargo: null,
+  modificacion: null,
 
   setEncargo: (encargo) => set({ encargo }),
+  setModificacion: (modificacion) => set({ modificacion }),
 
   agregarItem: (p, personalizacion = null, cuantos = 1) =>
     set((state) => {
@@ -213,6 +224,8 @@ export const usePosStore = create<PosStore>((set, get) => ({
       // encargo de alguien más al siguiente cliente del mostrador, que es el
       // mismo daño que dejar el canal en Rappi.
       encargo: null,
+      // La modificación también se suelta: ya se cobró, o se abandonó.
+      modificacion: null,
     }),
 
   canal: 'pos',

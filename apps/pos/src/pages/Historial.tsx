@@ -21,7 +21,7 @@ import { imprimirComprobanteCancelacion } from '../lib/ticket'
  */
 export function Historial() {
   const navigate = useNavigate()
-  const { corte } = usePosStore()
+  const { corte, setModificacion, limpiarOrden } = usePosStore()
 
   const [ventas, setVentas] = useState<VentaDelTurno[]>([])
   const [cargando, setCargando] = useState(true)
@@ -29,6 +29,8 @@ export function Historial() {
   // La venta que se está cancelando: primero se escribe el motivo, luego pide
   // el PIN de gerencia.
   const [cancelando, setCancelando] = useState<VentaDelTurno | null>(null)
+  // La venta que se va a modificar (cancelar y rearmar): va directo al PIN.
+  const [modificando, setModificando] = useState<VentaDelTurno | null>(null)
   const [motivo, setMotivo] = useState('')
   const [pidiendoPin, setPidiendoPin] = useState(false)
   const [guardando, setGuardando] = useState(false)
@@ -47,15 +49,33 @@ export function Historial() {
     cargar()
   }, [corte, cargar, navigate])
 
-  async function confirmarCancelacion(_nombre: string, jefeId: string) {
-    const venta = cancelando
+  // El PIN de gerencia sirve a las dos acciones: cancelar o empezar a
+  // modificar. Según cuál esté armada, se hace una u otra.
+  async function alAutorizar(nombre: string, jefeId: string) {
     setPidiendoPin(false)
+    if (modificando) {
+      // Modificar = cancelar y rearmar: se guarda el crédito (lo ya pagado) y
+      // se vuelve a la caja con el ticket vacío. La venta vieja NO se toca
+      // todavía; el cambio real pasa, atómico, al cobrar la nueva.
+      const venta = modificando
+      setModificando(null)
+      limpiarOrden()
+      setModificacion({
+        ordenVieja: venta.id,
+        folioVieja: venta.folio,
+        credito: venta.total,
+        autorizadoPor: jefeId,
+      })
+      navigate('/')
+      return
+    }
+    const venta = cancelando
     if (!venta) return
     setGuardando(true)
     setError(null)
     try {
       await cancelarVentaDelTurno(sb, venta.id, motivo, jefeId)
-      imprimirComprobanteCancelacion(venta.folio, venta.total, motivo, _nombre)
+      imprimirComprobanteCancelacion(venta.folio, venta.total, motivo, nombre)
       setCancelando(null)
       setMotivo('')
       cargar()
@@ -90,10 +110,12 @@ export function Historial() {
           <div className="max-w-2xl mx-auto space-y-3">
             {ventas.map((v) => {
               const cancelada = v.estado === 'cancelada'
+              const modificada = !cancelada && v.modificada_en != null
+              const inactiva = cancelada || modificada
               return (
                 <div
                   key={v.id}
-                  className={`bg-white rounded-sa p-4 shadow-sa-sm ${cancelada ? 'opacity-60' : ''}`}
+                  className={`bg-white rounded-sa p-4 shadow-sa-sm ${inactiva ? 'opacity-60' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -108,6 +130,11 @@ export function Historial() {
                             Cancelada
                           </span>
                         )}
+                        {modificada && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide bg-sa-banana/80 text-sa-green-ink px-2 py-0.5 rounded-full">
+                            Modificada
+                          </span>
+                        )}
                       </div>
                       <div className="mt-1.5 font-mono text-sm text-sa-green-ink/70 space-y-0.5">
                         {v.items.map((it, i) => (
@@ -119,16 +146,24 @@ export function Historial() {
                       )}
                     </div>
                     <div className="text-right flex-shrink-0">
-                      <div className={`font-display text-xl text-sa-green-ink ${cancelada ? 'line-through' : ''}`}>
+                      <div className={`font-display text-xl text-sa-green-ink ${inactiva ? 'line-through' : ''}`}>
                         {mxn(v.total)}
                       </div>
-                      {!cancelada && (
-                        <button
-                          onClick={() => { setCancelando(v); setMotivo('') }}
-                          className="mt-2 font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-3 py-1.5 rounded-full border border-sa-strawberry/30"
-                        >
-                          Cancelar / Devolver
-                        </button>
+                      {!inactiva && (
+                        <div className="mt-2 flex flex-col gap-1.5 items-end">
+                          <button
+                            onClick={() => { setModificando(v); setCancelando(null); setPidiendoPin(true) }}
+                            className="font-mono text-xs uppercase tracking-wide bg-sa-green/10 hover:bg-sa-green/20 text-sa-green-deep px-3 py-1.5 rounded-full border border-sa-green/30"
+                          >
+                            Modificar
+                          </button>
+                          <button
+                            onClick={() => { setCancelando(v); setModificando(null); setMotivo('') }}
+                            className="font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-3 py-1.5 rounded-full border border-sa-strawberry/30"
+                          >
+                            Cancelar / Devolver
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -179,9 +214,9 @@ export function Historial() {
 
       <ModalAutorizacion
         open={pidiendoPin}
-        accion={`cancelar la venta #${cancelando?.folio ?? ''}`}
+        accion={modificando ? `modificar la venta #${modificando.folio}` : `cancelar la venta #${cancelando?.folio ?? ''}`}
         onClose={() => setPidiendoPin(false)}
-        onAutorizado={confirmarCancelacion}
+        onAutorizado={alAutorizar}
       />
     </div>
   )
