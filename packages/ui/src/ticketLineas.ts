@@ -473,6 +473,8 @@ export function armarCorte(
   L.push(parear(`Órdenes: ${n(c.num_ordenes)}`, ''))
   L.push(parear('Efectivo', pesos(n(c.total_efectivo))))
   if (n(c.total_tarjeta) > 0) L.push(parear('Terminal', pesos(n(c.total_tarjeta))))
+  if (n(c.total_inbursa) > 0) L.push(parear('Inbursa', pesos(n(c.total_inbursa))))
+  if (n(c.total_transferencia) > 0) L.push(parear('Transferencia', pesos(n(c.total_transferencia))))
   if (n(c.total_clip) > 0) L.push(parear('Clip', pesos(n(c.total_clip))))
   if (n(c.total_cortesia) > 0) L.push(parear('Cortesía', pesos(n(c.total_cortesia))))
   if (n(c.total_otro) > 0) L.push(parear('Otro', pesos(n(c.total_otro))))

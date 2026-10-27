@@ -191,7 +191,7 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(sin.some((x) => x.includes('Horario'))).toBe(false)
     const con = texto(armarTicket(venta, { ...NEGOCIO_DEFAULT, horario: 'L a D 7 a.m. a 9 p.m.' }))
     const iH = con.findIndex((x) => x.includes('Horario: L a D 7 a.m. a 9 p.m.'))
-    const iF = con.findIndex((x) => x.includes('Solicita tu factura'))
+    const iF = con.findIndex((x) => x.includes('Para facturar'))
     expect(iH).toBeGreaterThan(-1)
     expect(iH).toBeLessThan(iF)
   })

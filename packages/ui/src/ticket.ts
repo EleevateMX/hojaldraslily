@@ -54,7 +54,7 @@ const FUENTES_MARCA =
  * - Nada de color: la térmica solo quema negro. La jerarquía la cargan el
  *   tamaño, el peso y las reglas.
  */
-export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DEFAULT): string {
+export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DEFAULT, copias = 1): string {
   const fecha = typeof data.fecha === 'string' ? new Date(data.fecha) : data.fecha
   // La zona va fija en Mérida, no la del navegador.
   //
@@ -178,8 +178,13 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   /* Cantidad · producto · importe. El importe no se parte nunca. */
   .ln { display: grid; grid-template-columns: 22px minmax(0,1fr) 58px; gap: 0 4px; padding: 3px 0; align-items: start; }
   .cuentas { display: grid; grid-template-columns: minmax(0,1fr) 70px; gap: 3px 4px; font-size: 10px; }
+  /* La copia va en su propia página: con autocorte "por página" en el driver,
+     la térmica corta entre el original y la copia y salen dos tickets. */
+  .copia { page-break-before: always; }
+  .sello { text-align:center; font-size:9px; letter-spacing:.3em; border:1px solid #000; padding:3px 2px; margin-bottom:6px; }
 </style></head><body onload="window.print()">
-<div class="t">
+${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div class="t${__i > 0 ? ' copia' : ''}">
+  ${__i > 0 ? '<div class="sello">COPIA</div>' : ''}
 
   <div class="center">
     ${logo}
@@ -252,7 +257,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     }
   </div>
 
-</div>
+</div>`).join('')}
 </body></html>`
 }
 
@@ -274,8 +279,12 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
  * dispara). Quitarlo antes de tiempo cancela la impresión, así que el margen
  * es generoso: un marco de 0×0 invisible no le estorba a nadie.
  */
-export function imprimirTicket(data: TicketData, negocio: TicketNegocio = NEGOCIO_DEFAULT): boolean {
-  return imprimirHTML(ticketHTML(data, negocio), 'Ticket')
+export function imprimirTicket(
+  data: TicketData,
+  negocio: TicketNegocio = NEGOCIO_DEFAULT,
+  copias = 1,
+): boolean {
+  return imprimirHTML(ticketHTML(data, negocio, copias), 'Ticket')
 }
 
 /** El corte de caja por el navegador: Admin lo manda a la impresora de donde esté, o a PDF. */
@@ -381,7 +390,7 @@ export function corteHTML(c: CorteData, negocio: TicketNegocio = NEGOCIO_DEFAULT
   <div class="regla" style="margin:8px 0 5px"></div>
   <div class="mini" style="margin-bottom:3px">Ventas · ${n(c.num_ordenes)} órdenes</div>
   <div class="cuentas">
-    ${metodo('Efectivo', c.total_efectivo)}${metodo('Terminal', c.total_tarjeta)}${metodo('Clip', c.total_clip)}${metodo('Cortesía', c.total_cortesia)}${metodo('Otro', c.total_otro)}
+    ${metodo('Efectivo', c.total_efectivo)}${metodo('Terminal', c.total_tarjeta)}${metodo('Inbursa', c.total_inbursa)}${metodo('Transferencia', c.total_transferencia)}${metodo('Clip', c.total_clip)}${metodo('Cortesía', c.total_cortesia)}${metodo('Otro', c.total_otro)}
   </div>
   <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;border-top:1px solid #000;margin-top:5px;padding-top:4px">
     <div style="font-weight:500;font-size:11px;letter-spacing:.08em">TOTAL VENDIDO</div>

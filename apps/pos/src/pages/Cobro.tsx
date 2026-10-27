@@ -30,19 +30,37 @@ import {
    (folio del voucher) queda opcional para conciliar el corte.
    Los iconos son SVG, no emoji: el emoji se ve distinto en cada equipo y no
    se puede tenir (esta escrito en docs/replicar-el-sistema.md). */
-const METODOS: { key: MetodoPago; label: string; icono: 'efectivo' | 'terminal'; pideRef?: boolean }[] = [
+// Formas de cobro. 'tarjeta' es la terminal de Banorte (pasa por la pinpad);
+// 'inbursa' es una SEGUNDA terminal que se cobra a mano en su aparato y se
+// confirma aquí; 'transferencia' es depósito/transferencia bancaria. Las tres
+// que no son efectivo piden una referencia opcional para cuadrar el corte, y
+// cada una sale POR SEPARADO en el corte (la casa lo pidió, 27/10/26).
+type IconoPago = 'efectivo' | 'terminal' | 'transferencia'
+const METODOS: { key: MetodoPago; label: string; icono: IconoPago; pideRef?: boolean }[] = [
   { key: 'efectivo', label: 'Efectivo', icono: 'efectivo' },
   { key: 'tarjeta', label: 'Terminal', icono: 'terminal', pideRef: true },
+  { key: 'inbursa', label: 'Inbursa', icono: 'terminal', pideRef: true },
+  { key: 'transferencia', label: 'Transferencia', icono: 'transferencia', pideRef: true },
 ]
 
-function IconoMetodo({ tipo }: { tipo: 'efectivo' | 'terminal' }) {
-  return tipo === 'efectivo' ? (
-    <svg viewBox="0 0 32 24" className="h-8 w-11" aria-hidden="true">
-      <rect x="1" y="3" width="30" height="18" rx="3" fill="currentColor" opacity=".16" />
-      <rect x="1.5" y="3.5" width="29" height="17" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <circle cx="16" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  ) : (
+function IconoMetodo({ tipo }: { tipo: IconoPago }) {
+  if (tipo === 'efectivo')
+    return (
+      <svg viewBox="0 0 32 24" className="h-8 w-11" aria-hidden="true">
+        <rect x="1" y="3" width="30" height="18" rx="3" fill="currentColor" opacity=".16" />
+        <rect x="1.5" y="3.5" width="29" height="17" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+        <circle cx="16" cy="12" r="4.4" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      </svg>
+    )
+  if (tipo === 'transferencia')
+    // Dos flechas opuestas: dinero que va de una cuenta a otra.
+    return (
+      <svg viewBox="0 0 32 24" className="h-8 w-11" aria-hidden="true">
+        <path d="M6 9 h17 l-4 -4 M23 9 l-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M26 15 H9 l4 4 M9 15 l4 -4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    )
+  return (
     <svg viewBox="0 0 24 32" className="h-8 w-7" aria-hidden="true">
       <rect x="3" y="1" width="18" height="30" rx="3" fill="currentColor" opacity=".16" />
       <rect x="3.5" y="1.5" width="17" height="29" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
@@ -272,9 +290,12 @@ export function Cobro() {
       }
 
       // Cuánto va por cada lado. En mixto son las dos partes; si no, todo el
-      // saldo por el método elegido.
+      // saldo por el método elegido. `conTarjeta` es SOLO lo que pasa por la
+      // pinpad de Banorte ('tarjeta'): Inbursa y transferencia son cobros
+      // manuales, así que no tocan la terminal y caen al cobro normal de abajo
+      // con su propio método.
       const enEfectivo = mixto ? efectivoMixto : metodo === 'efectivo' ? totalNeto : 0
-      const conTarjeta = mixto ? tarjetaMixto : metodo === 'efectivo' ? 0 : totalNeto
+      const conTarjeta = mixto ? tarjetaMixto : metodo === 'tarjeta' ? totalNeto : 0
 
       let folio = 0
       // El id de la orden, para mandarle el ticket a la térmica. Si queda en
@@ -538,7 +559,7 @@ export function Cobro() {
               razón: la pregunta del mostrador es UNA, «¿cómo paga?», y las
               tres respuestas tienen que verse como tres respuestas, no como
               dos grandes y una chica escondida abajo. */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 md:gap-4 mb-4 md:mb-5">
             {METODOS.map((m) => (
               <button
                 key={m.key}
@@ -670,16 +691,44 @@ export function Cobro() {
               conectada al sistema (entonces la caja lo avisa). */}
           {(mixto || metodoSel.pideRef) && (
             <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
-              <p className="font-display text-base text-sa-green-ink mb-1">
-                Al confirmar, {mixto ? mxn(tarjetaMixto) : mxn(totalNeto)} aparece en la terminal
-              </p>
-              <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
-                El cliente acerca o inserta su tarjeta en la pinpad de Banorte y la venta
-                queda registrada sola, con su voucher en el ticket.
-              </p>
-              <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
-                Folio del voucher (solo si cobró a mano en la pinpad)
-              </label>
+              {mixto || metodo === 'tarjeta' ? (
+                <>
+                  <p className="font-display text-base text-sa-green-ink mb-1">
+                    Al confirmar, {mixto ? mxn(tarjetaMixto) : mxn(totalNeto)} aparece en la terminal
+                  </p>
+                  <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
+                    El cliente acerca o inserta su tarjeta en la pinpad de Banorte y la venta
+                    queda registrada sola, con su voucher en el ticket.
+                  </p>
+                  <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                    Folio del voucher (solo si cobró a mano en la pinpad)
+                  </label>
+                </>
+              ) : metodo === 'inbursa' ? (
+                <>
+                  <p className="font-display text-base text-sa-green-ink mb-1">
+                    Cobra {mxn(totalNeto)} en la terminal Inbursa
+                  </p>
+                  <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
+                    Pasa la tarjeta en el aparato de Inbursa; cuando apruebe, confirma aquí.
+                  </p>
+                  <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                    Folio del voucher de Inbursa (opcional)
+                  </label>
+                </>
+              ) : (
+                <>
+                  <p className="font-display text-base text-sa-green-ink mb-1">
+                    Cobra {mxn(totalNeto)} por transferencia
+                  </p>
+                  <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
+                    Confirma aquí cuando te llegue la transferencia a la cuenta.
+                  </p>
+                  <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                    Clave de rastreo o referencia (opcional)
+                  </label>
+                </>
+              )}
               <input
                 type="text"
                 value={referencia}

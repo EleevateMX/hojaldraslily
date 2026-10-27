@@ -102,6 +102,8 @@ export interface CorteDeCaja {
   num_ordenes: number
   total_efectivo: number
   total_tarjeta: number
+  total_inbursa: number
+  total_transferencia: number
   total_clip: number
   total_cortesia: number
   total_otro: number

@@ -24,7 +24,10 @@ var NEGOCIO_DEFAULT = {
   // propósito: no me lo dieron, y un horario inventado impreso en el papel es
   // peor que no tenerlo — el cliente llega a una tienda cerrada. En cuanto lo
   // digan, se agrega como un renglón más de este arreglo y ya.
-  avisos: ["Solicita tu factura", "Por higiene NO se hacen cambios de pan"],
+  avisos: [
+    "Para facturar, env\xEDa tu n\xFAmero de ticket a facturas@hojaldraslily.com",
+    "Por higiene NO se hacen cambios de pan"
+  ],
   mostrarLogo: true,
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
   mostrarCajero: false
@@ -271,6 +274,8 @@ function armarCorte(c, negocio, ancho = COLUMNAS_80MM) {
   L.push(parear(`\xD3rdenes: ${n(c.num_ordenes)}`, ""));
   L.push(parear("Efectivo", pesos(n(c.total_efectivo))));
   if (n(c.total_tarjeta) > 0) L.push(parear("Terminal", pesos(n(c.total_tarjeta))));
+  if (n(c.total_inbursa) > 0) L.push(parear("Inbursa", pesos(n(c.total_inbursa))));
+  if (n(c.total_transferencia) > 0) L.push(parear("Transferencia", pesos(n(c.total_transferencia))));
   if (n(c.total_clip) > 0) L.push(parear("Clip", pesos(n(c.total_clip))));
   if (n(c.total_cortesia) > 0) L.push(parear("Cortes\xEDa", pesos(n(c.total_cortesia))));
   if (n(c.total_otro) > 0) L.push(parear("Otro", pesos(n(c.total_otro))));

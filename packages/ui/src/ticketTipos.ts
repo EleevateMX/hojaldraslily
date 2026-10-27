@@ -146,7 +146,10 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   // propósito: no me lo dieron, y un horario inventado impreso en el papel es
   // peor que no tenerlo — el cliente llega a una tienda cerrada. En cuanto lo
   // digan, se agrega como un renglón más de este arreglo y ya.
-  avisos: ['Solicita tu factura', 'Por higiene NO se hacen cambios de pan'],
+  avisos: [
+    'Para facturar, envía tu número de ticket a facturas@hojaldraslily.com',
+    'Por higiene NO se hacen cambios de pan',
+  ],
   mostrarLogo: true,
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
   mostrarCajero: false,
@@ -170,6 +173,8 @@ export interface CorteData {
   num_ordenes?: number | null
   total_efectivo?: number | null
   total_tarjeta?: number | null
+  total_inbursa?: number | null
+  total_transferencia?: number | null
   total_clip?: number | null
   total_cortesia?: number | null
   total_otro?: number | null

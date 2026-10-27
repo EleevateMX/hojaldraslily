@@ -312,6 +312,8 @@ export default function Cortes({
                   {([
                     ['Efectivo', abierto.total_efectivo],
                     ['Terminal', abierto.total_tarjeta],
+                    ['Inbursa', abierto.total_inbursa],
+                    ['Transferencia', abierto.total_transferencia],
                     ['Clip', abierto.total_clip],
                     ['Cortesía', abierto.total_cortesia],
                     ['Otro', abierto.total_otro],

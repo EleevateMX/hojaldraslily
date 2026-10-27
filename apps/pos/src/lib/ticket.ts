@@ -56,5 +56,9 @@ export async function sacarTicket(ordenId: string | null, ticket: TicketData): P
       // Da igual por qué falló: el cliente tiene que llevarse su papel.
     }
   }
-  imprimirTicket(ticket, negocioCargado)
+  // Dos copias: la original para el cliente y una copia (la casa lo pidió,
+  // 27/10/26). Cada una va en su propia página; con el autocorte "por página"
+  // del driver de la térmica, salen cortadas por separado. Por el agente
+  // ESC/POS esto será cosa del agente; por ahora la caja imprime por navegador.
+  imprimirTicket(ticket, negocioCargado, 2)
 }
