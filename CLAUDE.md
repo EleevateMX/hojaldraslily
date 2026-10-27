@@ -11,9 +11,10 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **215 migraciones aplicadas en orden, y 215
+`fzkdgqqvfkogmxdgqsxj` tiene **222 migraciones aplicadas en orden, y 222
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. Ya corrió una venta
+primero que hay que comprobar al retomar. (Las del 27/10: transferencia e
+inbursa como métodos, Rappi como método, y las de cancelar/modificar ventas.) Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
 el catálogo semilla de hojaldras está sembrado. **Las Edge Functions que
@@ -704,7 +705,10 @@ empaquetador y se desvían solas:
 | Dar de alta la térmica del mostrador | Admin → **Impresoras** → «Para qué sirve» = **Tickets del cliente**. Lo que sale al guardar es el `.env` del agente de caja, no el JSON de las etiquetadoras |
 | Se fue el internet | **Seguir vendiendo**: efectivo o terminal del banco. El folio sale como «S-01» y las ventas se registran solas al volver. No se puede cerrar la caja hasta que entren (ver `docs/sin-internet.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
-| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma |
+| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma. **No pide método de pago** (paga Rappi, no el cliente): pide el **ID del pedido** (los números de la plataforma) y al confirmar imprime los dos tickets con «RAPPI #id». En el corte sale como «Rappi» aparte y no descuadra el cajón |
+| Cobrar por transferencia o con la 2ª terminal (Inbursa) | En el cobro, **Transferencia** o **Inbursa** (Terminal 2): se cobra a mano en la cuenta/aparato y se registra aparte en el corte. Inbursa pregunta **¿Ya pagó? / ¿Rebotó?** antes de registrar |
+| Devolver una venta (cancelar) | Caja → **☰ Historial** → la venta → **Cancelar / Devolver**, con **PIN de gerencia**. El pan vuelve al inventario, el dinero sale del corte y se imprime un comprobante. Solo del turno actual |
+| Cambiar una venta por otra (modificar) | Caja → **☰ Historial** → la venta → **Modificar** (PIN de gerencia). Vuelve a la caja con el ticket vacío y un aviso «Modificando #N»: se arma el pedido nuevo y se **cobra la diferencia**. Si la nueva es más barata, se usa **Cancelar** y se cobra de nuevo |
 | Las pestañas de la caja | Van en el orden que pidió gerencia (20/10): Todos, Menú del día, Bocadillos, Panes, Galletas, Anís, Menú de temporada, Bebidas, Por encargo. Es `categorias.orden`; se cambia en Admin → Categorías |
 | Las bebidas | Son las de la lista de la casa (20/10): Coca Cola en lata y botella, regular y sin azúcar, Agua, Boxito, Soldado Chocolate y Jugo. Viven en Costeos → Bebidas (son reventa): cambiar un precio ahí y Guardar. La Coca Cola es **una tarjeta con cuatro opciones** porque el nombre lleva el `·` |
 | Saber cuántos paquetes quedan | Admin → **Producción** (baja solo con cada cobro) |
@@ -1361,9 +1365,110 @@ dos copias del mismo `.bat` se separan en cuanto alguien toca una) y deja
 `version.json` con la versión de los dos agentes, que Admin compara contra el
 latido de cada impresora. `_headers` pone `Content-Disposition: attachment`
 y `no-store` en esa ruta. **Solo `.bat`, nunca `.ps1`**: un `.ps1` bajado
-del navegador no abre de doble clic. Ojo: los `.bat` siguen apuntando a
-`raw.githubusercontent.com/.../main`, y este repo **todavía no tiene
-`main`** — hasta que exista, el instalador no encuentra qué bajar.
+del navegador no abre de doble clic. Los `.bat` apuntan a
+`raw.githubusercontent.com/.../main`. **`main` ya existe** (27/10) y es la rama
+de despliegue: la vitrina (GitHub Pages) y Cloudflare se arman desde ahí, el
+instalador baja de ahí, y **el agente de caja se auto-actualiza desde ahí**
+(ver §2.11). Cloudflare todavía no tiene secretos, así que su workflow falla
+a propósito; lo que sirve las apps hoy es la vitrina.
+
+### 2.11 Lo del 27/10: ticket, Rappi, cancelar/modificar, agente que se actualiza solo
+
+Un día entero sobre la caja ya instalada en la tienda. Lo que salió:
+
+**El agente de caja se actualiza SOLO, en remoto.** El ticket ya se cambiaba
+sin ir a la PC (viaja en `parametros.ticket`), pero el PROGRAMA no. Ahora
+`apps/agente-caja/src/autoactualizar.ts` revisa cada 20 min el
+`dist/package.json` de `main` y, si la versión publicada no es la suya, se baja
+el `.mjs` encima y se reinicia —el `.bat` corre en bucle—, nunca a media
+impresión (se compara por DISTINTO, no por mayor, para que una reversión
+también se aplique). Consecuencia práctica: **para estrenar un cambio del
+agente, basta subir a `main` con la versión bumpeada**; las PCs lo toman solas.
+El primer salto a una versión auto-actualizable sí se hace con el instalador
+(`scripts/instalar-agente-caja.ps1`), que además corre OCULTO (sin ventana, vía
+un `.vbs` con `wscript`) — la casa no quiere una consola abierta. Va en 80 mm y
+USB (impresora de Windows por nombre, `apps/agente-caja/src/windows.ts`:
+`WritePrinter` RAW por winspool, sin módulo nativo que compilar).
+
+**El ticket: logo + slogan como conjunto, y el bloque fiscal chico.** El logo
+se subió desde Admin (se rasteriza con canvas a bytes 1bpp en `logoRaster`, que
+viajan en el payload; el agente NO decodifica PNG). Cuando hay logo, el nombre
+en grande NO se imprime (saldría repetido). Debajo del logo va el **slogan**
+(«Tradición que une generaciones»), y debajo el **RFC y el régimen en FontB**
+(ESC M 1, `ConstructorEscPos.fuente('B')`) — están para facturar pero son
+secundarios. El teléfono NO va en la cabecera (ya está en el pie). El RFC
+(`KHO250605 6F0`) y el régimen viven en `parametros.ticket`, NO en el repo
+(es dato fiscal). El logo de la térmica se topa a 256 px (`apps/admin/src/lib/
+logoTicket.ts`); cambiar ese tope exige RE-SUBIR el logo en Admin.
+
+**Rappi es un método de pago, no una venta normal.** La casa lo dejó claro: a
+la tienda le paga la PLATAFORMA días después, no el repartidor, así que un
+pedido de Rappi no se puede cobrar como efectivo/tarjeta —descuadraría el
+corte— ni llevar método en el ticket. Con el interruptor en Rappi, el cobro
+cambia: no pide método, pide el **ID de Rappi** (3–6 números que se copian de
+la plataforma) y cobra con método `'rappi'`. El corte lo cuenta en su propia
+línea (`total_rappi` en `vw_corte_resumen`) y el **efectivo esperado lo
+ignora**, igual que transferencia e inbursa: el cajón cuadra sin mentir. El
+ticket sale con **«RAPPI #id»** en vez de folio y «Pedido de Rappi — la
+plataforma paga» en vez del método. Enum y vista en las migraciones
+`20261027030000/030100`.
+
+**Transferencia e Inbursa** (segunda terminal) son dos métodos manuales más
+(audio de Kenny, 26/10): se cobran a mano en su aparato/cuenta y se registran
+aparte en el corte, sin tocar el efectivo esperado. En el ticket del cliente,
+la terminal de Banorte sale como **«Terminal 1»** y la de Inbursa como
+**«Terminal 2»** (internamente son `tarjeta` e `inbursa`). Inbursa tiene su
+pantalla «¿Ya pagó? / ¿Rebotó?» en el cobro (no sabe si aprobó: lo dice el
+cajero). Y si la Terminal 1 (Banorte) declina en vivo, hay un botón para
+imprimirle al cliente un **comprobante de rechazo** con el motivo.
+
+### 2.12 Cancelar y modificar una venta (del turno, con PIN de gerencia)
+
+La casa lo pidió: con el cliente todavía en el mostrador, a veces hay que
+DEVOLVER una venta (una hojaldra cruda) o cambiarla por otra. Vive en
+**Caja → ☰ Historial** (`apps/pos/src/pages/Historial.tsx`), que lista las
+ventas del turno (`fn_ventas_del_turno`).
+
+**Lo que hace que esto sea barato: el inventario de cuadros se CALCULA de las
+órdenes `pagado = true`** (`fn_catalogo_del_dia`, `fn_existencias_por_molde`),
+no es un total que un trigger decrementa. Así que para devolver el pan al
+inventario basta marcar la orden **no pagada**: vuelve solo, sin movimientos
+inversos que puedan descuadrarse. Es la misma idea que «apartar no descuenta».
+
+**Cancelar** (`fn_cancelar_orden`, PIN de gerencia, `20261027040000`): pone la
+orden `pagado=false` + `estado='cancelada'` y su pago en `'cancelado'`. El
+inventario vuelve (computado) y el pago **deja de contar en el corte**
+(`vw_corte_resumen` suma pagos `aprobado`), así que el efectivo esperado baja
+justo lo devuelto y el cajón —ya con ese dinero afuera— cuadra. **Solo del
+turno actual** (su corte sigue `'abierta'`): tocar un corte cerrado cambiaría
+un turno ya firmado. Sale un comprobante de cancelación para el cliente.
+
+**Modificar = cancelar y rearmar** (`fn_cobrar_modificacion`, `20261027050000`,
+atómico). El modelo que cuadra inventario Y corte a la vez, **sin el bug de
+restar la vieja del corte**: la venta vieja queda `pagado=false` (su pan
+vuelve) PERO su pago se queda **`'aprobado'`** (su dinero sigue contado, porque
+físicamente sigue en el cajón, usado de crédito). La venta nueva se crea
+COMPLETA (sus cuadros nuevos, para el inventario) y se cobra solo la
+**diferencia**, con lo ya pagado como `anticipo_aplicado` —el mismo truco que
+`fn_encargo_cobrar`: `update ordenes set total = saldo, anticipo_aplicado = …`
+y luego `fn_cobrar_orden(saldo)`, porque `fn_cobrar_orden` exige `pago == total`
+y no resta anticipos—. Resultado:
+
+    corte = vieja ($160, se queda) + diferencia ($150) = $310 = total nuevo
+    cajón = $160 (ya estaba)       + $150 (diferencia) = $310            ✓
+    inventario: 12 cuadros vuelven, 24 salen                             ✓
+
+y cuadra POR MÉTODO aunque cambie la forma de pago, porque cada pago queda con
+su método real. **Si la nueva es más barata se rechaza** (habría que devolver,
+y el crédito es «solo dentro de la modificación»): manda a usar Cancelar.
+`ModalAutorizacion` ahora devuelve también el id del gerente, que se re-verifica
+en el servidor (gerencia por `roles.slug`), no solo del lado del cliente.
+
+**Pendiente de verificar EN LA TIENDA** (regla del repo: el camino de
+dinero/inventario se prueba ahí, no desde aquí, por lo del temp-table/MCP):
+hacer una venta y cancelarla (¿corte e inventario cuadran?), y hacer una venta
+y modificarla a algo más caro (¿cobra solo la diferencia, cierra bien el
+corte?).
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 
