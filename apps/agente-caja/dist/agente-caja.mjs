@@ -544,6 +544,90 @@ function estaViva(host, puerto, timeoutMs = 3e3) {
   });
 }
 
+// src/windows.ts
+import { writeFile, unlink } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { randomUUID } from "node:crypto";
+var AYUDANTE = String.raw`
+using System;
+using System.IO;
+using System.Runtime.InteropServices;
+public class LilyRaw {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public class DOCINFO {
+    [MarshalAs(UnmanagedType.LPWStr)] public string pDocName;
+    [MarshalAs(UnmanagedType.LPWStr)] public string pOutputFile;
+    [MarshalAs(UnmanagedType.LPWStr)] public string pDataType;
+  }
+  [DllImport("winspool.Drv", EntryPoint = "OpenPrinterW", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool OpenPrinter(string src, out IntPtr h, IntPtr d);
+  [DllImport("winspool.Drv", EntryPoint = "ClosePrinter", SetLastError = true)]
+  static extern bool ClosePrinter(IntPtr h);
+  [DllImport("winspool.Drv", EntryPoint = "StartDocPrinterW", SetLastError = true, CharSet = CharSet.Unicode)]
+  static extern bool StartDocPrinter(IntPtr h, int level, [In] DOCINFO di);
+  [DllImport("winspool.Drv", EntryPoint = "EndDocPrinter", SetLastError = true)]
+  static extern bool EndDocPrinter(IntPtr h);
+  [DllImport("winspool.Drv", EntryPoint = "StartPagePrinter", SetLastError = true)]
+  static extern bool StartPagePrinter(IntPtr h);
+  [DllImport("winspool.Drv", EntryPoint = "EndPagePrinter", SetLastError = true)]
+  static extern bool EndPagePrinter(IntPtr h);
+  [DllImport("winspool.Drv", EntryPoint = "WritePrinter", SetLastError = true)]
+  static extern bool WritePrinter(IntPtr h, byte[] buf, int n, out int written);
+  public static void Send(string printer, byte[] data) {
+    IntPtr h;
+    if (!OpenPrinter(printer, out h, IntPtr.Zero))
+      throw new Exception("No se pudo abrir la impresora '" + printer + "' (codigo " + Marshal.GetLastWin32Error() + ")");
+    try {
+      var di = new DOCINFO();
+      di.pDocName = "Ticket Hojaldras Lily";
+      di.pDataType = "RAW";
+      if (!StartDocPrinter(h, 1, di)) throw new Exception("StartDocPrinter fallo");
+      try {
+        if (!StartPagePrinter(h)) throw new Exception("StartPagePrinter fallo");
+        int escritos;
+        if (!WritePrinter(h, data, data.Length, out escritos)) throw new Exception("WritePrinter fallo");
+        if (escritos != data.Length) throw new Exception("Se escribieron " + escritos + " de " + data.Length + " bytes");
+        EndPagePrinter(h);
+      } finally { EndDocPrinter(h); }
+    } finally { ClosePrinter(h); }
+  }
+}
+`;
+function imprimirWindows(bytes, nombre) {
+  return new Promise((resolve, reject) => {
+    const archivo = join(tmpdir(), `lily-ticket-${randomUUID()}.bin`);
+    const limpiar = () => {
+      void unlink(archivo).catch(() => {
+      });
+    };
+    writeFile(archivo, bytes).then(() => {
+      const ps = [
+        '$ErrorActionPreference = "Stop"',
+        `Add-Type -TypeDefinition @'`,
+        AYUDANTE,
+        `'@`,
+        `[LilyRaw]::Send('${nombre.replace(/'/g, "''")}', [IO.File]::ReadAllBytes('${archivo.replace(/'/g, "''")}'))`
+      ].join("\n");
+      const b64 = Buffer.from(ps, "utf16le").toString("base64");
+      execFile(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand", b64],
+        { timeout: 2e4, windowsHide: true },
+        (err, _stdout, stderr) => {
+          limpiar();
+          if (err) reject(new Error(`impresora de Windows "${nombre}": ${(stderr || err.message).trim()}`));
+          else resolve();
+        }
+      );
+    }).catch((e) => {
+      limpiar();
+      reject(e);
+    });
+  });
+}
+
 // src/index.ts
 var VERSION = "1.0.0";
 function requerido(clave) {
@@ -557,8 +641,10 @@ function requerido(clave) {
 var SUPABASE_URL = requerido("SUPABASE_URL");
 var SUPABASE_ANON_KEY = requerido("SUPABASE_ANON_KEY");
 var TOKEN = requerido("IMPRESORA_TOKEN");
-var HOST = requerido("IMPRESORA_HOST");
+var WINDOWS = process.env.IMPRESORA_WINDOWS?.trim() || "";
+var HOST = WINDOWS ? "" : requerido("IMPRESORA_HOST");
 var PUERTO = Number(process.env.IMPRESORA_PUERTO || 9100);
+var COPIAS_TICKET = Math.max(1, Math.round(Number(process.env.TICKET_COPIAS || 2)));
 var ANCHO = process.env.IMPRESORA_ANCHO?.trim() === "58mm" ? COLUMNAS_58MM : COLUMNAS_80MM;
 var AGENTE_ID = process.env.AGENTE_ID?.trim() || "agente-caja-01";
 var POLL_MS = Number(process.env.POLL_INTERVALO_SEGUNDOS || 3) * 1e3;
@@ -589,8 +675,11 @@ async function cicloDeImpresion() {
     const trabajos = data ?? [];
     for (const t of trabajos) {
       try {
-        const bytes = construirDocumento(t, datosDelNegocio(), null, ANCHO);
-        await enviar(bytes, HOST, PUERTO);
+        const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO);
+        const copias = t.tipo_documento === "ticket" ? COPIAS_TICKET : 1;
+        const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno;
+        if (WINDOWS) await imprimirWindows(bytes, WINDOWS);
+        else await enviar(bytes, HOST, PUERTO);
         const { error: e } = await sb.rpc("fn_imprimir_confirmar", {
           p_token: TOKEN,
           p_trabajo_id: t.id
@@ -618,9 +707,12 @@ async function latir() {
 async function arrancar() {
   console.log("");
   console.log("  Hojaldras Lily \u2014 agente de tickets de caja");
-  console.log(`  version ${VERSION} \xB7 impresora ${HOST}:${PUERTO} \xB7 ${ANCHO} columnas`);
+  const destino = WINDOWS ? `${WINDOWS} (USB/Windows)` : `${HOST}:${PUERTO}`;
+  console.log(`  version ${VERSION} \xB7 impresora ${destino} \xB7 ${ANCHO} columnas`);
   console.log("");
-  if (await estaViva(HOST, PUERTO)) {
+  if (WINDOWS) {
+    log.info(`imprime por USB a la impresora de Windows "${WINDOWS}"`);
+  } else if (await estaViva(HOST, PUERTO)) {
     log.info("la impresora responde");
   } else {
     log.error(`la impresora ${HOST}:${PUERTO} NO responde. Se sigue intentando.`);

@@ -28,6 +28,7 @@ import { NEGOCIO_DEFAULT, type TicketNegocio } from '@lily/ui/tipos'
 import { COLUMNAS_80MM, COLUMNAS_58MM } from '@lily/ui/papel'
 import { construirDocumento, type TrabajoCaja } from './render.js'
 import { enviar, estaViva } from './socket.js'
+import { imprimirWindows } from './windows.js'
 
 const VERSION = '1.0.0'
 
@@ -43,8 +44,15 @@ function requerido(clave: string): string {
 const SUPABASE_URL = requerido('SUPABASE_URL')
 const SUPABASE_ANON_KEY = requerido('SUPABASE_ANON_KEY')
 const TOKEN = requerido('IMPRESORA_TOKEN')
-const HOST = requerido('IMPRESORA_HOST')
+// Dos formas de salida: por RED (host:9100) o por USB a una impresora de
+// WINDOWS por su nombre (p. ej. "POS-58"). Si IMPRESORA_WINDOWS está puesto,
+// ese manda y HOST ya no hace falta.
+const WINDOWS = process.env.IMPRESORA_WINDOWS?.trim() || ''
+const HOST = WINDOWS ? '' : requerido('IMPRESORA_HOST')
 const PUERTO = Number(process.env.IMPRESORA_PUERTO || 9100)
+// La casa pidió imprimir la original para el cliente y una copia (27/10/26).
+// Solo aplica al ticket de venta; una prueba o un corte salen una vez.
+const COPIAS_TICKET = Math.max(1, Math.round(Number(process.env.TICKET_COPIAS || 2)))
 // El ancho del papel decide las columnas, y equivocarse no da error: el
 // sobrante se tira al siguiente renglón y el ticket se desalinea entero.
 const ANCHO = process.env.IMPRESORA_ANCHO?.trim() === '58mm' ? COLUMNAS_58MM : COLUMNAS_80MM
@@ -88,8 +96,13 @@ async function cicloDeImpresion(): Promise<void> {
     const trabajos = (data ?? []) as TrabajoCaja[]
     for (const t of trabajos) {
       try {
-        const bytes = construirDocumento(t, datosDelNegocio(), null, ANCHO)
-        await enviar(bytes, HOST, PUERTO)
+        const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO)
+        // Ticket de venta: original + copia (cada copia trae su propio corte
+        // ESC/POS, así que salen dos papeles cortados). Corte y prueba: una.
+        const copias = t.tipo_documento === 'ticket' ? COPIAS_TICKET : 1
+        const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno
+        if (WINDOWS) await imprimirWindows(bytes, WINDOWS)
+        else await enviar(bytes, HOST, PUERTO)
         const { error: e } = await sb.rpc('fn_imprimir_confirmar', {
           p_token: TOKEN,
           p_trabajo_id: t.id,
@@ -123,13 +136,18 @@ async function latir(): Promise<void> {
 async function arrancar(): Promise<void> {
   console.log('')
   console.log('  Hojaldras Lily — agente de tickets de caja')
-  console.log(`  version ${VERSION} · impresora ${HOST}:${PUERTO} · ${ANCHO} columnas`)
+  const destino = WINDOWS ? `${WINDOWS} (USB/Windows)` : `${HOST}:${PUERTO}`
+  console.log(`  version ${VERSION} · impresora ${destino} · ${ANCHO} columnas`)
   console.log('')
 
   // Se comprueba la impresora ANTES de ponerse a reclamar trabajos. Arrancar
   // con la impresora apagada y descubrirlo al primer cobro —con el cliente
-  // enfrente— es lo que hay que evitar.
-  if (await estaViva(HOST, PUERTO)) {
+  // enfrente— es lo que hay que evitar. En modo USB/Windows no hay socket que
+  // probar: el spooler acepta el trabajo aunque la impresora esté apagada, así
+  // que el fallo se ve en el primer ticket (y queda en Admin, que es el punto).
+  if (WINDOWS) {
+    log.info(`imprime por USB a la impresora de Windows "${WINDOWS}"`)
+  } else if (await estaViva(HOST, PUERTO)) {
     log.info('la impresora responde')
   } else {
     log.error(`la impresora ${HOST}:${PUERTO} NO responde. Se sigue intentando.`)
