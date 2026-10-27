@@ -151,6 +151,13 @@ export interface TicketData {
   /** A nombre de quién va el pedido. No es una ficha de cliente: es lo que
    *  se grita en el mostrador y lo que lleva la etiqueta. */
   clienteNombre?: string | null
+  /**
+   * El ID del pedido de Rappi (cuatro números que el cajero copia de la
+   * plataforma). Cuando viene, el ticket se identifica con «RAPPI #id» en vez
+   * del folio de la tienda, y NO se imprime método de pago: a la tienda le
+   * paga Rappi días después, no el repartidor.
+   */
+  rappiId?: string | null
 }
 
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */
@@ -202,6 +209,7 @@ export interface CorteData {
   total_tarjeta?: number | null
   total_inbursa?: number | null
   total_transferencia?: number | null
+  total_rappi?: number | null
   total_clip?: number | null
   total_cortesia?: number | null
   total_otro?: number | null

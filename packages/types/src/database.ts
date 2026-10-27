@@ -3371,6 +3371,7 @@ export type Database = {
           total_inbursa: number | null
           total_otro: number | null
           total_pagado: number | null
+          total_rappi: number | null
           total_tarjeta: number | null
           total_transferencia: number | null
         }
@@ -5040,7 +5041,7 @@ export type Database = {
         | "unknown"
         | "refunded_partial"
         | "refunded_full"
-      metodo_pago: "clip" | "efectivo" | "tarjeta" | "cortesia" | "otro" | "transferencia" | "inbursa"
+      metodo_pago: "clip" | "efectivo" | "tarjeta" | "cortesia" | "otro" | "transferencia" | "inbursa" | "rappi"
       modo_pago_kiosko: "clip" | "pagar_en_caja" | "demo" | "cajero"
       tipo_almacen: "bodega" | "kiosko"
       tipo_conexion_impresora: "usb" | "red"
@@ -5235,7 +5236,7 @@ export const Constants = {
         "refunded_partial",
         "refunded_full",
       ],
-      metodo_pago: ["clip", "efectivo", "tarjeta", "cortesia", "otro", "transferencia", "inbursa"],
+      metodo_pago: ["clip", "efectivo", "tarjeta", "cortesia", "otro", "transferencia", "inbursa", "rappi"],
       modo_pago_kiosko: ["clip", "pagar_en_caja", "demo", "cajero"],
       tipo_almacen: ["bodega", "kiosko"],
       tipo_conexion_impresora: ["usb", "red"],

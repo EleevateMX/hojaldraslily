@@ -314,6 +314,7 @@ export default function Cortes({
                     ['Terminal', abierto.total_tarjeta],
                     ['Inbursa', abierto.total_inbursa],
                     ['Transferencia', abierto.total_transferencia],
+                    ['Rappi', abierto.total_rappi],
                     ['Clip', abierto.total_clip],
                     ['Cortesía', abierto.total_cortesia],
                     ['Otro', abierto.total_otro],

@@ -211,8 +211,8 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
 
   <div style="display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px;align-items:end">
     <div>
-      <div class="mini" style="margin-bottom:2px">Folio</div>
-      <div style="display:inline-block;background:#000;color:#fff;font-weight:500;font-size:22px;line-height:1;padding:4px 7px 3px">#${esc(data.folio)}</div>
+      <div class="mini" style="margin-bottom:2px">${data.rappiId ? 'Rappi' : 'Folio'}</div>
+      <div style="display:inline-block;background:#000;color:#fff;font-weight:500;font-size:22px;line-height:1;padding:4px 7px 3px">#${esc(data.rappiId || data.folio)}</div>
     </div>
     <div style="text-align:right;font-size:9.5px;line-height:1.45">
       <div>${esc(fechaTxt)}</div>
@@ -248,10 +248,12 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
   </div>
 
   <div class="cuentas" style="margin-top:8px">
-    ${filasPago}
+    ${data.rappiId
+      ? `<div style="grid-column:1 / 3;text-align:center;font-size:10px;line-height:1.4">Pedido de Rappi<br/>La plataforma paga a la tienda</div>`
+      : `${filasPago}
     ${data.referenciaPago ? `<div style="grid-column:1 / 3;font-size:9px;margin-top:-2px">Ref. ${esc(data.referenciaPago)}</div>` : ''}
     ${data.recibido != null ? `<div>Recibido</div><div style="text-align:right">${money(data.recibido)}</div>` : ''}
-    ${cambio != null ? `<div style="font-weight:500">Cambio</div><div style="text-align:right;font-weight:500">${money(cambio)}</div>` : ''}
+    ${cambio != null ? `<div style="font-weight:500">Cambio</div><div style="text-align:right;font-weight:500">${money(cambio)}</div>` : ''}`}
   </div>
   ${voucher}
 
@@ -402,7 +404,7 @@ export function corteHTML(c: CorteData, negocio: TicketNegocio = NEGOCIO_DEFAULT
   <div class="regla" style="margin:8px 0 5px"></div>
   <div class="mini" style="margin-bottom:3px">Ventas · ${n(c.num_ordenes)} órdenes</div>
   <div class="cuentas">
-    ${metodo('Efectivo', c.total_efectivo)}${metodo('Terminal', c.total_tarjeta)}${metodo('Inbursa', c.total_inbursa)}${metodo('Transferencia', c.total_transferencia)}${metodo('Clip', c.total_clip)}${metodo('Cortesía', c.total_cortesia)}${metodo('Otro', c.total_otro)}
+    ${metodo('Efectivo', c.total_efectivo)}${metodo('Terminal', c.total_tarjeta)}${metodo('Inbursa', c.total_inbursa)}${metodo('Transferencia', c.total_transferencia)}${metodo('Rappi', c.total_rappi)}${metodo('Clip', c.total_clip)}${metodo('Cortesía', c.total_cortesia)}${metodo('Otro', c.total_otro)}
   </div>
   <div style="display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:baseline;border-top:1px solid #000;margin-top:5px;padding-top:4px">
     <div style="font-weight:500;font-size:11px;letter-spacing:.08em">TOTAL VENDIDO</div>

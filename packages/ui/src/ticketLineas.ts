@@ -281,8 +281,10 @@ export function armarTicket(
   // El folio es lo que se canta en el mostrador y lo que se busca en una
   // aclaración: va blanco sobre negro y al doble, como en el diseño. La
   // fecha, el canal y quién cobró, debajo y a la derecha.
-  L.push('FOLIO')
-  L.push(estilo(` #${data.folio} `, { ancho: 2, alto: 2, invertido: true }))
+  // Un pedido de Rappi no lleva folio de la tienda: lo identifica el ID que
+  // el cajero copia de la plataforma. Se canta «RAPPI #1234» en vez de FOLIO.
+  L.push(data.rappiId ? 'RAPPI' : 'FOLIO')
+  L.push(estilo(` #${data.rappiId || data.folio} `, { ancho: 2, alto: 2, invertido: true }))
   L.push(estilo(fechaTxt, { alinear: 'der' }))
   const canalLinea = [data.canal, cajero].filter(Boolean).join(' · ')
   if (canalLinea) L.push(estilo(canalLinea, { alinear: 'der' }))
@@ -355,7 +357,13 @@ export function armarTicket(
   L.push('')
 
   // ---- Cómo se pagó ----
-  if (data.partes?.length) {
+  // Rappi NO lleva método de pago: al repartidor no se le cobra, paga la
+  // plataforma días después. Mostrar «Efectivo» o «Terminal» aquí sería
+  // mentir y descuadrar la lectura del corte. Solo se avisa que es de Rappi.
+  if (data.rappiId) {
+    L.push(centrar('Pedido de Rappi'))
+    L.push(centrar('La plataforma paga a la tienda'))
+  } else if (data.partes?.length) {
     // Un renglón por parte: el cliente tiene que poder comprobar que las dos
     // suman lo que pagó. Una frase corrida («Efectivo $400 + Terminal $238»)
     // no se lee de un vistazo.
@@ -489,6 +497,7 @@ export function armarCorte(
   if (n(c.total_tarjeta) > 0) L.push(parear('Terminal', pesos(n(c.total_tarjeta))))
   if (n(c.total_inbursa) > 0) L.push(parear('Inbursa', pesos(n(c.total_inbursa))))
   if (n(c.total_transferencia) > 0) L.push(parear('Transferencia', pesos(n(c.total_transferencia))))
+  if (n(c.total_rappi) > 0) L.push(parear('Rappi', pesos(n(c.total_rappi))))
   if (n(c.total_clip) > 0) L.push(parear('Clip', pesos(n(c.total_clip))))
   if (n(c.total_cortesia) > 0) L.push(parear('Cortesía', pesos(n(c.total_cortesia))))
   if (n(c.total_otro) > 0) L.push(parear('Otro', pesos(n(c.total_otro))))

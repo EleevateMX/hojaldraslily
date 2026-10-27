@@ -166,6 +166,7 @@ export function CorteCaja() {
                   { label: 'Terminal', icon: '💳', value: resumen.total_tarjeta ?? 0 },
                   { label: 'Inbursa', icon: '💳', value: resumen.total_inbursa ?? 0 },
                   { label: 'Transferencia', icon: '🏦', value: resumen.total_transferencia ?? 0 },
+                  { label: 'Rappi', icon: '🛵', value: resumen.total_rappi ?? 0 },
                   { label: 'Clip', icon: '📟', value: resumen.total_clip ?? 0 },
                   { label: 'Cortesía', icon: '🎁', value: resumen.total_cortesia ?? 0 },
                   { label: 'Otro', icon: '•', value: resumen.total_otro ?? 0 },

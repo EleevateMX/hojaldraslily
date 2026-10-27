@@ -145,8 +145,8 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     minute: "2-digit"
   });
   const cajero = negocio.mostrarCajero === false ? "" : data.cajero ?? "";
-  L.push("FOLIO");
-  L.push(estilo(` #${data.folio} `, { ancho: 2, alto: 2, invertido: true }));
+  L.push(data.rappiId ? "RAPPI" : "FOLIO");
+  L.push(estilo(` #${data.rappiId || data.folio} `, { ancho: 2, alto: 2, invertido: true }));
   L.push(estilo(fechaTxt, { alinear: "der" }));
   const canalLinea = [data.canal, cajero].filter(Boolean).join(" \xB7 ");
   if (canalLinea) L.push(estilo(canalLinea, { alinear: "der" }));
@@ -193,7 +193,10 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   if (hayRestas) L.push(regla("="));
   L.push(estilo(parear("TOTAL", pesos(total)), { alto: 2, negrita: true }));
   L.push("");
-  if (data.partes?.length) {
+  if (data.rappiId) {
+    L.push(centrar("Pedido de Rappi"));
+    L.push(centrar("La plataforma paga a la tienda"));
+  } else if (data.partes?.length) {
     for (const p of data.partes) L.push(parear(p.metodo, pesos(p.monto)));
   } else {
     L.push(parear(data.metodoPago, pesos(total)));
@@ -282,6 +285,7 @@ function armarCorte(c, negocio, ancho = COLUMNAS_80MM) {
   if (n(c.total_tarjeta) > 0) L.push(parear("Terminal", pesos(n(c.total_tarjeta))));
   if (n(c.total_inbursa) > 0) L.push(parear("Inbursa", pesos(n(c.total_inbursa))));
   if (n(c.total_transferencia) > 0) L.push(parear("Transferencia", pesos(n(c.total_transferencia))));
+  if (n(c.total_rappi) > 0) L.push(parear("Rappi", pesos(n(c.total_rappi))));
   if (n(c.total_clip) > 0) L.push(parear("Clip", pesos(n(c.total_clip))));
   if (n(c.total_cortesia) > 0) L.push(parear("Cortes\xEDa", pesos(n(c.total_cortesia))));
   if (n(c.total_otro) > 0) L.push(parear("Otro", pesos(n(c.total_otro))));
@@ -702,7 +706,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.2";
+var VERSION = "1.1.3";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {

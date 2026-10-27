@@ -133,6 +133,10 @@ export function Cobro() {
   const [mixto, setMixto] = useState(false)
   const [parteEfectivo, setParteEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
+  // Rappi: el ID de 4 números que el cajero copia de la plataforma. No se
+  // vincula solo —Rappi no da su API por un botón—, se teclea a mano, y es lo
+  // que identifica el pedido en vez del folio de la tienda.
+  const [rappiId, setRappiId] = useState('')
   const [recibido, setRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -171,13 +175,18 @@ export function Cobro() {
   // así que si las dos no coincidieran el cobro se rechaza — que es
   // exactamente lo que tiene que pasar.
   const totalNeto = aCobrar()
+  // Rappi: no se cobra aquí (paga la plataforma), no hay método ni mixto.
+  const esRappi = canal === 'rappi'
+  const rappiIdOk = /^\d{3,6}$/.test(rappiId.trim())
   const metodoSel = METODOS.find((m) => m.key === metodo)!
   const recibidoNum = parseFloat(recibido) || 0
   const cambio = recibidoNum - totalNeto
   const efectivoMixto = Math.round((parseFloat(parteEfectivo) || 0) * 100) / 100
   const tarjetaMixto = Math.round((totalNeto - efectivoMixto) * 100) / 100
   const mixtoValido = mixto && efectivoMixto > 0 && tarjetaMixto > 0
-  const listo = mixto
+  const listo = esRappi
+    ? rappiIdOk && totalNeto > 0
+    : mixto
     ? mixtoValido
     : metodo !== 'efectivo' || totalNeto <= 0 || recibidoNum >= totalNeto
 
@@ -188,7 +197,10 @@ export function Cobro() {
       folio,
       fecha: new Date(),
       cajero: empleado?.nombre,
-      canal: 'Caja',
+      canal: esRappi ? 'Rappi' : 'Caja',
+      // El pedido de Rappi se identifica con su ID, no con el folio, y el
+      // ticket no lleva método de pago (lo decide `rappiId` en @lily/ui).
+      rappiId: esRappi ? (rappiId.trim() || null) : undefined,
       items: items.map((l) => ({
         cantidad: l.cantidad,
         nombre: l.producto.nombre,
@@ -321,6 +333,45 @@ export function Cobro() {
           return
         }
         cobrarSinInternet()
+        return
+      }
+
+      // --- Rappi ---
+      // Un pedido de Rappi se registra para que descuente inventario y dispare
+      // la producción, pero a la tienda le paga la PLATAFORMA días después, no
+      // el repartidor: se cobra con método `rappi`, que el corte cuenta aparte
+      // y el efectivo esperado ignora —así el cajón no queda corto—. No hay
+      // método que elegir ni pinpad: se registra y se imprime de una vez.
+      if (esRappi) {
+        yaTocamosElServidor = true
+        const orden =
+          ordenViva.current ??
+          (await crearOrden(
+            sb,
+            {
+              sucursal_id: almacen!.sucursal_id,
+              almacen_id: almacen!.id,
+              canal,
+              corte_id: corte!.id,
+              cliente_id: null,
+              empleado_id: empleado?.id ?? null,
+              descuento: descuentoTotal(),
+            },
+            items.map((l) => ({
+              producto_id: l.producto.id,
+              cantidad: l.cantidad,
+              precio_unitario: precioDe(l.producto),
+              personalizacion: l.personalizacion,
+            })),
+          ))
+        await cobrarOrden(sb, orden.id, 'rappi', totalNeto, {
+          referencia: `Rappi ${rappiId.trim()}`,
+          idempotencyKey: crypto.randomUUID(),
+        })
+        ordenViva.current = null
+        await sacarTicket(orden.id, armarDatosDelTicket(orden.folio))
+        limpiarOrden()
+        navigate('/', { replace: true })
         return
       }
 
@@ -619,6 +670,31 @@ export function Cobro() {
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Izquierda: método de pago */}
         <div className="flex-1 min-h-0 p-4 md:p-6 overflow-y-auto">
+          {/* Rappi: no se elige método (paga la plataforma); se teclea el ID. */}
+          {esRappi && (
+            <div className="bg-white rounded-sa p-5 shadow-sa-sm mb-4">
+              <p className="font-display text-lg text-sa-green-ink mb-1">Pedido de Rappi</p>
+              <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
+                A la tienda le paga Rappi, no el cliente: no se cobra aquí. Escribe el ID del
+                pedido (los números de la plataforma) y dale «Cobrar e imprimir».
+              </p>
+              <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                ID de Rappi
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={rappiId}
+                onChange={(e) => setRappiId(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="1234"
+                className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl tracking-[0.3em] text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+              />
+              {!rappiIdOk && rappiId.length > 0 && (
+                <p className="font-mono text-xs text-sa-strawberry mt-2">El ID es de 3 a 6 números.</p>
+              )}
+            </div>
+          )}
+          {!esRappi && (<>
           {/* Tres botones iguales: Efectivo, Terminal y Mixto. La casa lo
               pidió así —«que solo diga efectivo, terminal o mixto»— y tiene
               razón: la pregunta del mostrador es UNA, «¿cómo paga?», y las
@@ -803,6 +879,7 @@ export function Cobro() {
               />
             </div>
           )}
+          </>)}
 
           {aviso && (
             <div className="bg-sa-banana/30 border border-sa-banana rounded-sa px-4 py-3 mb-4">
@@ -873,7 +950,11 @@ export function Cobro() {
             disabled={!listo || procesando}
             className="w-full flex-shrink-0 bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 disabled:hover:bg-sa-green active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
           >
-            {procesando ? 'Cobrando…' : `Confirmar pago ${mxn(totalNeto)}`}
+            {procesando
+              ? 'Cobrando…'
+              : esRappi
+              ? `Cobrar e imprimir ${mxn(totalNeto)}`
+              : `Confirmar pago ${mxn(totalNeto)}`}
           </button>
         </div>
       </div>
