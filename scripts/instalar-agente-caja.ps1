@@ -73,30 +73,52 @@ Push-Location $dir
 cmd /c "npm install --omit=dev" | Out-Null
 Pop-Location
 
-# 7) Lanzador y arranque automatico
+# 7) Detener una instancia anterior (actualizacion), para no tener dos agentes
+#    peleandose los mismos trabajos.
+Get-CimInstance Win32_Process -Filter "Name='node.exe'" -ErrorAction SilentlyContinue |
+  Where-Object { $_.CommandLine -match 'agente-caja\.mjs' } |
+  ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+# 8) Lanzador con auto-reinicio y LOG. La salida va a un archivo, no a una
+#    ventana: los errores quedan en agente-caja.log y los fallos de impresion
+#    ademas se ven en Admin -> Impresoras.
+$log = Join-Path $dir "agente-caja.log"
 $bat = Join-Path $dir "iniciar-agente-caja.bat"
 @(
   "@echo off",
   "cd /d `"$dir`"",
   ":loop",
-  "node agente-caja.mjs",
-  "echo El agente se cerro. Reintentando en 5s... (cierra esta ventana para detener)",
+  "echo ---- %date% %time% arranque ---- >> `"$log`"",
+  "node agente-caja.mjs >> `"$log`" 2>&1",
   "timeout /t 5 >nul",
   "goto loop"
 ) | Set-Content -Encoding ascii $bat
 
+# 9) El .vbs corre el .bat SIN ventana (el 0 = oculto). Esto es lo que hace que
+#    el agente quede corriendo invisible, como un servicio, sin dejar consola.
+$vbs = Join-Path $dir "iniciar-oculto.vbs"
+$runArg = '"""' + $bat + '"""'
+@(
+  'CreateObject("WScript.Shell").Run ' + $runArg + ', 0, False'
+) | Set-Content -Encoding ascii $vbs
+
+# 10) Arranque automatico al iniciar sesion: un acceso directo en Inicio que
+#     lanza el .vbs con wscript (sin consola).
 $startup = [Environment]::GetFolderPath('Startup')
 $ws = New-Object -ComObject WScript.Shell
 $lnk = $ws.CreateShortcut((Join-Path $startup "Agente Caja Hojaldras Lily.lnk"))
-$lnk.TargetPath = $bat
+$lnk.TargetPath = "wscript.exe"
+$lnk.Arguments = '"' + $vbs + '"'
 $lnk.WorkingDirectory = $dir
-$lnk.WindowStyle = 7   # minimizado
 $lnk.Save()
 
+# 11) Arrancarlo ahora, oculto.
+Start-Process "wscript.exe" -ArgumentList ('"' + $vbs + '"')
+
 Write-Host ""
-Write-Host "Listo. El agente quedo instalado en:" -ForegroundColor Green
+Write-Host "Listo. El agente quedo instalado y CORRIENDO OCULTO (sin ventana) en:" -ForegroundColor Green
 Write-Host "  $dir"
-Write-Host "Arranca solo al iniciar sesion. Lo abro ahora..."
-Start-Process $bat
+Write-Host "Arranca solo al iniciar sesion."
+Write-Host "Log (por si hay que revisar): $log"
 Write-Host ""
 Write-Host "Prueba: Admin -> Impresoras -> Probar, o haz una venta en la caja."
