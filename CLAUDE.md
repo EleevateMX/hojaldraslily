@@ -1424,6 +1424,15 @@ ticket sale con **«RAPPI #id»** en vez de folio y «Pedido de Rappi — la
 plataforma paga» en vez del método. Enum y vista en las migraciones
 `20261027030000/030100`.
 
+**Banorte por DLL, no por API** (27/10): la casa, probando contra la terminal
+real, se inclinó por el camino del **DLL** (`apps/agente-banorte`, `PINPAD.TPV`
+vía koffi) y no por la API REST. Consecuencia concreta pedida: `customerRef5 =
+'PaxInterredAPI'` —que el manual exige «siempre»— es **solo de la API**, así
+que se quitó del DLL (`pinpad.mjs`); en `_shared/interredes.ts` (la API) se
+queda. Lo que sigue bloqueando el cobro en vivo es lo de siempre: el `group` y
+la afiliación habilitada para ventas (PAYW-6001). El código de la API queda
+desplegado como referencia hasta que se decida de plano.
+
 **Transferencia e Inbursa** (segunda terminal) son dos métodos manuales más
 (audio de Kenny, 26/10): se cobran a mano en su aparato/cuenta y se registran
 aparte en el corte, sin tocar el efectivo esperado. En el ticket del cliente,

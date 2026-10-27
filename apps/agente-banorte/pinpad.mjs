@@ -88,7 +88,8 @@ export function abrirPinpad(cfg) {
   const PPSetGroup = lib.func('void __cdecl PPSetGroup(const char *)')
   const PPSetPaywReference = lib.func('void __cdecl PPSetPaywReference(const char *)')
   const PPSetAuthCode = lib.func('void __cdecl PPSetAuthCode(const char *)')
-  const PPSetCustomerRef5 = seguro(lib, 'void __cdecl PPSetCustomerRef5(const char *)')
+  // (customerRef5 = 'PaxInterredAPI' NO se usa por el DLL: es solo de la API
+  //  REST. Ver el comentario en base(). Por eso ya no se declara su setter.)
   const PPSendTxn = lib.func('void __cdecl PPSendTxn(int)')
 
   // --- Getters, en los dos estilos del Anexo IV ---
@@ -141,9 +142,10 @@ export function abrirPinpad(cfg) {
     PPSetMode(cfg.mode)
     PPSetCommand(comando)
     PPSetControlNumber(controlNumber)
-    // El manual exige que customerRef5 lleve siempre este valor; si el DLL no
-    // exporta el setter, no pasa nada (es más para la API).
-    if (PPSetCustomerRef5) { try { PPSetCustomerRef5('PaxInterredAPI') } catch { /* opcional */ } }
+    // `customerRef5 = 'PaxInterredAPI'` NO se manda por el DLL (27/10): la casa
+    // confirmó —probando contra la terminal real— que ese valor es SOLO para
+    // la API REST (el nombre lo dice, «…InterredAPI»), no para el DLL. En la
+    // API sí se manda (en `_shared/interredes.ts`); aquí no se pone.
   }
 
   function enviar() {
