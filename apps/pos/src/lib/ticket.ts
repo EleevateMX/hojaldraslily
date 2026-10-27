@@ -62,3 +62,54 @@ export async function sacarTicket(ordenId: string | null, ticket: TicketData): P
   // ESC/POS esto será cosa del agente; por ahora la caja imprime por navegador.
   imprimirTicket(ticket, negocioCargado, 2)
 }
+
+/**
+ * Comprobante de que la Terminal 1 (Banorte) RECHAZÓ el cobro.
+ *
+ * No es un ticket de venta —no hubo venta—: es el respaldo que se le da al
+ * cliente para que vea que su tarjeta salió declinada y por qué, y que la
+ * tienda no se quedó con su dinero. Sale por el navegador (no hay orden que
+ * encolar) con la cabecera del negocio de siempre.
+ */
+export function imprimirComprobanteRechazo(monto: number, motivo: string): void {
+  const n = negocioCargado
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+  const dinero = '$' + Math.abs(monto).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const hora = new Date().toLocaleString('es-MX', { timeZone: 'America/Merida', hour12: true })
+  const html = `<!doctype html><html><head><meta charset="utf-8" />
+<style>
+  @page { size: 80mm auto; margin: 0 }
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  body { width: 80mm; padding: 6mm 4mm; font-family: 'Courier New', monospace; color: #000; text-align: center }
+  .nom { font-weight: 700; font-size: 15px; letter-spacing: .04em }
+  .sub { font-size: 10px; margin-top: 2px }
+  .caja { border: 2px solid #000; border-radius: 4px; padding: 8px; margin: 12px 0 }
+  .tit { font-weight: 700; font-size: 16px; text-transform: uppercase }
+  .monto { font-weight: 700; font-size: 20px; margin: 8px 0 }
+  .motivo { font-size: 12px; margin-top: 4px }
+  .pie { font-size: 10px; margin-top: 10px; line-height: 1.4 }
+</style></head><body onload="window.print()">
+  <div class="nom">${esc(n.nombre)}</div>
+  ${n.sucursal ? `<div class="sub">Sucursal ${esc(n.sucursal)}</div>` : ''}
+  <div class="caja">
+    <div class="tit">Pago rechazado</div>
+    <div class="monto">${dinero}</div>
+    <div class="sub">Terminal 1</div>
+    <div class="motivo">Motivo: ${esc(motivo)}</div>
+  </div>
+  <div class="sub">${esc(hora)}</div>
+  <div class="pie">La tarjeta fue DECLINADA. No se realizó ningún cargo.<br/>
+  Intente con otra tarjeta u otra forma de pago.</div>
+</body></html>`
+  // Mismo mecanismo que el ticket: un marco oculto que se imprime y se retira.
+  const marco = document.createElement('iframe')
+  marco.style.position = 'fixed'
+  marco.style.right = '0'
+  marco.style.bottom = '0'
+  marco.style.width = '0'
+  marco.style.height = '0'
+  marco.style.border = '0'
+  marco.srcdoc = html
+  marco.onload = () => { setTimeout(() => marco.remove(), 2000) }
+  document.body.appendChild(marco)
+}

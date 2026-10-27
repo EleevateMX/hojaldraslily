@@ -10,7 +10,7 @@ import {
 } from '@lily/supabase'
 import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
 import { type TicketData } from '@lily/ui'
-import { sacarTicket } from '../lib/ticket'
+import { sacarTicket, imprimirComprobanteRechazo } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
 import { useConexion, esErrorDeRed, revisarAhora } from '../lib/conexion'
@@ -141,6 +141,18 @@ export function Cobro() {
   /** El importe que está esperando en la pinpad, mientras se espera la tarjeta. */
   const [enTerminal, setEnTerminal] = useState<number | null>(null)
   /**
+   * Inbursa (Terminal 2) se cobra a MANO en su propio aparato, así que el
+   * sistema no sabe si aprobó: antes de registrar, el cajero confirma «¿Ya
+   * pagó?» o «¿Rebotó?». Un rebote no registra nada.
+   */
+  const [confirmandoInbursa, setConfirmandoInbursa] = useState(false)
+  /**
+   * Cuando la Terminal 1 (Banorte) rechaza, se guarda el motivo para poder
+   * imprimirle al cliente un comprobante de por qué salió declinado — su
+   * respaldo de que el cobro no pasó, no que la tienda se quedó con su dinero.
+   */
+  const [rechazo, setRechazo] = useState<{ monto: number; motivo: string } | null>(null)
+  /**
    * La orden que ya nació para este ticket. Si la tarjeta se rechaza y el
    * cajero vuelve a intentar, se cobra ESTA orden en vez de crear otra: una
    * orden sin pagar por cada intento ensucia los folios y el corte.
@@ -268,10 +280,22 @@ export function Cobro() {
     return true
   }
 
+  /**
+   * El botón «Confirmar» pasa por aquí. Para Inbursa (cobro manual) abre antes
+   * la pregunta «¿Ya pagó?»; para todo lo demás va directo a cobrar.
+   */
+  function iniciarCobro() {
+    if (procesando) return
+    if (!mixto && metodo === 'inbursa' && enLinea) { setConfirmandoInbursa(true); return }
+    void confirmarPago()
+  }
+
   async function confirmarPago() {
     if (procesando) return
+    setConfirmandoInbursa(false)
     setProcesando(true)
     setError(null)
+    setRechazo(null)
     // Si el internet se cae EN MEDIO de esto, importa muchísimo en qué
     // momento: antes de tocar el servidor se puede cobrar sin internet sin
     // riesgo; después, no se sabe si la orden alcanzó a nacer, y guardarla
@@ -401,7 +425,10 @@ export function Cobro() {
         } else if (r.estado === 'no_configurado') {
           setAviso('La terminal de Banorte todavía no está conectada al sistema: cobra en la pinpad a mano y confirma aquí.')
         } else {
+          // Terminal 1 (Banorte) rechazó. Se enseña el motivo y se ofrece
+          // imprimirlo para el cliente, como respaldo de que el cargo no pasó.
           setError(r.mensaje)
+          setRechazo({ monto: conTarjeta, motivo: r.mensaje })
           return
         }
       }
@@ -533,6 +560,33 @@ export function Cobro() {
           </p>
         </div>
       )}
+      {/* Inbursa (Terminal 2) se cobra a MANO en su aparato: el sistema no sabe
+          si aprobó. El cajero cobra allá y aquí dice qué pasó. «Rebotó» no
+          registra nada; «Ya pagó» sigue al cobro normal. */}
+      {confirmandoInbursa && (
+        <div className="fixed inset-0 z-50 bg-sa-green-deep flex flex-col items-center justify-center gap-6 px-8 text-sa-cream text-center">
+          <p className="font-display text-3xl md:text-4xl leading-tight">
+            Cobra {mxn(totalNeto)} en la terminal Inbursa
+          </p>
+          <p className="font-body text-base text-sa-cream/70 max-w-sm">
+            Pasa la tarjeta en el aparato de Inbursa. ¿Qué dijo la terminal?
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+            <button
+              onClick={() => void confirmarPago()}
+              className="flex-1 bg-sa-cream text-sa-green-deep py-5 rounded-sa-lg font-display text-xl active:scale-[0.98] transition-all"
+            >
+              Sí, ya pagó
+            </button>
+            <button
+              onClick={() => setConfirmandoInbursa(false)}
+              className="flex-1 bg-transparent border-2 border-sa-cream/40 text-sa-cream py-5 rounded-sa-lg font-display text-xl active:scale-[0.98] transition-all"
+            >
+              No, rebotó el pago
+            </button>
+          </div>
+        </div>
+      )}
       {/* Hero con total */}
       <header className="bg-sa-green-deep text-sa-cream flex-shrink-0">
         <div className="flex items-center gap-4 px-4 md:px-6 py-2 md:py-3 border-b border-sa-cream/10">
@@ -574,7 +628,7 @@ export function Cobro() {
             {METODOS.map((m) => (
               <button
                 key={m.key}
-                onClick={() => { setMetodo(m.key); setMixto(false) }}
+                onClick={() => { setMetodo(m.key); setMixto(false); setRechazo(null); setError(null) }}
                 aria-pressed={!mixto && metodo === m.key}
                 className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
                   !mixto && metodo === m.key
@@ -587,7 +641,7 @@ export function Cobro() {
               </button>
             ))}
             <button
-              onClick={() => { setMixto(true); setParteEfectivo('') }}
+              onClick={() => { setMixto(true); setParteEfectivo(''); setRechazo(null); setError(null) }}
               aria-pressed={mixto}
               className={`flex flex-col items-center justify-center gap-2.5 py-7 rounded-sa transition-all ${
                 mixto
@@ -759,6 +813,14 @@ export function Cobro() {
           {error && (
             <div className="bg-sa-strawberry/10 border border-sa-strawberry/30 rounded-sa px-4 py-3 mb-4">
               <p className="font-mono text-sm text-sa-strawberry">{error}</p>
+              {rechazo && (
+                <button
+                  onClick={() => imprimirComprobanteRechazo(rechazo.monto, rechazo.motivo)}
+                  className="mt-3 w-full bg-sa-green-deep text-sa-cream py-2.5 rounded-sa font-display text-base active:scale-[0.98] transition-all"
+                >
+                  Imprimir comprobante de rechazo para el cliente
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -807,7 +869,7 @@ export function Cobro() {
               acento y con letras blancas casi no se lee (§4). Es el botón más
               importante de todo el sistema y tiene que verse como tal. */}
           <button
-            onClick={() => void confirmarPago()}
+            onClick={iniciarCobro}
             disabled={!listo || procesando}
             className="w-full flex-shrink-0 bg-sa-green hover:bg-sa-green-deep disabled:opacity-40 disabled:hover:bg-sa-green active:scale-[0.98] text-sa-cream py-4 rounded-sa-lg font-display text-xl shadow-sa-sm transition-all"
           >
