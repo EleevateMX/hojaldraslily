@@ -43,6 +43,17 @@ const METODOS: { key: MetodoPago; label: string; icono: IconoPago; pideRef?: boo
   { key: 'transferencia', label: 'Transferencia', icono: 'transferencia', pideRef: true },
 ]
 
+/**
+ * Cómo se llama el método EN EL TICKET del cliente. La casa pidió que las dos
+ * terminales salgan como "Terminal 1" (la de Banorte) y "Terminal 2" (la de
+ * Inbursa). En el corte y adentro siguen como Terminal e Inbursa, para cuadrar.
+ */
+function etiquetaEnTicket(m: MetodoPago): string {
+  if (m === 'tarjeta') return 'Terminal 1'
+  if (m === 'inbursa') return 'Terminal 2'
+  return METODOS.find((x) => x.key === m)?.label ?? m
+}
+
 function IconoMetodo({ tipo }: { tipo: IconoPago }) {
   if (tipo === 'efectivo')
     return (
@@ -184,14 +195,14 @@ export function Cobro() {
         ? `${encargo.cliente} (encargo #${encargo.folio})`
         : undefined,
       metodoPago: mixto
-        ? `Efectivo ${mxn(efectivoMixto)} + Terminal ${mxn(tarjetaMixto)}`
-        : metodoSel.label,
+        ? `Efectivo ${mxn(efectivoMixto)} + Terminal 1 ${mxn(tarjetaMixto)}`
+        : etiquetaEnTicket(metodo),
       // En mixto van las dos partes por separado, para que en el papel se
       // vea que suman el total. La frase de arriba se queda de respaldo.
       partes: mixto
         ? [
             { metodo: 'Efectivo', monto: efectivoMixto },
-            { metodo: 'Terminal', monto: tarjetaMixto },
+            { metodo: 'Terminal 1', monto: tarjetaMixto },
           ]
         : undefined,
       // La autorización del banco manda sobre lo que se haya tecleado: si la

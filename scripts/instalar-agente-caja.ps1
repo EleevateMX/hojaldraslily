@@ -16,7 +16,7 @@
 param(
   [string] $Token = "",
   [string] $Impresora = "POS-58",
-  [string] $Ancho = "58mm",
+  [string] $Ancho = "80mm",
   [int]    $Copias = 2
 )
 
