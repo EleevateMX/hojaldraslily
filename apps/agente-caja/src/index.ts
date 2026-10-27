@@ -29,8 +29,9 @@ import { COLUMNAS_80MM, COLUMNAS_58MM } from '@lily/ui/papel'
 import { construirDocumento, type TrabajoCaja } from './render.js'
 import { enviar, estaViva } from './socket.js'
 import { imprimirWindows } from './windows.js'
+import { revisarActualizacion } from './autoactualizar.js'
 
-const VERSION = '1.0.0'
+const VERSION = '1.1.0'
 
 function requerido(clave: string): string {
   const v = process.env[clave]?.trim()
@@ -157,7 +158,28 @@ async function arrancar(): Promise<void> {
   await latir()
   setInterval(() => void latir(), LATIDO_MS)
   setInterval(() => void cicloDeImpresion(), POLL_MS)
-  log.info('esperando tickets… deja esta ventana abierta')
+
+  // Auto-actualización remota: cada tanto se revisa si el repo publicó una
+  // versión nueva del agente. Si la hay, se baja encima y se reinicia —el
+  // lanzador corre en bucle—, pero NUNCA a media impresión. Así se actualiza
+  // sin ir a la PC, que es lo que pidió la casa.
+  const REVISAR_MS = Math.max(5, Number(process.env.ACTUALIZAR_INTERVALO_MIN || 20)) * 60 * 1000
+  setInterval(() => void revisarYReiniciar(), REVISAR_MS)
+  void revisarYReiniciar()
+
+  log.info('esperando tickets… corre oculto; se actualiza solo')
+}
+
+async function revisarYReiniciar(): Promise<void> {
+  if (imprimiendo) return
+  const nueva = await revisarActualizacion(VERSION)
+  // Entre la revisión y aquí pudo entrar un cobro: si está imprimiendo, no se
+  // reinicia. El .mjs nuevo ya quedó en disco, así que la próxima vuelta
+  // ociosa lo estrena. Nada se pierde.
+  if (nueva && !imprimiendo) {
+    log.info(`Versión ${nueva} descargada (tenía ${VERSION}). Reiniciando para estrenarla…`)
+    process.exit(0)
+  }
 }
 
 void arrancar()

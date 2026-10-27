@@ -647,8 +647,46 @@ function imprimirWindows(bytes, nombre) {
   });
 }
 
+// src/autoactualizar.ts
+import { writeFile as writeFile2 } from "node:fs/promises";
+import { dirname, join as join2 } from "node:path";
+import { fileURLToPath } from "node:url";
+var CARPETA_AGENTE = dirname(fileURLToPath(import.meta.url));
+var BASE_DEFECTO = "https://raw.githubusercontent.com/EleevateMX/hojaldraslily/main/apps/agente-caja/dist";
+var URL_ACTUALIZAR = process.env.AGENTE_ACTUALIZAR_URL?.trim() || BASE_DEFECTO;
+async function bajarTexto(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.text();
+}
+async function revisarActualizacion(versionActual) {
+  let publicada;
+  try {
+    const pkg = JSON.parse(await bajarTexto(`${URL_ACTUALIZAR}/package.json`));
+    publicada = String(pkg?.version ?? "").trim();
+  } catch {
+    return null;
+  }
+  if (!publicada || publicada === versionActual) return null;
+  let codigo;
+  try {
+    codigo = await bajarTexto(`${URL_ACTUALIZAR}/agente-caja.mjs`);
+  } catch {
+    return null;
+  }
+  if (codigo.length < 5e3 || !codigo.includes("Hojaldras Lily")) return null;
+  try {
+    const pkgNuevo = await bajarTexto(`${URL_ACTUALIZAR}/package.json`);
+    await writeFile2(join2(CARPETA_AGENTE, "agente-caja.mjs"), codigo, "utf8");
+    await writeFile2(join2(CARPETA_AGENTE, "package.json"), pkgNuevo, "utf8");
+  } catch {
+    return null;
+  }
+  return publicada;
+}
+
 // src/index.ts
-var VERSION = "1.0.0";
+var VERSION = "1.1.0";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
@@ -740,6 +778,17 @@ async function arrancar() {
   await latir();
   setInterval(() => void latir(), LATIDO_MS);
   setInterval(() => void cicloDeImpresion(), POLL_MS);
-  log.info("esperando tickets\u2026 deja esta ventana abierta");
+  const REVISAR_MS = Math.max(5, Number(process.env.ACTUALIZAR_INTERVALO_MIN || 20)) * 60 * 1e3;
+  setInterval(() => void revisarYReiniciar(), REVISAR_MS);
+  void revisarYReiniciar();
+  log.info("esperando tickets\u2026 corre oculto; se actualiza solo");
+}
+async function revisarYReiniciar() {
+  if (imprimiendo) return;
+  const nueva = await revisarActualizacion(VERSION);
+  if (nueva && !imprimiendo) {
+    log.info(`Versi\xF3n ${nueva} descargada (ten\xEDa ${VERSION}). Reiniciando para estrenarla\u2026`);
+    process.exit(0);
+  }
 }
 void arrancar();
