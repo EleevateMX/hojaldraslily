@@ -122,7 +122,10 @@ function totalDe(data) {
 function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   const { centrar, parear, regla, envolver } = formato(ancho);
   const L = [];
-  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
+  const hayLogo = negocio.mostrarLogo !== false && !!negocio.logoRaster?.datos;
+  if (!hayLogo) {
+    L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
+  }
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
   for (const renglon of (negocio.direccion ?? "").split("\n")) {
@@ -686,7 +689,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.0";
+var VERSION = "1.1.1";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {

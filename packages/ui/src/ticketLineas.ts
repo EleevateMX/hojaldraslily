@@ -237,12 +237,16 @@ export function armarTicket(
   const L: LineaTicket[] = []
 
   // ---- Encabezado ----
-  // El logotipo no se rasteriza: el brief lo deja como opcional porque gasta
-  // papel y calor. Lo que sostiene la identidad sin color es el nombre al
-  // doble de tamaño — que es lo que se lee aunque el logo no salga.
-  L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: 'centro' }))
-  // El lema, debajo del nombre: identidad de la casa, lo que amarra el nombre
-  // al negocio. Se envuelve si no cabe en el ancho del papel.
+  // Si Admin puso un logotipo (y no lo apagó), el agente ya lo imprime arriba
+  // como imagen: entonces el NOMBRE en grande sobra —saldría el logo y debajo
+  // «HOJALDRAS LILY» escrito, repetido—. Sin logo, el nombre al doble de
+  // tamaño es lo que sostiene la identidad en papel térmico (sin color).
+  const hayLogo = negocio.mostrarLogo !== false && !!negocio.logoRaster?.datos
+  if (!hayLogo) {
+    L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: 'centro' }))
+  }
+  // El lema, debajo del logo (o del nombre): identidad de la casa. Se envuelve
+  // si no cabe en el ancho del papel.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
   // La dirección trae saltos de línea propios: se respetan y además se

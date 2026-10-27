@@ -1,6 +1,6 @@
 {
   "name": "@lily/agente-caja",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "private": true,
   "description": "Agente local de tickets de caja (ESC/POS, termica de red).",
   "type": "module",
