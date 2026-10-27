@@ -34,6 +34,17 @@ existencia en cero, empleados, impresoras con su token, cajas, parámetros y
 Costeos. **Lo que se capture a partir de ahora es de verdad**: no volver a
 correr esa migración.
 
+**Y se re-limpió el 27/10**, antes de abrir: tras un día de pruebas en la
+tienda ya instalada (32 órdenes, 6 cortes, 4 encargos, 49 trabajos en cola),
+la casa pidió otra vez todo en cero. Mismo recipe que el 19/10 **pero por
+`execute_sql`** (es dato, no esquema, así que no suma migración ni descuadra el
+conteo): borrado todo lo transaccional, insumos en 0, folios a 1 y **sin corte
+abierto** —al entrar a la caja hay que **Abrir caja** contando el cajón—. La
+configuración quedó intacta, incluido `parametros.ticket` con el **logo ya
+puesto** (raster 256 px), el RFC y el régimen. Ojo si se vuelve a hacer:
+verificar el folio con `last_value/is_called`, NO con `nextval()`, que consume
+el 1 y deja el primero en 2.
+
 **Todas las horas van en 12 h y en Mérida (UTC−6), fijas**, no al gusto del
 aparato: `horaEnMerida` / `fechaHoraEnMerida` en `@lily/utils` para las
 pantallas, y `timeZone: 'America/Merida'` + `hour12: true` en los
