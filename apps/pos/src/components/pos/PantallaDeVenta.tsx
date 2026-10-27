@@ -40,7 +40,7 @@ export interface PantallaDeVentaProps {
   empleadoNombre: string
   canal: CanalDeVenta
   setCanal: (c: CanalDeVenta) => void
-  onIr: (ruta: '/pendientes' | '/encargos' | '/corte' | '/cobro') => void
+  onIr: (ruta: '/pendientes' | '/encargos' | '/corte' | '/cobro' | '/historial') => void
   onSalir: () => void
 }
 
@@ -57,7 +57,7 @@ export function PantallaDeVenta({
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [ticketAbierto, setTicketAbierto] = useState(false)
 
-  const ir = (ruta: '/pendientes' | '/encargos' | '/corte') => {
+  const ir = (ruta: '/pendientes' | '/encargos' | '/corte' | '/historial') => {
     setMenuAbierto(false)
     onIr(ruta)
   }
@@ -66,6 +66,7 @@ export function PantallaDeVenta({
     <>
       <button onClick={() => ir('/pendientes')} className={btnCabecera}>Pedidos de kiosko</button>
       <button onClick={() => ir('/encargos')} className={btnCabecera}>Encargos</button>
+      <button onClick={() => ir('/historial')} className={btnCabecera}>Historial</button>
       <button onClick={() => ir('/corte')} className={btnCabecera}>Corte de caja</button>
       <button
         onClick={onSalir}

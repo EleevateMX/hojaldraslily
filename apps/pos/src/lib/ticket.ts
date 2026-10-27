@@ -101,7 +101,57 @@ export function imprimirComprobanteRechazo(monto: number, motivo: string): void 
   <div class="pie">La tarjeta fue DECLINADA. No se realizó ningún cargo.<br/>
   Intente con otra tarjeta u otra forma de pago.</div>
 </body></html>`
-  // Mismo mecanismo que el ticket: un marco oculto que se imprime y se retira.
+  imprimirEnMarco(html)
+}
+
+/**
+ * Comprobante de que una venta se CANCELÓ (se devolvió).
+ *
+ * Es el respaldo para el cliente y para la caja de que esa venta ya no cuenta
+ * y se le devolvió su dinero. Sale por el navegador con la cabecera del
+ * negocio; lleva el folio, el total devuelto, el motivo y quién lo autorizó.
+ */
+export function imprimirComprobanteCancelacion(
+  folio: number | string,
+  total: number,
+  motivo: string,
+  autorizadoPor: string,
+): void {
+  const n = negocioCargado
+  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
+  const dinero = '$' + Math.abs(total).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+  const hora = new Date().toLocaleString('es-MX', { timeZone: 'America/Merida', hour12: true })
+  const html = `<!doctype html><html><head><meta charset="utf-8" />
+<style>
+  @page { size: 80mm auto; margin: 0 }
+  * { margin: 0; padding: 0; box-sizing: border-box }
+  body { width: 80mm; padding: 6mm 4mm; font-family: 'Courier New', monospace; color: #000; text-align: center }
+  .nom { font-weight: 700; font-size: 15px; letter-spacing: .04em }
+  .sub { font-size: 10px; margin-top: 2px }
+  .caja { border: 2px solid #000; border-radius: 4px; padding: 8px; margin: 12px 0 }
+  .tit { font-weight: 700; font-size: 16px; text-transform: uppercase }
+  .monto { font-weight: 700; font-size: 20px; margin: 8px 0 }
+  .d { font-size: 11px; margin-top: 4px }
+  .pie { font-size: 10px; margin-top: 10px; line-height: 1.4 }
+</style></head><body onload="window.print()">
+  <div class="nom">${esc(n.nombre)}</div>
+  ${n.sucursal ? `<div class="sub">Sucursal ${esc(n.sucursal)}</div>` : ''}
+  <div class="caja">
+    <div class="tit">Venta cancelada</div>
+    <div class="sub">Folio #${esc(String(folio))}</div>
+    <div class="monto">${dinero}</div>
+    <div class="d">Devuelto al cliente</div>
+    ${motivo ? `<div class="d">Motivo: ${esc(motivo)}</div>` : ''}
+    <div class="d">Autoriz&oacute;: ${esc(autorizadoPor)}</div>
+  </div>
+  <div class="sub">${esc(hora)}</div>
+  <div class="pie">Esta venta ya no cuenta en el corte.</div>
+</body></html>`
+  imprimirEnMarco(html)
+}
+
+/** Imprime un HTML suelto en un marco oculto (lo mismo que hace el ticket). */
+function imprimirEnMarco(html: string): void {
   const marco = document.createElement('iframe')
   marco.style.position = 'fixed'
   marco.style.right = '0'

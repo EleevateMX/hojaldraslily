@@ -7,7 +7,8 @@ interface Props {
   /** Qué se está autorizando, p. ej. "aplicar un descuento" */
   accion: string
   onClose: () => void
-  onAutorizado: (nombreAutorizador: string) => void
+  /** Devuelve el nombre y el id del gerente que autorizó (el id, para registrarlo). */
+  onAutorizado: (nombreAutorizador: string, empleadoId: string) => void
 }
 
 /**
@@ -37,7 +38,7 @@ export function ModalAutorizacion({ open, accion, onClose, onAutorizado }: Props
       }
       const nombre = emp.nombre
       setPin('')
-      onAutorizado(nombre)
+      onAutorizado(nombre, emp.id)
     } catch {
       setError('No se pudo validar el PIN, revisa la conexión.')
       setPin('')

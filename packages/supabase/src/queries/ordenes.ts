@@ -156,6 +156,45 @@ export async function cancelarOrden(sb: ClienteLily, ordenId: string): Promise<v
   if (error) throw error
 }
 
+/** Una venta del turno, para el «Historial de tickets» de la caja. */
+export interface VentaDelTurno {
+  id: string
+  folio: number
+  created_at: string
+  total: number
+  metodo_pago: MetodoPago | null
+  canal: string
+  pagado: boolean
+  estado: string
+  cancelada_motivo: string | null
+  items: { nombre: string; cantidad: number; precio: number }[]
+}
+
+/** Lo vendido (y lo cancelado) del turno, de lo más reciente a lo más viejo. */
+export async function ventasDelTurno(sb: ClienteLily, corteId: string): Promise<VentaDelTurno[]> {
+  return (await rpc<VentaDelTurno[] | null>(sb, 'fn_ventas_del_turno', { p_corte_id: corteId })) ?? []
+}
+
+/**
+ * Cancela (devuelve) una venta del turno actual.
+ *
+ * `autorizadoPor` es el empleado de gerencia que metió su PIN. El inventario
+ * se restaura solo y el pago deja de contar en el corte; la devolución del
+ * dinero es física, en el mostrador.
+ */
+export async function cancelarVentaDelTurno(
+  sb: ClienteLily,
+  ordenId: string,
+  motivo: string,
+  autorizadoPor: string,
+): Promise<void> {
+  await rpc(sb, 'fn_cancelar_orden', {
+    p_orden_id: ordenId,
+    p_motivo: motivo,
+    p_autorizado_por: autorizadoPor,
+  })
+}
+
 /**
  * Nombres de pedido más usados, para los chips de la pantalla de pago.
  *

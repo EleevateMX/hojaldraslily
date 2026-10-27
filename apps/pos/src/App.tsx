@@ -6,6 +6,7 @@ import { Cobro } from './pages/Cobro'
 import { CorteCaja } from './pages/CorteCaja'
 import { PedidosPendientes } from './pages/PedidosPendientes'
 import { Encargos } from './pages/Encargos'
+import { Historial } from './pages/Historial'
 import { usePosStore } from './store/posStore'
 import { registrarPwa } from '@lily/pwa/registrar'
 import { vigilarConexion } from './lib/conexion'
@@ -98,6 +99,7 @@ export default function App() {
       <Route path="/cobro" element={<RequireAuth><Cobro /></RequireAuth>} />
       <Route path="/pendientes" element={<RequireAuth><PedidosPendientes /></RequireAuth>} />
       <Route path="/encargos" element={<RequireAuth><Encargos /></RequireAuth>} />
+      <Route path="/historial" element={<RequireAuth><Historial /></RequireAuth>} />
       <Route path="/corte" element={<RequireAuth><CorteCaja /></RequireAuth>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
