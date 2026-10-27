@@ -23,6 +23,12 @@ export interface TicketNegocio {
   telefono?: string
   /** Vacío = no se imprime. Solo hace falta si van a facturar. */
   rfc?: string
+  /**
+   * El régimen fiscal, debajo del RFC y en fuente chica («Régimen General de
+   * Ley Personas Morales»). Va aparte del RFC porque es texto largo y se
+   * envuelve distinto. Vacío = no se imprime.
+   */
+  regimen?: string
   /** Primera línea del pie, en Jost: el agradecimiento. */
   leyenda?: string
   /** Segunda línea, más chica: aviso de encargos, redes, horario. */

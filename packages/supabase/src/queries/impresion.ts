@@ -305,6 +305,7 @@ export interface DatosDelTicket {
   direccion?: string
   telefono?: string
   rfc?: string
+  regimen?: string
   leyenda?: string
   pieSecundario?: string
   avisos?: string[]

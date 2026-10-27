@@ -110,13 +110,28 @@ describe('construirDocumento', () => {
 
   // Los datos del negocio viajan DENTRO del trabajo (los pega el servidor
   // desde Admin). Lo que falte lo completa el codigo; lo que venga, manda.
-  it('el telefono de Admin le gana al del codigo, y lo que falta se completa', () => {
+  it('los datos de Admin le ganan a los del codigo, y lo que falta se completa', () => {
     const n = negocioDelTrabajo({ ...venta, negocio: { telefono: '999 000 00 00', rfc: null } }, NEGOCIO_DEFAULT)
     expect(n.telefono).toBe('999 000 00 00')
     expect(n.nombre).toBe(NEGOCIO_DEFAULT.nombre)
     expect(n.rfc).toBe(NEGOCIO_DEFAULT.rfc)
-    const b = construirDocumento(trabajo({ ...venta, negocio: { telefono: '999 000 00 00' } }), NEGOCIO_DEFAULT, null)
+    // El telefono ya NO se imprime en la cabecera (vive en el pie). Se
+    // comprueba el override con un campo que si sale en el papel.
+    const b = construirDocumento(trabajo({ ...venta, negocio: { pieSecundario: 'Llamanos al 999 000 00 00' } }), NEGOCIO_DEFAULT, null)
     expect(b.toString('latin1')).toContain('999 000 00 00')
+  })
+
+  it('el RFC y el regimen salen en fuente chica (ESC M 1), y sin ellos no hay renglon vacio', () => {
+    const conFiscal = construirDocumento(
+      trabajo({ ...venta, negocio: { rfc: 'KHO250605 6F0', regimen: 'Regimen General de Ley Personas Morales' } }),
+      NEGOCIO_DEFAULT, null,
+    )
+    const t = conFiscal.toString('latin1')
+    expect(t).toContain('RFC: KHO250605 6F0')
+    expect(t).toContain('Regimen General de Ley Personas Morales')
+    // ESC M 1 (fuente B) abre y ESC M 0 (fuente A) cierra el bloque fiscal.
+    expect(hex(conFiscal)).toContain('1b4d01')
+    expect(hex(conFiscal)).toContain('1b4d00')
   })
 
   it('esPayloadDeTicket distingue lo imprimible', () => {

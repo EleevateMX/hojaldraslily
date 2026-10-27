@@ -368,7 +368,8 @@ function DatosDelTicketPanel() {
           {campo('sucursal', 'Sucursal', 'Miguel Alemán')}
           {campo('direccion', 'Dirección (un renglón por línea)', 'Calle 29-A #183 por Av. 22', true)}
           {campo('telefono', 'Teléfono', '999 926 71 51')}
-          {campo('rfc', 'RFC (solo si van a facturar)', '')}
+          {campo('rfc', 'RFC (solo si van a facturar)', 'KHO250605 6F0')}
+          {campo('regimen', 'Régimen fiscal (chico, bajo el RFC)', 'Régimen General de Ley Personas Morales')}
           {campo('leyenda', 'Agradecimiento del pie', '¡Gracias por su compra!')}
           {campo('pieSecundario', 'Segunda línea del pie', 'Encargos al 999 926 71 51')}
           {/* El horario va en su casilla y no entre los avisos: cambia con la

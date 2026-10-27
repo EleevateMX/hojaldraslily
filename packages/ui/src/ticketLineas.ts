@@ -74,6 +74,8 @@ export interface MarcaEstilo {
   negrita?: boolean
   invertido?: boolean
   alinear?: 'izq' | 'centro' | 'der'
+  /** `'B'` imprime en la fuente chica (RFC, régimen). Por omisión, la normal. */
+  fuente?: 'A' | 'B'
 }
 
 export type LineaTicket = string | MarcaQr | MarcaEstilo
@@ -248,16 +250,21 @@ export function armarTicket(
   // El lema, debajo del logo (o del nombre): identidad de la casa. Se envuelve
   // si no cabe en el ancho del papel.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
+  // El bloque fiscal —RFC y régimen— va en fuente chica (FontB): tiene que
+  // estar para facturar, pero es secundario, no compite con el nombre. Solo
+  // si existe: «RFC —» a la vista del cliente es peor que no imprimirlo.
+  const chico = (t: string): MarcaEstilo => estilo(t, { alinear: 'centro', fuente: 'B' })
+  if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
+  if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l))
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
   // La dirección trae saltos de línea propios: se respetan y además se
   // envuelve lo que no quepa.
   for (const renglon of (negocio.direccion ?? '').split('\n')) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()))
   }
-  if (negocio.telefono) L.push(centrar(`Tel. ${negocio.telefono}`))
-  // El RFC solo si existe: «RFC —» impreso a la vista del cliente es peor
-  // que no imprimirlo.
-  if (negocio.rfc?.trim()) L.push(centrar(`RFC: ${negocio.rfc.trim()}`))
+  // El teléfono NO va aquí: ya está abajo en «Encarga con 2 días… 999…», y
+  // repetirlo arriba es ruido. Si algún día no estuviera en el pie, se
+  // regresa a esta línea.
   L.push('')
 
   // ---- Datos de la venta ----

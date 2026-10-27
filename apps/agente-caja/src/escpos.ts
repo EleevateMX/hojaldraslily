@@ -83,6 +83,15 @@ export class ConstructorEscPos {
   negrita(encendida: boolean): this { return this.crudo(ESC, 0x45, encendida ? 1 : 0) }
 
   /**
+   * Fuente A (normal, 12 px de ancho) o B (chica, 9 px) con `ESC M n`.
+   * La B es para el renglón que debe verse secundario sin dejar de leerse —el
+   * RFC y el régimen—: en papel térmico no hay tamaños intermedios, FontB es
+   * «lo chiquito». No cambia el número de columnas que se usa para cuadrar,
+   * así que se abre y se cierra en la misma línea, como las demás marcas.
+   */
+  fuente(b: 'A' | 'B'): this { return this.crudo(ESC, 0x4d, b === 'B' ? 1 : 0) }
+
+  /**
    * Blanco sobre negro (GS B n). El brief del ticket lo dice: gasta mucho
    * calor, sirve para una palabra —el folio— y no para más.
    */

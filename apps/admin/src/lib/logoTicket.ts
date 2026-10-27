@@ -20,7 +20,7 @@
  * a múltiplo de 8 porque cada fila del raster se alinea a byte.
  */
 
-const ANCHO_MAX = 384
+const ANCHO_MAX = 256
 /** Debajo de este brillo (0–255), con suficiente opacidad, el pixel es negro. */
 const UMBRAL = 160
 

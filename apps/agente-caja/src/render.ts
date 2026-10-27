@@ -170,7 +170,9 @@ export function construirDocumento(
   // en los datos del negocio, ya rasterizado y viajando dentro del trabajo.
   const img = logo ?? logoDelNegocio(neg)
   const b = new ConstructorEscPos().inicializar()
-  if (img) b.alinear(1).logo(img).linea()
+  // El logo pegado al slogan, sin línea en blanco de por medio: la casa lo
+  // quiere como un conjunto. El slogan ya es la primera línea de armarTicket.
+  if (img) b.alinear(1).logo(img)
 
   b.alinear(0)
   for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l)
@@ -199,11 +201,13 @@ function dibujar(b: ConstructorEscPos, l: LineaTicket): void {
   const alinear = l.alinear === 'centro' ? 1 : l.alinear === 'der' ? 2 : 0
   b.alinear(alinear)
   b.tamano(l.ancho ?? 1, l.alto ?? 1)
+  if (l.fuente === 'B') b.fuente('B')
   if (l.negrita) b.negrita(true)
   if (l.invertido) b.invertir(true)
   b.linea(l.texto)
   if (l.invertido) b.invertir(false)
   if (l.negrita) b.negrita(false)
+  if (l.fuente === 'B') b.fuente('A')
   b.tamano(1, 1)
   b.alinear(0)
 }

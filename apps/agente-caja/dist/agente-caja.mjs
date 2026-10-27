@@ -127,12 +127,13 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
   }
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
+  const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
+  if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
+  if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l));
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
   for (const renglon of (negocio.direccion ?? "").split("\n")) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()));
   }
-  if (negocio.telefono) L.push(centrar(`Tel. ${negocio.telefono}`));
-  if (negocio.rfc?.trim()) L.push(centrar(`RFC: ${negocio.rfc.trim()}`));
   L.push("");
   const f = data.fecha instanceof Date ? data.fecha : new Date(data.fecha);
   const fechaTxt = f.toLocaleString("es-MX", {
@@ -359,6 +360,16 @@ var ConstructorEscPos = class {
     return this.crudo(ESC, 69, encendida ? 1 : 0);
   }
   /**
+   * Fuente A (normal, 12 px de ancho) o B (chica, 9 px) con `ESC M n`.
+   * La B es para el renglón que debe verse secundario sin dejar de leerse —el
+   * RFC y el régimen—: en papel térmico no hay tamaños intermedios, FontB es
+   * «lo chiquito». No cambia el número de columnas que se usa para cuadrar,
+   * así que se abre y se cierra en la misma línea, como las demás marcas.
+   */
+  fuente(b) {
+    return this.crudo(ESC, 77, b === "B" ? 1 : 0);
+  }
+  /**
    * Blanco sobre negro (GS B n). El brief del ticket lo dice: gasta mucho
    * calor, sirve para una palabra —el folio— y no para más.
    */
@@ -481,7 +492,7 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   }
   const img = logo ?? logoDelNegocio(neg);
   const b = new ConstructorEscPos().inicializar();
-  if (img) b.alinear(1).logo(img).linea();
+  if (img) b.alinear(1).logo(img);
   b.alinear(0);
   for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l);
   return b.cortar().construir();
@@ -500,11 +511,13 @@ function dibujar(b, l) {
   const alinear = l.alinear === "centro" ? 1 : l.alinear === "der" ? 2 : 0;
   b.alinear(alinear);
   b.tamano(l.ancho ?? 1, l.alto ?? 1);
+  if (l.fuente === "B") b.fuente("B");
   if (l.negrita) b.negrita(true);
   if (l.invertido) b.invertir(true);
   b.linea(l.texto);
   if (l.invertido) b.invertir(false);
   if (l.negrita) b.negrita(false);
+  if (l.fuente === "B") b.fuente("A");
   b.tamano(1, 1);
   b.alinear(0);
 }
@@ -689,7 +702,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.1";
+var VERSION = "1.1.2";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
