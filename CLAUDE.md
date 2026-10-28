@@ -1522,13 +1522,28 @@ Las tres capas (28/10):
   total del día, el botón **Timbrar factura global**, y el historial con
   PDF/XML. Se mira con `apps/admin/mirar/facturacion.html`.
 
+**El emisor es `KALALEV HOLDING`** (RFC `KHO2506056F0`, régimen **601**, CP de
+expedición **97148**): es la razón social de Hojaldras Lily. Lo fijó una
+factura de referencia que mandó la casa el 28/10 (**Factura 74**, nominal a
+«Secretaría de Administración y Finanzas»), **hecha con OTRA facturera, no con
+ContaDigital** — sirve solo de modelo del formato y los datos fiscales, NO
+prueba nada sobre ContaDigital. De ahí salieron dos datos para el renglón del
+pan: la clave SAT es **50181900** («Pan, galletas y pastelitos dulces») y la
+unidad **H87** (Pieza), con **IVA traslado a tasa 0.000000** y objeto de
+impuesto **02** — justo lo que arma el módulo. (Ese `KALALEV` es el de la
+razón social; es el mismo que la casa pidió **no** imprimir en el ticket
+térmico, no el de otro negocio.)
+
 **Lo que FALTA para encender (todo del lado de ContaDigital / la casa):**
 
-1. **Dar de alta la empresa de Hojaldras Lily en ContaDigital** con su **CSD**
-   (certificado de sello digital). Hoy la API Key da acceso a 5 empresas y
-   **ninguna es el RFC del ticket (KHO250605 6F0)** — confirmado el 28/10: «no
-   está de alta». Sin eso, el Edge Function se detiene con `empresa_no_alta` y
-   **no inventa nada** (es lo correcto).
+1. **Dar de alta la empresa KALALEV HOLDING (KHO2506056F0) en ContaDigital**
+   con su **CSD**. Hoy la casa factura con otra facturera (de ahí la Factura
+   74); en **ContaDigital todavía no está de alta** —confirmado el 28/10—, y la
+   API Key que dio la casa da acceso a 5 empresas, **ninguna es KALALEV**
+   (ve EDY MEDINA, MHS, SONERGY, NACJ, MABR). Por eso `conectar.json` no la
+   lista y el Edge Function se detiene con `empresa_no_alta` (correcto: no
+   inventa nada). Falta darla de alta —en la cuenta de esa llave, o en otra y
+   pasar su API Key.
 2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo):
    `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa),
    `CONTADIGITAL_RFC` (el RFC emisor, una vez de alta), y
