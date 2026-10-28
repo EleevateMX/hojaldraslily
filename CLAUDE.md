@@ -1496,6 +1496,59 @@ hacer una venta y cancelarla (¿corte e inventario cuadran?), y hacer una venta
 y modificarla a algo más caro (¿cobra solo la diferencia, cierra bien el
 corte?).
 
+### 2.13 Facturación global diaria con ContaDigital (Isyconta)
+
+La casa factura **diario para comprobar ingresos**: una sola **factura global**
+a público en general por día, donde **cada folio del día entra como un renglón**
+(Comentarios = «Folio N», Importe = total de ese folio). El pan va a **tasa 0%**
+de IVA, así que subtotal = total. Vive en **Admin → Facturación**.
+
+Las tres capas (28/10):
+
+- **Base** (`20261028120000`): tabla `facturas_globales` (el comprobante:
+  UUID, PDF, XML, estatus) y `fn_facturacion_dia(fecha)` (las ventas pagadas,
+  no canceladas, del día en Mérida — misma regla de día que el inventario).
+  Un índice parcial único por `folio_original` (`GLOBAL-YYYYMMDD`) impide
+  **timbrar dos veces el mismo día** pero deja reintentar si quedó en error.
+  La **API Key NUNCA vive en la base ni en el repo.**
+- **Edge Function** `contadigital-facturar`: ahí están los secretos y la
+  llamada. Flujo: `conectar.json` (API Key → token + empresas) → busca la
+  empresa por RFC → `utiles.json` (IdRFC, lugar de expedición, serie, forma de
+  pago, uso S01, moneda) → cliente público general (XAXX010101000) → arma el
+  CFDI global (una línea por folio, `TasaCero`) → `cfdi.json`. **El total lo
+  decide el servidor** (sale de `fn_facturacion_dia`), nunca la pantalla. Solo
+  **gerencia** (`fn_es_jefe`). Idempotente por día.
+- **Admin → Facturación**: elige el día, enseña cada folio con su total y el
+  total del día, el botón **Timbrar factura global**, y el historial con
+  PDF/XML. Se mira con `apps/admin/mirar/facturacion.html`.
+
+**Lo que FALTA para encender (todo del lado de ContaDigital / la casa):**
+
+1. **Dar de alta la empresa de Hojaldras Lily en ContaDigital** con su **CSD**
+   (certificado de sello digital). Hoy la API Key da acceso a 5 empresas y
+   **ninguna es el RFC del ticket (KHO250605 6F0)** — confirmado el 28/10: «no
+   está de alta». Sin eso, el Edge Function se detiene con `empresa_no_alta` y
+   **no inventa nada** (es lo correcto).
+2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo):
+   `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa),
+   `CONTADIGITAL_RFC` (el RFC emisor, una vez de alta), y
+   `CONTADIGITAL_ID_PRODUCTO` / `CONTADIGITAL_ID_UM` (el producto/unidad
+   genéricos del catálogo de esa empresa para el renglón global). Opcional
+   `CONTADIGITAL_SERIE`.
+3. El cliente **Público en General** (XAXX010101000) dado de alta en esa
+   empresa en ContaDigital, y **timbres** cargados.
+
+Ojo con los **ambientes**: la llave que dio la casa funciona en **PRODUCCIÓN**
+(`.../dev/pro/api`); el de **pruebas** (`.../dev/pruebas/api`) usa otra llave y
+rechaza esta («API KEY incorrecta»). Validado el 28/10 por pg_net desde la
+base (el contenedor no llega a ContaDigital, la base sí). Como la API no envía
+precios desde la pantalla y el total lo pone el servidor, la primera prueba
+será un timbre **real** (lo pidió la casa) en cuanto la empresa esté de alta.
+
+Decisiones fiscales tomadas (28/10): **IVA tasa 0%** (pan), uso **S01**
+(sin efectos fiscales), periodicidad **diaria**, método **PUE**. Rappi entra
+como un folio más (es ingreso); confírmalo con el contador si quiere separarlo.
+
 ### Qué sigue diciendo «shake», y por qué no se toca
 
 Los paquetes se llaman `@lily/*` y el tipo del cliente es `ClienteLily`. Lo
