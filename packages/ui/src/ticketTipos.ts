@@ -15,6 +15,8 @@
 
 export interface TicketNegocio {
   nombre: string
+  /** La razón social, bajo el nombre/logo («KALALEV HOLDING»). Vacío = no se imprime. */
+  razonSocial?: string
   sucursal?: string
   /** El lema de la casa, debajo del nombre. Vacío = no se imprime. */
   slogan?: string
@@ -163,9 +165,13 @@ export interface TicketData {
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */
 export const NEGOCIO_DEFAULT: TicketNegocio = {
   nombre: 'Hojaldras Lily',
+  // La razón social (nombre fiscal), distinta del nombre comercial del logo.
+  razonSocial: 'KALALEV HOLDING',
   slogan: 'Tradición que une generaciones',
-  sucursal: 'Miguel Alemán',
-  direccion: 'Calle 29-A #183 por Av. 22\nCol. Miguel Alemán, Mérida, Yuc.',
+  // La casa pidió quitar «Sucursal Miguel Alemán» del ticket (28/10). Vacío no
+  // se imprime.
+  sucursal: '',
+  direccion: 'Calle 29-A No. 183 x 20 y 22\nCol. Miguel Alemán\nMérida, Yuc., C.P. 97148',
   telefono: '999 926 71 51',
   // Vacío, NO un guion: `'—'` es texto, así que la plantilla lo daba por
   // bueno e imprimía «RFC —» en el papel, a la vista del cliente. Vacío no se
@@ -175,13 +181,13 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   // original: una hojaldra no se refrigera. Es el mismo caso que el bloque de
   // los puntos que ya se quitó del pie del ticket.
   leyenda: '¡Gracias por su compra!',
-  pieSecundario: 'Encarga con 2 días de anticipación · 999 926 71 51',
-  // Los tres avisos que pidió la casa. El HORARIO todavía NO está aquí a
-  // propósito: no me lo dieron, y un horario inventado impreso en el papel es
-  // peor que no tenerlo — el cliente llega a una tienda cerrada. En cuanto lo
-  // digan, se agrega como un renglón más de este arreglo y ya.
+  // El teléfono pasó a la cabecera (bajo la dirección), como el mockup de la
+  // casa (28/10); el pie ya no lo repite.
+  pieSecundario: '',
+  // La casa dio el horario el 28/10; sale en el pie como «Horario: …».
+  horario: 'Lunes a viernes 9:00 a.m. a 6:00 p.m. · Sábados 9:00 a.m. a 2:00 p.m.',
   avisos: [
-    'Para facturar, envía tu número de ticket a facturas@hojaldraslily.com',
+    'Solicita tu factura a facturas@hojaldraslily.com el mismo mes de tu compra',
     'Por higiene NO se hacen cambios de pan',
   ],
   mostrarLogo: true,

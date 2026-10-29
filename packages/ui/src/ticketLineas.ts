@@ -250,6 +250,9 @@ export function armarTicket(
   // El lema, debajo del logo (o del nombre): identidad de la casa. Se envuelve
   // si no cabe en el ancho del papel.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
+  // La razón social (KALALEV HOLDING), debajo del lema y encima del RFC: es el
+  // nombre fiscal del emisor, distinto del nombre comercial que va en el logo.
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l))
   // El bloque fiscal —RFC y régimen— va en fuente chica (FontB): tiene que
   // estar para facturar, pero es secundario, no compite con el nombre. Solo
   // si existe: «RFC —» a la vista del cliente es peor que no imprimirlo.
@@ -262,9 +265,9 @@ export function armarTicket(
   for (const renglon of (negocio.direccion ?? '').split('\n')) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()))
   }
-  // El teléfono NO va aquí: ya está abajo en «Encarga con 2 días… 999…», y
-  // repetirlo arriba es ruido. Si algún día no estuviera en el pie, se
-  // regresa a esta línea.
+  // El teléfono va bajo la dirección, como el mockup de la casa (28/10): antes
+  // vivía solo en el pie, pero la casa lo quiere en el bloque fiscal.
+  if (negocio.telefono?.trim()) L.push(centrar(`Tel. ${negocio.telefono.trim()}`))
   L.push('')
 
   // ---- Datos de la venta ----

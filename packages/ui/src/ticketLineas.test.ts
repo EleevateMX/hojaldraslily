@@ -186,13 +186,14 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.some((x) => x.includes('Por higiene'))).toBe(true)
   })
 
-  it('el horario sale en el pie solo si Admin lo puso, y delante de los avisos', () => {
-    const sin = texto(armarTicket(venta, NEGOCIO_DEFAULT))
+  it('el horario sale en el pie solo si está puesto, y delante de los avisos', () => {
+    const sin = texto(armarTicket(venta, { ...NEGOCIO_DEFAULT, horario: '' }))
     expect(sin.some((x) => x.includes('Horario'))).toBe(false)
     const con = texto(armarTicket(venta, { ...NEGOCIO_DEFAULT, horario: 'L a D 7 a.m. a 9 p.m.' }))
     const iH = con.findIndex((x) => x.includes('Horario: L a D 7 a.m. a 9 p.m.'))
-    const iF = con.findIndex((x) => x.includes('Para facturar'))
+    const iF = con.findIndex((x) => x.includes('Solicita tu factura'))
     expect(iH).toBeGreaterThan(-1)
+    expect(iF).toBeGreaterThan(-1)
     expect(iH).toBeLessThan(iF)
   })
 

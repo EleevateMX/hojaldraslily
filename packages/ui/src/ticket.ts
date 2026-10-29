@@ -156,6 +156,11 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   const slogan = negocio.slogan?.trim()
     ? `<div style="font-family:Jost,sans-serif;font-size:10px;font-style:italic;margin-top:2px">${esc(negocio.slogan.trim())}</div>`
     : ''
+  // La razón social (KALALEV HOLDING), bajo el lema y encima del RFC: nombre
+  // fiscal del emisor, distinto del nombre comercial del logo.
+  const razonSocialHtml = negocio.razonSocial?.trim()
+    ? `<div style="font-size:10px;margin-top:2px">${esc(negocio.razonSocial.trim())}</div>`
+    : ''
   // RFC y régimen en chico: están para facturar, pero son secundarios.
   const fiscal = [
     negocio.rfc?.trim() ? `RFC: ${esc(negocio.rfc.trim())}` : '',
@@ -202,9 +207,11 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
   <div class="center">
     ${logo}
     ${slogan}
+    ${razonSocialHtml}
     ${fiscalHtml}
     ${negocio.sucursal ? `<div style="font-size:10px;margin-top:8px">Sucursal ${esc(negocio.sucursal)}</div>` : ''}
     <div style="font-size:9px;line-height:1.4;margin-top:2px">${direccion}</div>
+    ${negocio.telefono?.trim() ? `<div style="font-size:9px;margin-top:2px">Tel. ${esc(negocio.telefono.trim())}</div>` : ''}
   </div>
 
   <div class="regla" style="margin:8px 0 6px"></div>

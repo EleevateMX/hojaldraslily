@@ -8,9 +8,13 @@ import { createClient } from "@supabase/supabase-js";
 // ../../packages/ui/src/ticketTipos.ts
 var NEGOCIO_DEFAULT = {
   nombre: "Hojaldras Lily",
+  // La razón social (nombre fiscal), distinta del nombre comercial del logo.
+  razonSocial: "KALALEV HOLDING",
   slogan: "Tradici\xF3n que une generaciones",
-  sucursal: "Miguel Alem\xE1n",
-  direccion: "Calle 29-A #183 por Av. 22\nCol. Miguel Alem\xE1n, M\xE9rida, Yuc.",
+  // La casa pidió quitar «Sucursal Miguel Alemán» del ticket (28/10). Vacío no
+  // se imprime.
+  sucursal: "",
+  direccion: "Calle 29-A No. 183 x 20 y 22\nCol. Miguel Alem\xE1n\nM\xE9rida, Yuc., C.P. 97148",
   telefono: "999 926 71 51",
   // Vacío, NO un guion: `'—'` es texto, así que la plantilla lo daba por
   // bueno e imprimía «RFC —» en el papel, a la vista del cliente. Vacío no se
@@ -20,13 +24,13 @@ var NEGOCIO_DEFAULT = {
   // original: una hojaldra no se refrigera. Es el mismo caso que el bloque de
   // los puntos que ya se quitó del pie del ticket.
   leyenda: "\xA1Gracias por su compra!",
-  pieSecundario: "Encarga con 2 d\xEDas de anticipaci\xF3n \xB7 999 926 71 51",
-  // Los tres avisos que pidió la casa. El HORARIO todavía NO está aquí a
-  // propósito: no me lo dieron, y un horario inventado impreso en el papel es
-  // peor que no tenerlo — el cliente llega a una tienda cerrada. En cuanto lo
-  // digan, se agrega como un renglón más de este arreglo y ya.
+  // El teléfono pasó a la cabecera (bajo la dirección), como el mockup de la
+  // casa (28/10); el pie ya no lo repite.
+  pieSecundario: "",
+  // La casa dio el horario el 28/10; sale en el pie como «Horario: …».
+  horario: "Lunes a viernes 9:00 a.m. a 6:00 p.m. \xB7 S\xE1bados 9:00 a.m. a 2:00 p.m.",
   avisos: [
-    "Para facturar, env\xEDa tu n\xFAmero de ticket a facturas@hojaldraslily.com",
+    "Solicita tu factura a facturas@hojaldraslily.com el mismo mes de tu compra",
     "Por higiene NO se hacen cambios de pan"
   ],
   mostrarLogo: true,
@@ -127,6 +131,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
   }
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l));
   const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
   if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l));
@@ -134,6 +139,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   for (const renglon of (negocio.direccion ?? "").split("\n")) {
     for (const l of envolver(renglon)) L.push(centrar(l.trim()));
   }
+  if (negocio.telefono?.trim()) L.push(centrar(`Tel. ${negocio.telefono.trim()}`));
   L.push("");
   const f = data.fecha instanceof Date ? data.fecha : new Date(data.fecha);
   const fechaTxt = f.toLocaleString("es-MX", {
@@ -706,7 +712,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.3";
+var VERSION = "1.1.4";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
