@@ -1439,6 +1439,24 @@ de la API queda desplegado como referencia; si se vuelve a la API, hay que
 **re-desplegar** las Edge Functions para que el group deje de exigirse también
 en lo desplegado.
 
+**Ajuste del ticket (28/10, agente 1.1.4):** sobre el diseño ya hecho, la casa
+pidió la **razón social `KALALEV HOLDING`** (bajo el slogan, encima del RFC;
+campo nuevo `razonSocial` en `TicketNegocio`, en la térmica y el HTML), la
+**dirección con C.P. 97148** y **sin «Sucursal Miguel Alemán»**, el **teléfono
+en la cabecera** (bajo la dirección, ya no solo en el pie) y el **horario** en
+el pie. Todo vive en `NEGOCIO_DEFAULT` (dato fijo), así que la térmica lo saca
+porque el agente completa `{...NEGOCIO_DEFAULT, ...parametros.ticket}`. **Trampa
+del logo que costó una vuelta**: el logo que se sube por Admin viajaba con el
+base64 **malformado** (5805 caracteres en vez de 5804 —un carácter de más, no
+múltiplo de 4—), así que `logoDelNegocio` del agente lo decodificaba a un
+tamaño que no cuadraba con `ancho×alto` y **lo descartaba en silencio: el
+ticket salía con el hueco del logo en blanco** (el nombre tampoco, porque
+`hayLogo` sí lo ve presente). Se arregló el dato en `parametros.ticket`
+(`regexp_replace(datos,'A=$','=')`, verificado **renderizando el raster** como
+PBM para confirmar que era el logo y no basura). Si vuelve a salir en blanco,
+lo primero es medir el base64: `length` debe ser múltiplo de 4 y
+`octet_length(decode(...))` debe ser `ceil(ancho/8)*alto`.
+
 **Transferencia e Inbursa** (segunda terminal) son dos métodos manuales más
 (audio de Kenny, 26/10): se cobran a mano en su aparato/cuenta y se registran
 aparte en el corte, sin tocar el efectivo esperado. En el ticket del cliente,
