@@ -268,7 +268,7 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
 
   <div class="center">
     ${negocio.leyenda ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:11px">${esc(negocio.leyenda)}</div>` : ''}
-    ${negocio.pieSecundario ? `<div style="font-size:9px;line-height:1.4;margin-top:3px">${esc(negocio.pieSecundario)}</div>` : ''}
+    ${negocio.pieSecundario && data.clienteNombre ? `<div style="font-size:9px;line-height:1.4;margin-top:3px">${esc(negocio.pieSecundario)}</div>` : ''}
     ${
       avisos.length > 0
         ? `<div style="border-top:1px solid #000;margin-top:6px;padding-top:5px;font-size:9px;line-height:1.5">${avisos

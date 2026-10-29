@@ -403,7 +403,10 @@ export function armarTicket(
   // El agradecimiento en negrita, como la Jost del diseño: es lo único del
   // pie que se lee sin querer.
   if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(estilo(l.trim(), { negrita: true, alinear: 'centro' }))
-  if (negocio.pieSecundario) {
+  // El pie secundario («Encarga con 2 días de anticipación») sale SOLO en
+  // tickets de ENCARGO (hay `clienteNombre`): en una venta de mostrador que el
+  // cliente ya se está llevando no viene al caso. Lo pidió la casa (28/10).
+  if (negocio.pieSecundario && data.clienteNombre) {
     // Se parte por el `·` de la casa antes que por palabras: envolviendo a
     // secas, «Encarga con 2 días de anticipación · 999 926 71 51» dejaba el
     // teléfono cortado en «999 926 71 / 51», que no se puede marcar.

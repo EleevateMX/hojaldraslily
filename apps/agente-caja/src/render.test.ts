@@ -115,10 +115,17 @@ describe('construirDocumento', () => {
     expect(n.telefono).toBe('999 000 00 00')
     expect(n.nombre).toBe(NEGOCIO_DEFAULT.nombre)
     expect(n.rfc).toBe(NEGOCIO_DEFAULT.rfc)
-    // El telefono ya NO se imprime en la cabecera (vive en el pie). Se
-    // comprueba el override con un campo que si sale en el papel.
-    const b = construirDocumento(trabajo({ ...venta, negocio: { pieSecundario: 'Llamanos al 999 000 00 00' } }), NEGOCIO_DEFAULT, null)
-    expect(b.toString('latin1')).toContain('999 000 00 00')
+    // El telefono ahora SI se imprime en la cabecera (bajo la direccion, 28/10).
+    const b = construirDocumento(trabajo({ ...venta, negocio: { telefono: '999 000 00 00' } }), NEGOCIO_DEFAULT, null)
+    expect(b.toString('latin1')).toContain('Tel. 999 000 00 00')
+  })
+
+  it('«Encarga con 2 dias» sale solo en tickets de encargo', () => {
+    const neg = { ...NEGOCIO_DEFAULT, pieSecundario: 'Encarga con 2 dias de anticipacion' }
+    const mostrador = construirDocumento(trabajo(venta), neg, null).toString('latin1')
+    expect(mostrador).not.toContain('Encarga con 2 dias')
+    const encargo = construirDocumento(trabajo({ ...venta, clienteNombre: 'Maria Perez' }), neg, null).toString('latin1')
+    expect(encargo).toContain('Encarga con 2 dias')
   })
 
   it('el RFC y el regimen salen en fuente chica (ESC M 1), y sin ellos no hay renglon vacio', () => {

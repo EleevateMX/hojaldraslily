@@ -24,9 +24,10 @@ var NEGOCIO_DEFAULT = {
   // original: una hojaldra no se refrigera. Es el mismo caso que el bloque de
   // los puntos que ya se quitó del pie del ticket.
   leyenda: "\xA1Gracias por su compra!",
-  // El teléfono pasó a la cabecera (bajo la dirección), como el mockup de la
-  // casa (28/10); el pie ya no lo repite.
-  pieSecundario: "",
+  // «Encarga con 2 días de anticipación» sale SOLO en tickets de ENCARGO (lo
+  // pidió la casa, 28/10): en `armarTicket` se muestra únicamente cuando hay
+  // `clienteNombre`. Ya sin el teléfono, que pasó a la cabecera.
+  pieSecundario: "Encarga con 2 d\xEDas de anticipaci\xF3n",
   // La casa dio el horario el 28/10; sale en el pie como «Horario: …».
   horario: "Lunes a viernes 9:00 a.m. a 6:00 p.m. \xB7 S\xE1bados 9:00 a.m. a 2:00 p.m.",
   avisos: [
@@ -229,7 +230,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   }
   L.push("");
   if (negocio.leyenda) for (const l of envolver(negocio.leyenda)) L.push(estilo(l.trim(), { negrita: true, alinear: "centro" }));
-  if (negocio.pieSecundario) {
+  if (negocio.pieSecundario && data.clienteNombre) {
     const partes = negocio.pieSecundario.split("\xB7").map((x) => x.trim()).filter(Boolean);
     const cabeEntero = negocio.pieSecundario.length <= ancho;
     for (const parte of cabeEntero ? [negocio.pieSecundario] : partes) {
@@ -712,7 +713,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.4";
+var VERSION = "1.1.5";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
