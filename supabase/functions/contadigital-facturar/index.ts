@@ -124,11 +124,15 @@ Deno.serve(async (req) => {
     const idExp = u.IdExpedidoENDefault
     const cp = empresa.CP || ''
     const serie = (cfg.serie ? porDescripcion(u.Series, cfg.serie) : null) ?? porDescripcion(u.Series, 'factura') ?? (u.Series ?? [])[0]
-    if (!serie) return falla(409, 'sin_serie', 'El emisor no tiene una serie de facturas configurada en ContaDigital.')
     const moneda = porDescripcion(u.Monedas, 'peso') ?? (u.Monedas ?? [])[0]
     const forma = porDescripcion(u.FormasDePago, 'efectivo') ?? (u.FormasDePago ?? [])[0]
     const usoS01 = porClave(u.UsosDeCFDI, 'S01')
     if (!usoS01) return falla(409, 'sin_uso', 'El emisor no tiene el uso de CFDI S01 (Sin efectos fiscales) disponible.')
+
+    if (!serie) return falla(409, 'sin_serie',
+      'El emisor no tiene una serie de facturas configurada en ContaDigital. ' +
+      'Hay que crear una serie en el portal de ContaDigital (Configuración de la empresa → Series/Folios); ' +
+      'la API no crea series.')
 
     if (!cfg.idProducto || !cfg.idUm) {
       return falla(503, 'not_configured',
@@ -139,7 +143,9 @@ Deno.serve(async (req) => {
 
     // --- Receptor: público en general ---------------------------------------
     const cliente = await clientePorRfc(cfg, token, empresa.Id, RFC_PUBLICO)
-    if (!cliente || !cliente.IdCliente) {
+    // ContaDigital devuelve el cliente con el campo `Id` (no `IdCliente`).
+    const idCliente = cliente?.Id ?? cliente?.IdCliente
+    if (!cliente || !idCliente) {
       return falla(409, 'sin_cliente_global',
         `Falta dar de alta el cliente "Público en General" (RFC ${RFC_PUBLICO}) en ContaDigital para esta empresa.`)
     }
@@ -168,10 +174,12 @@ Deno.serve(async (req) => {
       IdSucursal: idExp,
       IdLugarDeExpedicion: idExp,
       LugarDeExpedicion: cp,
-      IdCliente: cliente.IdCliente,
+      IdCliente: idCliente,
       IdSucursalCliente: cliente.IdSucursalDefault ?? cliente.IdSucursalCliente ?? 0,
       UsoCFDI: usoS01.Clave,
-      TipoRelacion: '',
+      // '0' = sin relación. ContaDigital rechaza la cadena vacía ("Es necesario
+      // que especifique el dato para el campo TipoRelacion"), aun omitiéndola.
+      TipoRelacion: '0',
       CFDIRelacionados: '',
       TipoDeCambio: 1,
       IdMoneda: moneda?.Id ?? 0,

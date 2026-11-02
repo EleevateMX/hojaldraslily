@@ -1552,24 +1552,42 @@ impuesto **02** — justo lo que arma el módulo. (Ese `KALALEV` es el de la
 razón social; es el mismo que la casa pidió **no** imprimir en el ticket
 térmico, no el de otro negocio.)
 
-**Lo que FALTA para encender (todo del lado de ContaDigital / la casa):**
+**Lo que avanzó el 02/11 (probado punta a punta por pg_net desde la base):**
+KALALEV HOLDING **ya está de alta en ContaDigital** —la casa la agregó a la
+cuenta de esa API Key—: `conectar.json` ya la lista con **IdEmpresa 2274, CP
+97148, 10 timbres (Creditos)**. Sus catálogos (`cfdi/utiles.json/2274`):
+**IdRFC 246**, lugar de expedición **187 (MÉRIDA YUCATÁN)**, moneda **PESOS
+915**, forma **01 Efectivo (Id 1)**, uso **S01**, tipo **Factura**, régimen
+del público general **616** disponible, y la unidad **PZA/PIEZA ClaveSat H87 =
+Id 2436**. Desde aquí, por la API, se crearon las dos piezas que faltaban:
+- **Cliente Público en General** (XAXX010101000, régimen 616, uso S01, CP
+  97148) → **IdCliente 46392** (`POST /api/clientes.json`).
+- **Producto genérico de pan** (ClaveSat **50181900**, unidad H87/2436, tasa
+  **0%**) → **IdProducto 45977** (`POST /api/productos.json`).
+Y se corrigieron **dos bugs** de la Edge Function que la habrían bloqueado aun
+con todo listo: el cliente viene con campo **`Id`** (no `IdCliente`), y
+**`TipoRelacion` no acepta cadena vacía** —hay que mandar `'0'` (sin relación);
+el catálogo `TiposDeRelacionCFDI` trae la clave `"0"` justo para eso—. Un CFDI
+global de prueba con `SoloGuardar=true` (no consume timbre) validó toda la
+cadena: solo rebota ya en la serie (abajo).
 
-1. **Dar de alta la empresa KALALEV HOLDING (KHO2506056F0) en ContaDigital**
-   con su **CSD**. Hoy la casa factura con otra facturera (de ahí la Factura
-   74); en **ContaDigital todavía no está de alta** —confirmado el 28/10—, y la
-   API Key que dio la casa da acceso a 5 empresas, **ninguna es KALALEV**
-   (ve EDY MEDINA, MHS, SONERGY, NACJ, MABR). Por eso `conectar.json` no la
-   lista y el Edge Function se detiene con `empresa_no_alta` (correcto: no
-   inventa nada). Falta darla de alta —en la cuenta de esa llave, o en otra y
-   pasar su API Key.
-2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo):
-   `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa),
-   `CONTADIGITAL_RFC` (el RFC emisor, una vez de alta), y
-   `CONTADIGITAL_ID_PRODUCTO` / `CONTADIGITAL_ID_UM` (el producto/unidad
-   genéricos del catálogo de esa empresa para el renglón global). Opcional
-   `CONTADIGITAL_SERIE`.
-3. El cliente **Público en General** (XAXX010101000) dado de alta en esa
-   empresa en ContaDigital, y **timbres** cargados.
+**Lo que FALTA para encender:**
+
+1. **Una SERIE de facturas en el portal de ContaDigital** para KALALEV
+   (Configuración de la empresa → Series/Folios). Es el **único** paso que
+   queda y **no hay API** para crearlo: `cfdi/utiles.json` trae `Series: null`
+   y timbrar con `IdSerie=0` rebota con *"No existe la serie, verifique el
+   parámetro IdSerie=0"*. En cuanto exista, `utiles` la devuelve y la Edge
+   Function la toma sola (o se fija con el secreto `CONTADIGITAL_SERIE`).
+2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo) — pendientes
+   de capturar su VALOR en el dashboard: `CONTADIGITAL_API_KEY` y
+   `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa), `CONTADIGITAL_RFC =
+   KHO2506056F0`, `CONTADIGITAL_ID_PRODUCTO = 45977`, `CONTADIGITAL_ID_UM =
+   2436`, `CONTADIGITAL_AMBIENTE = pro`. Opcional `CONTADIGITAL_SERIE` (la
+   descripción de la serie, una vez creada).
+3. El primer timbre **real** (lo pidió la casa): hay días con ventas reales
+   para facturar —**27/10 (6 folios, $1,295)** y **28/10 (14 folios,
+   $3,865)**—; el total lo pone el servidor desde `fn_facturacion_dia`.
 
 Ojo con los **ambientes**: la llave que dio la casa funciona en **PRODUCCIÓN**
 (`.../dev/pro/api`); el de **pruebas** (`.../dev/pruebas/api`) usa otra llave y
