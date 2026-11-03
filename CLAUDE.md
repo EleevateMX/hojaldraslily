@@ -706,7 +706,7 @@ empaquetador y se desvían solas:
 | Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén**. La cantidad **se teclea**: para 13 pastelitos se escribe 13, no se toca «+» trece veces |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
-| Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
+| Cobrar un encargo | Caja → **Encargos** → **Cobrar**: el encargo pasa al carrito de la caja ya precargado, ahí se elige cómo paga y se puede agregar lo que se lleve de más. La **nota sale sola al cubrir el total**, con el anticipo ya descontado. Para abonar una parte, **Anticipo** (no da nota, dice cuánto falta) |
 | Cobrar | En el cobro hay **tres botones iguales: Efectivo, Terminal, Mixto**. En efectivo salen atajos con los billetes que de verdad entregan ($650, $700, $800, $1,000 para un ticket de $625) |
 | Cobrar con tarjeta | **Terminal** (o Mixto): al confirmar, el importe aparece solo en la pinpad de Banorte, el cliente pone la tarjeta y la venta queda registrada con su voucher en el ticket. Si la pinpad no está conectada al sistema (faltan secretos), la caja lo avisa y se cobra a mano en la pinpad como hasta hoy, anotando el folio si se quiere |
 | Deshacer un cobro con tarjeta de hoy | Es de gerencia: `interredes-cancelar` manda el `void` a la pinpad y marca el pago y la orden cancelados. Todavía no tiene botón en pantalla; otro día ya es devolución, con el banco |
@@ -716,7 +716,7 @@ empaquetador y se desvían solas:
 | Dar de alta la térmica del mostrador | Admin → **Impresoras** → «Para qué sirve» = **Tickets del cliente**. Lo que sale al guardar es el `.env` del agente de caja, no el JSON de las etiquetadoras |
 | Se fue el internet | **Seguir vendiendo**: efectivo o terminal del banco. El folio sale como «S-01» y las ventas se registran solas al volver. No se puede cerrar la caja hasta que entren (ver `docs/sin-internet.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
-| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma. **No pide método de pago** (paga Rappi, no el cliente): pide el **ID del pedido** (los números de la plataforma) y al confirmar imprime los dos tickets con «RAPPI #id». En el corte sale como «Rappi» aparte y no descuadra el cajón |
+| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma. **No pide método de pago** (paga Rappi, no el cliente): pide el **ID de Pedido** y el **ID de entrega** (los dos números de la plataforma) y al confirmar imprime los dos tickets con «RAPPI #pedido» y «Entrega #id». En el corte sale como «Rappi» aparte y no descuadra el cajón |
 | Cobrar por transferencia o con la 2ª terminal (Inbursa) | En el cobro, **Transferencia** o **Inbursa** (Terminal 2): se cobra a mano en la cuenta/aparato y se registra aparte en el corte. Inbursa pregunta **¿Ya pagó? / ¿Rebotó?** antes de registrar |
 | Devolver una venta (cancelar) | Caja → **☰ Historial** → la venta → **Cancelar / Devolver**, con **PIN de gerencia**. El pan vuelve al inventario, el dinero sale del corte y se imprime un comprobante. Solo del turno actual |
 | Cambiar una venta por otra (modificar) | Caja → **☰ Historial** → la venta → **Modificar** (PIN de gerencia). Vuelve a la caja con el ticket vacío y un aviso «Modificando #N»: se arma el pedido nuevo y se **cobra la diferencia**. Si la nueva es más barata, se usa **Cancelar** y se cobra de nuevo |
@@ -1416,13 +1416,18 @@ logoTicket.ts`); cambiar ese tope exige RE-SUBIR el logo en Admin.
 la tienda le paga la PLATAFORMA días después, no el repartidor, así que un
 pedido de Rappi no se puede cobrar como efectivo/tarjeta —descuadraría el
 corte— ni llevar método en el ticket. Con el interruptor en Rappi, el cobro
-cambia: no pide método, pide el **ID de Rappi** (3–6 números que se copian de
-la plataforma) y cobra con método `'rappi'`. El corte lo cuenta en su propia
-línea (`total_rappi` en `vw_corte_resumen`) y el **efectivo esperado lo
-ignora**, igual que transferencia e inbursa: el cajón cuadra sin mentir. El
-ticket sale con **«RAPPI #id»** en vez de folio y «Pedido de Rappi — la
-plataforma paga» en vez del método. Enum y vista en las migraciones
-`20261027030000/030100`.
+cambia: no pide método, pide **dos IDs de la plataforma** —el **ID de Pedido**
+(3–6 números, lo que se canta) y el **ID de entrega** (3–12 números)— y cobra
+con método `'rappi'`. Los dos se teclean a mano (Rappi no da su API por un
+botón) y viajan al ticket (`rappiId` + `rappiEntregaId` en `@lily/ui`); la
+referencia del pago queda como `Rappi pedido N · entrega M`. El corte lo cuenta
+en su propia línea (`total_rappi` en `vw_corte_resumen`) y el **efectivo
+esperado lo ignora**, igual que transferencia e inbursa: el cajón cuadra sin
+mentir. El ticket sale con **«RAPPI #pedido»** en vez de folio, **«Entrega
+#id»** debajo, y «Pedido de Rappi» en vez del método —la casa pidió **quitar**
+la línea «la plataforma paga a la tienda» (3/11)—. Enum y vista en las
+migraciones `20261027030000/030100`; los dos campos y el ticket, agente 1.1.6
+(3/11).
 
 **Banorte por DLL, no por API** (27/10): la casa, probando contra la terminal
 real, se inclinó por el camino del **DLL** (`apps/agente-banorte`, `PINPAD.TPV`
@@ -1465,6 +1470,21 @@ la terminal de Banorte sale como **«Terminal 1»** y la de Inbursa como
 pantalla «¿Ya pagó? / ¿Rebotó?» en el cobro (no sabe si aprobó: lo dice el
 cajero). Y si la Terminal 1 (Banorte) declina en vivo, hay un botón para
 imprimirle al cliente un **comprobante de rechazo** con el motivo.
+
+**Cobrar un encargo pasa por el CARRITO, y la nota sale al cubrir el total**
+(3/11). Antes la tarjeta del encargo tenía botones de Efectivo/Terminal que
+cobraban en el acto **sin sacar nota**. Ahora el botón es uno, **«Cobrar»**, y
+hace lo que hacía «Y algo más»: manda el encargo al carrito de la caja ya
+precargado (`apps/pos/src/pages/Encargos.tsx` → `llevarAlCarrito`). Ahí se
+elige cómo paga (efectivo/terminal/mixto), se puede **agregar lo que se lleve
+de más**, y la nota sale **sola al cubrir el saldo** (`entregarEncargoConVenta`
++ `sacarTicket` en `Cobro.tsx`). Para un abono parcial sigue **«Anticipo»**,
+que NO da nota y dice cuánto falta; la tarjeta rotula «Pendiente de pago» /
+«Dejó $X · faltan $Y» / «Pagado · pendiente de entrega». Un encargo ya pagado
+no muestra Cobrar ni Anticipo. Respaldo: si un renglón del encargo ya salió del
+menú y no se puede armar en el carrito, se cobra directo en la tarjeta
+(`cobrarDirecto` → `cobrarEncargo` + nota por el navegador). Todo frontend, sin
+tocar la base.
 
 ### 2.12 Cancelar y modificar una venta (del turno, con PIN de gerencia)
 

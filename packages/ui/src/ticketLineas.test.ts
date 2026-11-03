@@ -51,6 +51,23 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(total && total.tipo === 'estilo' ? [total.alto, total.texto.endsWith('$590.00')] : null).toEqual([2, true])
   })
 
+  it('Rappi: canta pedido y entrega, sin «la plataforma paga» ni método', () => {
+    const l = armarTicket(
+      { ...venta, recibido: undefined, rappiId: '4821', rappiEntregaId: '930771' },
+      NEGOCIO_DEFAULT,
+    )
+    const t = texto(l).join('\n')
+    // El pedido va invertido y al doble, como el folio; la entrega, debajo.
+    const pedido = l.find((x) => typeof x !== 'string' && x.tipo === 'estilo' && x.texto.includes('#4821'))
+    expect(pedido).toBeTruthy()
+    expect(t).toContain('RAPPI')
+    expect(t).toContain('Entrega #930771')
+    expect(t).toContain('Pedido de Rappi')
+    // La casa pidió quitar esa línea, y Rappi no lleva método de pago.
+    expect(t.toLowerCase()).not.toContain('plataforma paga')
+    expect(t).not.toContain('Efectivo')
+  })
+
   it('el nombre del encargo va al doble de ancho y cabe aunque sea largo', () => {
     const l = armarTicket({ ...venta, clienteNombre: 'María Fernanda Cáceres Pech (encargo #1043)' }, NEGOCIO_DEFAULT)
     const nombre = l.filter((x) => typeof x !== 'string' && x.tipo === 'estilo' && x.ancho === 2 && x.negrita)

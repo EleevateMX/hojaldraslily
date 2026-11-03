@@ -220,6 +220,7 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
     <div>
       <div class="mini" style="margin-bottom:2px">${data.rappiId ? 'Rappi' : 'Folio'}</div>
       <div style="display:inline-block;background:#000;color:#fff;font-weight:500;font-size:22px;line-height:1;padding:4px 7px 3px">#${esc(data.rappiId || data.folio)}</div>
+      ${data.rappiId && data.rappiEntregaId ? `<div class="mini" style="margin-top:3px">Entrega #${esc(data.rappiEntregaId)}</div>` : ''}
     </div>
     <div style="text-align:right;font-size:9.5px;line-height:1.45">
       <div>${esc(fechaTxt)}</div>
@@ -256,7 +257,7 @@ ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div cla
 
   <div class="cuentas" style="margin-top:8px">
     ${data.rappiId
-      ? `<div style="grid-column:1 / 3;text-align:center;font-size:10px;line-height:1.4">Pedido de Rappi<br/>La plataforma paga a la tienda</div>`
+      ? `<div style="grid-column:1 / 3;text-align:center;font-size:10px;line-height:1.4">Pedido de Rappi</div>`
       : `${filasPago}
     ${data.referenciaPago ? `<div style="grid-column:1 / 3;font-size:9px;margin-top:-2px">Ref. ${esc(data.referenciaPago)}</div>` : ''}
     ${data.recibido != null ? `<div>Recibido</div><div style="text-align:right">${money(data.recibido)}</div>` : ''}

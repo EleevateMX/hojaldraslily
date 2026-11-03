@@ -22,10 +22,11 @@ import {
   type ProductoDelDia,
   type OrdenConTiempo,
 } from '@lily/supabase'
-import { SelectorDeHora } from '@lily/ui'
+import { SelectorDeHora, type TicketData } from '@lily/ui'
 import { usePosStore } from '@/store/posStore'
 import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { sb } from '@/lib/sb'
+import { sacarTicket } from '@/lib/ticket'
 
 /**
  * Encargos, desde la caja.
@@ -147,10 +148,18 @@ function Tarjeta({
               Pagado · pendiente de entrega
             </p>
           ) : e.anticipo > 0 ? (
+            // Abonó una parte: lo que importa es cuánto FALTA para poder darle
+            // la nota, no lo que ya dejó.
             <p className="font-body text-[11px] text-sa-green-ink/60 mt-0.5">
               Dejó {mxn(e.anticipo)} de anticipo · faltan {mxn(e.total - e.anticipo)}
             </p>
-          ) : null}
+          ) : (
+            // Sin abono: pendiente de pago. Dejarlo en blanco hacía que un
+            // encargo sin pagar se viera igual que uno listo.
+            <p className="font-body text-[11px] text-sa-green-ink/50 mt-0.5">
+              Pendiente de pago
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-1.5">{acciones}</div>
       </div>
@@ -177,6 +186,10 @@ export function Encargos() {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
+  // Respaldo: cuando un encargo no se puede pasar al carrito porque alguno de
+  // sus renglones ya no está en el menú, se cobra aquí mismo (efectivo o
+  // terminal) y la nota sale por el navegador. Guarda a cuál encargo aplica.
+  const [cobroDirecto, setCobroDirecto] = useState<string | null>(null)
 
   // Formulario de apartar
   const [nuevo, setNuevo] = useState(false)
@@ -201,6 +214,7 @@ export function Encargos() {
   const setEncargoEnCarrito = usePosStore((x) => x.setEncargo)
   const limpiarOrden = usePosStore((x) => x.limpiarOrden)
   const itemsEnCarrito = usePosStore((x) => x.items)
+  const empleado = usePosStore((x) => x.empleado)
 
   const base = import.meta.env.BASE_URL
 
@@ -252,13 +266,14 @@ export function Encargos() {
   )
 
   /**
-   * Se lo lleva al carrito para cobrarlo **junto con lo que se lleve de más**.
+   * **Cobrar el encargo**: se pasa al carrito de la caja, ya precargado.
    *
-   * Es lo que pasa todos los días: vienen por su encargo y de paso quieren
-   * unas galletas. Hasta hoy eso eran dos cobros —dos papeles, dos
-   * movimientos en el corte y, con la terminal, dos veces el NIP por la misma
-   * visita—. Ahora sus renglones entran al ticket como líneas normales y el
-   * cobro sale de la pasarela de siempre.
+   * Cobrar un encargo es cerrar una visita, igual que una venta de mostrador:
+   * por eso se hace en el carrito y no aquí. Así el cajero elige cómo paga
+   * (efectivo, terminal o mixto), puede **agregar lo que se lleve de más** —es
+   * lo que pasa todos los días: vienen por su encargo y de paso unas
+   * galletas—, y la **nota sale sola al cubrir el total**. Si todavía no cubre
+   * (solo deja un abono), para eso está «Anticipo», que no da nota.
    *
    * Si el carrito ya traía algo, se pregunta antes de tirarlo: lo que está
    * armado es el ticket de otro cliente.
@@ -280,11 +295,17 @@ export function Encargos() {
       const porId = new Map(catalogo.map((p) => [p.id, p]))
       const faltantes = e.items.filter((i) => !porId.has(i.producto_id))
       if (faltantes.length > 0) {
-        throw new Error(
-          `Hay renglones de este encargo que ya no están en el menú: ` +
+        // Alguno de sus renglones ya no está en el menú (se pausó o se quitó),
+        // así que no se puede armar en el carrito. No se deja varada a la
+        // cajera: se ofrece el cobro directo aquí mismo, que no necesita el
+        // catálogo (el precio ya está congelado en el encargo).
+        setCobroDirecto(e.id)
+        setError(
+          `Este encargo tiene renglones que ya no están en el menú (` +
             faltantes.map((f) => f.producto).join(', ') +
-            '. Cóbrelo desde aquí con Efectivo o Terminal.',
+            `), así que no se puede pasar al carrito. Cóbralo directo aquí abajo.`,
         )
+        return
       }
       limpiarOrden()
       for (const i of e.items) agregarItem(porId.get(i.producto_id)!, null, i.cantidad)
@@ -295,6 +316,51 @@ export function Encargos() {
         anticipo: e.anticipo,
       })
       navigate('/')
+    } catch (err) {
+      setError(mensajeDeError(err))
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  /**
+   * Cobro directo del encargo, SIN pasar por el carrito.
+   *
+   * Es el respaldo para cuando el carrito no se puede armar (un renglón salió
+   * del menú). Cobra el saldo por el mismo camino de siempre (`cobrarEncargo`,
+   * que cae en el corte del turno) y saca la nota por el navegador —con el
+   * anticipo ya descontado—, porque cobrar un encargo también merece su papel.
+   */
+  async function cobrarDirecto(e: Encargo, metodo: 'efectivo' | 'tarjeta') {
+    setOcupado(e.id)
+    try {
+      const saldo = await cobrarEncargo(sb, e.id, metodo)
+      const ticket: TicketData = {
+        folio: e.folio,
+        fecha: new Date(),
+        cajero: empleado?.nombre,
+        canal: 'Caja',
+        items: e.items.map((i) => ({
+          cantidad: i.cantidad,
+          nombre: i.producto,
+          precioUnitario: i.precio_unitario,
+        })),
+        anticipo: e.anticipo || undefined,
+        clienteNombre: `${e.cliente} (encargo #${e.folio})`,
+        metodoPago: metodo === 'efectivo' ? 'Efectivo' : 'Terminal 1',
+      }
+      // Sin id de orden: la nota sale por el navegador (cobrarEncargo no
+      // devuelve la orden para encolar en la térmica). Es el camino de
+      // respaldo, no el de todos los días.
+      void sacarTicket(null, ticket)
+      setCobroDirecto(null)
+      setError(null)
+      setAviso(
+        e.anticipo > 0
+          ? `Cobrado ${mxn(saldo)} de ${e.cliente} (ya había dejado ${mxn(e.anticipo)}). Entró al corte del turno.`
+          : `Cobrado ${mxn(saldo)} de ${e.cliente}. Ya entró al corte del turno.`,
+      )
+      await cargar(false)
     } catch (err) {
       setError(mensajeDeError(err))
     } finally {
@@ -350,27 +416,6 @@ export function Encargos() {
       setError(mensajeDeError(e))
     } finally {
       setGuardando(false)
-    }
-  }
-
-  async function cobrar(e: Encargo, metodo: 'efectivo' | 'tarjeta') {
-    setOcupado(e.id)
-    try {
-      const saldo = await cobrarEncargo(sb, e.id, metodo)
-      // Es el SALDO, no el total: si dejó anticipo, eso ya entró al corte el
-      // día que lo dejó. Decirle «cobrado $1,580» al cajero cuando en el
-      // cajón entraron $1,380 es mandarlo a cuadrar un dinero que no existe.
-      setAviso(
-        e.anticipo > 0
-          ? `Cobrado ${mxn(saldo)} de ${e.cliente} (ya había dejado ${mxn(e.anticipo)}). Entró al corte del turno.`
-          : `Cobrado ${mxn(saldo)} de ${e.cliente}. Ya entró al corte del turno.`,
-      )
-      await cargar(false)
-      setError(null)
-    } catch (err) {
-      setError(mensajeDeError(err))
-    } finally {
-      setOcupado(null)
     }
   }
 
@@ -779,46 +824,58 @@ export function Encargos() {
                               >
                                 Cancelar
                               </button>
-                              {/* Anticipo va en gris y los de cobrar en color: el
-                                  que cierra la venta es el que la cajera busca con
-                                  prisa, y el que solo abona no debe competir con
-                                  él. Se esconde cuando ya está todo pagado, para
-                                  que nadie cobre de más por error. */}
-                              {e.anticipo < e.total && (
-                                <button
-                                  onClick={() => void anticipo(e)}
-                                  disabled={ocupado === e.id}
-                                  className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                                >
-                                  Anticipo
-                                </button>
+                              {/* Ya pagado = no hay nada que cobrar: solo falta
+                                  entregarlo. No se muestran Anticipo ni Cobrar
+                                  para que nadie cobre de más por error. */}
+                              {e.estado !== 'pagado' && (
+                                <>
+                                  {/* Anticipo en gris: abonar es parcial y NO da
+                                      nota. Se esconde cuando ya está cubierto. */}
+                                  {e.anticipo < e.total && (
+                                    <button
+                                      onClick={() => void anticipo(e)}
+                                      disabled={ocupado === e.id}
+                                      className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                                    >
+                                      Anticipo
+                                    </button>
+                                  )}
+                                  {/* Cobrar: lo manda al carrito ya precargado,
+                                      donde se elige cómo paga, se puede agregar
+                                      algo más, y la nota sale al cubrir el
+                                      total. Es la acción que cierra la visita,
+                                      así que va en color. */}
+                                  <button
+                                    onClick={() => void llevarAlCarrito(e)}
+                                    disabled={ocupado === e.id}
+                                    className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                                    title="Lo pasa al carrito de la caja ya precargado: ahí eliges cómo paga, agregas lo que se lleve de más, y la nota sale al cubrir el total"
+                                  >
+                                    {ocupado === e.id ? '…' : 'Cobrar'}
+                                  </button>
+                                </>
                               )}
-                              {/* Para cuando vienen por su encargo y de paso
-                                  se llevan otra cosa. Va junto a los de
-                                  cobrar porque es lo mismo —cerrar la
-                                  visita— solo que con más cosas. */}
-                              <button
-                                onClick={() => void llevarAlCarrito(e)}
-                                disabled={ocupado === e.id}
-                                className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                                title="Lo pasa al ticket de la caja para cobrarlo junto con lo que se lleven de más"
-                              >
-                                Y algo más
-                              </button>
-                              <button
-                                onClick={() => void cobrar(e, 'efectivo')}
-                                disabled={ocupado === e.id}
-                                className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                              >
-                                {ocupado === e.id ? '…' : 'Efectivo'}
-                              </button>
-                              <button
-                                onClick={() => void cobrar(e, 'tarjeta')}
-                                disabled={ocupado === e.id}
-                                className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
-                              >
-                                Terminal
-                              </button>
+                              {/* Respaldo: si el encargo no se pudo pasar al
+                                  carrito (un renglón salió del menú), se cobra
+                                  directo aquí y la nota sale por el navegador. */}
+                              {cobroDirecto === e.id && (
+                                <>
+                                  <button
+                                    onClick={() => void cobrarDirecto(e, 'efectivo')}
+                                    disabled={ocupado === e.id}
+                                    className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                                  >
+                                    {ocupado === e.id ? '…' : 'Cobrar efectivo'}
+                                  </button>
+                                  <button
+                                    onClick={() => void cobrarDirecto(e, 'tarjeta')}
+                                    disabled={ocupado === e.id}
+                                    className="bg-sa-green-ink hover:bg-sa-green-ink/85 text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                                  >
+                                    Cobrar terminal
+                                  </button>
+                                </>
+                              )}
                             </>
                           }
                         />
