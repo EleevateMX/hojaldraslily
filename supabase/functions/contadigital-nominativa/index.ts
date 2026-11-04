@@ -28,6 +28,7 @@ import {
   configContaDigital,
   crearCliente,
   empresaPorRfc,
+  fechaContaDigital,
   listarClientes,
   porClave,
   porDescripcion,
@@ -42,15 +43,6 @@ const falla = (status: number, codigo: string, mensaje: string, extra: Record<st
   json(status, { ok: false, error: { codigo, mensaje }, ...extra })
 
 const redondea = (n: number) => Math.round(Number(n) * 100) / 100
-
-function ahoraMerida(): string {
-  const f = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  }).formatToParts(new Date())
-  const g = (t: string) => f.find((p) => p.type === t)?.value ?? '00'
-  return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}:${g('second')}`
-}
 
 interface Cuerpo {
   accion?: 'clientes' | 'agregar_cliente' | 'timbrar_folio'
@@ -194,7 +186,7 @@ Deno.serve(async (req) => {
         IdEmpresa: empresa.Id,
         IdRFC: u.IdRFC,
         FolioOriginal: `NOM-${folio}`,
-        Fecha: ahoraMerida(),
+        Fecha: fechaContaDigital(),
         TipoComprobante: (porClave(u.TiposDeComprobante, 'Factura')?.Clave) ?? 'Factura',
         IdSerie: serie.Id,
         IdSucursal: u.IdExpedidoENDefault,

@@ -27,6 +27,7 @@ import {
   conectar,
   configContaDigital,
   empresaPorRfc,
+  fechaContaDigital,
   porClave,
   porDescripcion,
   timbrar,
@@ -42,16 +43,6 @@ const falla = (status: number, codigo: string, mensaje: string, extra: Record<st
   json(status, { ok: false, error: { codigo, mensaje }, ...extra })
 
 const redondea = (n: number) => Math.round(Number(n) * 100) / 100
-
-/** 'YYYY-MM-DD' y 'YYYY-MM-DDTHH:MM:SS' en horario de Mérida. */
-function ahoraMerida(): { fechaHora: string } {
-  const f = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  }).formatToParts(new Date())
-  const g = (t: string) => f.find((p) => p.type === t)?.value ?? '00'
-  return { fechaHora: `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}:${g('second')}` }
-}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
@@ -169,7 +160,7 @@ Deno.serve(async (req) => {
       IdEmpresa: empresa.Id,
       IdRFC: idRFC,
       FolioOriginal: folioOriginal,
-      Fecha: ahoraMerida().fechaHora,
+      Fecha: fechaContaDigital(),
       TipoComprobante: (porClave(u.TiposDeComprobante, 'Factura')?.Clave) ?? 'Factura',
       IdSerie: serie.Id,
       IdSucursal: idExp,

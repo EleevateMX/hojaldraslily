@@ -1596,23 +1596,37 @@ el catálogo `TiposDeRelacionCFDI` trae la clave `"0"` justo para eso—. Un CFD
 global de prueba con `SoloGuardar=true` (no consume timbre) validó toda la
 cadena: solo rebota ya en la serie (abajo).
 
-**Lo que FALTA para encender:**
+**La SERIE ya existe (4/11) y la cadena entera valida.** El único blocker que
+quedaba —la serie en el portal— ya está: la casa la creó y `cfdi/utiles.json/2274`
+ahora trae `Series: [{Id:550, Descripcion:"FACTURA"}]` (timbra como Serie **"F"**).
+Con la serie puesta, un CFDI global de prueba del **27/10** ($1,295, 6 folios) por
+pg_net con `SoloGuardar=true` **validó de punta a punta**: `Codigo 2 ·
+"Pre-factura guardada correctamente" · Serie F · Folio 83`. Lo único entre eso y
+un timbre real es `SoloGuardar:false` (consume un timbre y devuelve UUID). Créditos
+en KALALEV: **510** (la casa recargó).
 
-1. **Una SERIE de facturas en el portal de ContaDigital** para KALALEV
-   (Configuración de la empresa → Series/Folios). Es el **único** paso que
-   queda y **no hay API** para crearlo: `cfdi/utiles.json` trae `Series: null`
-   y timbrar con `IdSerie=0` rebota con *"No existe la serie, verifique el
-   parámetro IdSerie=0"*. En cuanto exista, `utiles` la devuelve y la Edge
-   Function la toma sola (o se fija con el secreto `CONTADIGITAL_SERIE`).
-2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo) — pendientes
-   de capturar su VALOR en el dashboard: `CONTADIGITAL_API_KEY` y
-   `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa), `CONTADIGITAL_RFC =
-   KHO2506056F0`, `CONTADIGITAL_ID_PRODUCTO = 45977`, `CONTADIGITAL_ID_UM =
-   2436`, `CONTADIGITAL_AMBIENTE = pro`. Opcional `CONTADIGITAL_SERIE` (la
-   descripción de la serie, una vez creada).
-3. El primer timbre **real** (lo pidió la casa): hay días con ventas reales
-   para facturar —**27/10 (6 folios, $1,295)** y **28/10 (14 folios,
-   $3,865)**—; el total lo pone el servidor desde `fn_facturacion_dia`.
+**Trampa que ese SoloGuardar destapó, ya ARREGLADA (4/11): el formato de FECHA.**
+ContaDigital quiere `dd-MM-yyyy HH:mm:ss`, NO el ISO con «T». El ISO rebota con
+*«Fecha: … no es válida. Formato válido (dd-MM-yyyy HH:mm:ss)»* y no timbra. Antes
+no se veía porque la serie ausente rechazaba primero; con la serie puesta,
+apareció. Se centralizó en `fechaContaDigital()` en `_shared/contadigital.ts` (con
+`hourCycle:'h23'` para que la medianoche no salga como «24»), se quitó el
+`ahoraMerida()` ISO de las DOS Edge Functions, y **se redesplegaron**
+(`contadigital-facturar` v4, `contadigital-nominativa` v2).
+
+**Lo que FALTA para encender (solo de la casa, ya no es código):**
+
+1. **Capturar los secretos** (Supabase Edge Function Secrets, nunca en el repo),
+   su VALOR en el dashboard: `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN`
+   (los dio la casa), `CONTADIGITAL_RFC = KHO2506056F0`, `CONTADIGITAL_ID_PRODUCTO
+   = 45977`, `CONTADIGITAL_ID_UM = 2436`, `CONTADIGITAL_AMBIENTE = pro`. Opcional
+   `CONTADIGITAL_SERIE = FACTURA` (si no, la toma sola del catálogo). Es lo único
+   que falta: la Edge Function los lee del entorno, por eso la prueba de arriba se
+   hizo por pg_net con la llave a mano.
+2. El primer timbre **real** (lo pidió la casa): hay días con ventas reales para
+   facturar —**27/10 (6 folios, $1,295)** y **28/10 (14 folios, $3,865)**—; el
+   total lo pone el servidor desde `fn_facturacion_dia`.
+3. **Rotar** la API Key y el Plugin Token después, porque pasaron por el chat.
 
 Ojo con los **ambientes**: la llave que dio la casa funciona en **PRODUCCIÓN**
 (`.../dev/pro/api`); el de **pruebas** (`.../dev/pruebas/api`) usa otra llave y
