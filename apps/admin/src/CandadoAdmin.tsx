@@ -3,6 +3,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import logo from '@lily/brand/logo-negativo.png'
 import { entrarConPin, empleadoDeLaSesion, salirDeSesion, vigilarSesion, type EmpleadoSesion } from '@lily/supabase'
 import { sb } from './lib/sb'
+import { SesionContext } from './sesion'
 
 /**
  * Candado de Admin.
@@ -16,10 +17,12 @@ import { sb } from './lib/sb'
  * quién está del otro lado. Una pantalla bonita sobre un `anon` no protege
  * nada, porque las mismas funciones se pueden llamar desde una consola.
  *
- * Solo pasan administrador y gerente: la cajera tiene su PIN para caja, pero
- * no tiene por qué poder cambiar precios ni tocar al personal.
+ * Solo pasan administrador y gerente —y contabilidad, pero ACOTADO: ve nada
+ * más el apartado de Facturación (lo decide `App` leyendo el rol de la
+ * sesión). La cajera tiene su PIN para caja, pero no tiene por qué poder
+ * cambiar precios ni tocar al personal.
  */
-const ROLES_QUE_PASAN = ['administrador', 'gerente']
+const ROLES_QUE_PASAN = ['administrador', 'gerente', 'contabilidad']
 
 export function CandadoAdmin({ children }: { children: ReactNode }) {
   const [empleado, setEmpleado] = useState<EmpleadoSesion | null>(null)
@@ -101,7 +104,7 @@ export function CandadoAdmin({ children }: { children: ReactNode }) {
   }
 
   return (
-    <>
+    <SesionContext.Provider value={{ nombre: empleado.nombre, rol: empleado.rol }}>
       <div className="fixed bottom-3 right-3 z-50 flex items-center gap-3 bg-sa-green-deep text-sa-cream/90 rounded-sa-lg px-4 py-2 shadow-sa-sm">
         <span className="font-mono text-xs">{empleado.nombre}</span>
         <button
@@ -112,6 +115,6 @@ export function CandadoAdmin({ children }: { children: ReactNode }) {
         </button>
       </div>
       {children}
-    </>
+    </SesionContext.Provider>
   )
 }

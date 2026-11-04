@@ -11,9 +11,12 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **222 migraciones aplicadas en orden, y 222
+`fzkdgqqvfkogmxdgqsxj` tiene **224 migraciones aplicadas en orden, y 224
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. (Las del 27/10: transferencia e
+primero que hay que comprobar al retomar. (Ojo: dos archivos quedaron con un
+nombre de versión distinto al que `apply_migration` registró —`20261028120000`
+se aplicó como `20261028230830`, y el rol de contabilidad como
+`20261104121323`—; el CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
 inbursa como métodos, Rappi como método, y las de cancelar/modificar ventas.) Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
@@ -1619,6 +1622,22 @@ será un timbre **real** (lo pidió la casa) en cuanto la empresa esté de alta.
 Decisiones fiscales tomadas (28/10): **IVA tasa 0%** (pan), uso **S01**
 (sin efectos fiscales), periodicidad **diaria**, método **PUE**. Rappi entra
 como un folio más (es ingreso); confírmalo con el contador si quiere separarlo.
+
+**Cuenta "Contabilidad": ve SOLO Facturación y puede timbrar** (4/11). La casa
+pidió una cuenta para el contador que entre a Admin pero no vea nada más que
+el apartado de Facturación. Se agregó el rol **`contabilidad`** (migración
+`20261104121323`) y una función `fn_puede_facturar()` = gerencia
+(`fn_es_jefe`) **o** rol `contabilidad`; la Edge Function `contadigital-facturar`
+pregunta por esa en vez de `fn_es_jefe`, así contabilidad timbra pero el cajero
+no. En el frontend, `CandadoAdmin` deja pasar `contabilidad` y `App` le filtra
+la barra a solo «Facturación» (lee el rol de un `SesionContext`; se mira con
+`apps/admin/mirar/contabilidad.html`). NO es seguridad de pantalla a secas: lo
+de verdad es que `contabilidad` **no** es `fn_es_jefe`, así que no puede cambiar
+precios, personal ni configuración (todo eso es gerencia); sí es `fn_es_staff`,
+así que puede LEER lo que cualquier staff lee —es un contador, no molesta—. La
+CUENTA en sí (empleado "Contabilidad" + PIN) es **dato**, no migración, para no
+dejar el PIN en el repo público: se creó con `execute_sql` como Rosa y Lily. El
+PIN se cambia en Admin → Empleados como cualquier otro.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

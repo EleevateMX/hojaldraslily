@@ -18,6 +18,7 @@ import Sistema from './pages/Sistema'
 import Cortes from './pages/Cortes'
 import Facturacion from './pages/Facturacion'
 import Descargas from './pages/Descargas'
+import { useSesion } from './sesion'
 
 type Tab = 'dashboard' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
 
@@ -154,11 +155,22 @@ function tabDeLaUrl(): Tab | null {
 }
 
 export default function App() {
+  // Contabilidad es un puesto acotado: entra a Admin pero SOLO ve Facturación.
+  // El resto de la barra no se le pinta —y aunque forzara un hash, el contenido
+  // cae a Facturación—. La seguridad de verdad vive en RLS y en la Edge
+  // Function (`fn_puede_facturar`); esto es para no enseñarle botones que el
+  // servidor le negaría.
+  const sesion = useSesion()
+  const soloFacturacion = sesion?.rol === 'contabilidad'
+  const items = soloFacturacion ? navItems.filter((n) => n.id === 'facturacion') : navItems
+
   // La pestaña va también en el hash de la URL. Sirve para dos cosas: mandar
   // por WhatsApp «mira admin.hojaldraslily.com/#impresoras» y que abra ahí,
   // y para poder MIRAR cada pantalla en un arnés sin hacer clic en la barra.
   // Es un hash y no una ruta porque Admin no usa router y no lo necesita.
-  const [tab, setTabEstado] = useState<Tab>(() => tabDeLaUrl() ?? 'dashboard')
+  const [tab, setTabEstado] = useState<Tab>(() =>
+    soloFacturacion ? 'facturacion' : tabDeLaUrl() ?? 'dashboard',
+  )
   const setTab = (t: Tab) => {
     setTabEstado(t)
     window.history.replaceState(null, '', `#${t}`)
@@ -176,7 +188,10 @@ export default function App() {
   // teléfono lleva una cabecera con la sección actual y un botón que abre la
   // lista completa — se ve todo y se toca lo que se busca.
   const [menuAbierto, setMenuAbierto] = useState(false)
-  const actual = navItems.find((n) => n.id === tab)
+  // Para contabilidad, la pestaña activa es siempre Facturación, aunque el
+  // estado traiga otra cosa de un hash viejo.
+  const tabActivo: Tab = soloFacturacion ? 'facturacion' : tab
+  const actual = items.find((n) => n.id === tabActivo)
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-sa-cream-paper">
@@ -198,12 +213,12 @@ export default function App() {
         <nav
           className={`${menuAbierto ? 'grid' : 'hidden'} md:flex grid-cols-2 gap-1 px-3 pb-3 md:pb-0 md:flex-col md:flex-1 md:overflow-y-auto`}
         >
-          {navItems.map(({ id, label, Icon }) => (
+          {items.map(({ id, label, Icon }) => (
             <button
               key={id}
               onClick={() => { setTab(id); setMenuAbierto(false) }}
               className={`md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-sa-lg text-sm whitespace-nowrap transition-colors ${
-                tab === id
+                tabActivo === id
                   ? 'bg-sa-cream text-sa-green-ink font-semibold shadow-sa-sm'
                   : 'text-sa-cream/80 hover:text-sa-cream hover:bg-white/5 font-medium'
               }`}
@@ -222,23 +237,23 @@ export default function App() {
 
       {/* Contenido */}
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
-        {tab === 'dashboard' && <Dashboard />}
-        {tab === 'envivo' && <EnVivo />}
-        {tab === 'diagnostico' && <Diagnostico />}
-        {tab === 'produccion' && <Produccion />}
-        {tab === 'almacen' && <Almacen />}
-        {tab === 'menus' && <Menus />}
-        {tab === 'menu' && <Menu />}
-        {tab === 'categorias' && <Categorias />}
-        {tab === 'combos' && <Combos />}
-        {tab === 'ventas' && <Ventas />}
-        {tab === 'cortes' && <Cortes />}
-        {tab === 'facturacion' && <Facturacion />}
-        {tab === 'inventario' && <Inventario />}
-        {tab === 'empleados' && <Empleados />}
-        {tab === 'impresoras' && <Impresoras />}
-        {tab === 'descargas' && <Descargas />}
-        {tab === 'sistema' && <Sistema />}
+        {tabActivo === 'dashboard' && <Dashboard />}
+        {tabActivo === 'envivo' && <EnVivo />}
+        {tabActivo === 'diagnostico' && <Diagnostico />}
+        {tabActivo === 'produccion' && <Produccion />}
+        {tabActivo === 'almacen' && <Almacen />}
+        {tabActivo === 'menus' && <Menus />}
+        {tabActivo === 'menu' && <Menu />}
+        {tabActivo === 'categorias' && <Categorias />}
+        {tabActivo === 'combos' && <Combos />}
+        {tabActivo === 'ventas' && <Ventas />}
+        {tabActivo === 'cortes' && <Cortes />}
+        {tabActivo === 'facturacion' && <Facturacion />}
+        {tabActivo === 'inventario' && <Inventario />}
+        {tabActivo === 'empleados' && <Empleados />}
+        {tabActivo === 'impresoras' && <Impresoras />}
+        {tabActivo === 'descargas' && <Descargas />}
+        {tabActivo === 'sistema' && <Sistema />}
       </main>
     </div>
   )

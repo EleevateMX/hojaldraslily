@@ -9,7 +9,8 @@
 //   * **El total lo decide el servidor.** Los folios y sus totales salen de
 //     `fn_facturacion_dia` (ordenes pagadas, no canceladas, del día en Mérida),
 //     nunca de la pantalla.
-//   * **Solo gerencia.** Exige el JWT del usuario y pregunta `fn_es_jefe()`.
+//   * **Solo gerencia o contabilidad.** Exige el JWT del usuario y pregunta
+//     `fn_puede_facturar()` (gerencia + el rol 'contabilidad').
 //   * **Un día no se timbra dos veces.** El FolioOriginal es 'GLOBAL-YYYYMMDD';
 //     si ya hay una timbrada para ese día se devuelve esa, no se timbra otra.
 //   * **La API Key vive en los secrets**, nunca en el repo ni en el navegador.
@@ -59,12 +60,12 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const auth = req.headers.get('Authorization') ?? ''
 
-  // --- Solo gerencia ---------------------------------------------------------
+  // --- Solo gerencia o contabilidad ------------------------------------------
   const sbUsuario = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: auth } },
   })
-  const { data: esJefe } = await sbUsuario.rpc('fn_es_jefe')
-  if (!esJefe) return falla(403, 'sin_permiso', 'Solo gerencia puede facturar')
+  const { data: puedeFacturar } = await sbUsuario.rpc('fn_puede_facturar')
+  if (!puedeFacturar) return falla(403, 'sin_permiso', 'Solo gerencia o contabilidad pueden facturar')
   const { data: { user } } = await sbUsuario.auth.getUser()
 
   let body: { fecha?: string; ambiente?: string; solo_guardar?: boolean }
