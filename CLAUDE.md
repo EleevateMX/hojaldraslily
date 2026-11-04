@@ -11,14 +11,15 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **225 migraciones aplicadas en orden, y 225
+`fzkdgqqvfkogmxdgqsxj` tiene **226 migraciones aplicadas en orden, y 226
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. (Ojo: dos archivos quedaron con un
+primero que hay que comprobar al retomar. (Ojo: varios archivos quedaron con un
 nombre de versión distinto al que `apply_migration` registró —`20261028120000`
-se aplicó como `20261028230830`, y el rol de contabilidad como
-`20261104121323`—; y `20261104130000_facturas_nominativas` se aplicó por
-`execute_sql` con su fila de `schema_migrations` insertada a mano, porque el
-`drop policy` colgaba el filtro del MCP. El CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
+se aplicó como `20261028230830`, el rol de contabilidad como `20261104121323`, y
+`20261104140000_facturacion_periodo_manual` como `20261104132012`—; y
+`20261104130000_facturas_nominativas` se aplicó por `execute_sql` con su fila de
+`schema_migrations` insertada a mano, porque el `drop policy` colgaba el filtro
+del MCP. El CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
 inbursa como métodos, Rappi como método, y las de cancelar/modificar ventas.) Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
@@ -1674,6 +1675,31 @@ Function **`contadigital-nominativa`** (acciones `clientes` / `agregar_cliente`
 UI en `apps/admin/src/pages/FacturacionCliente.tsx`, se mira con
 `apps/admin/mirar/facturacion-cliente.html`. Igual que la global: **no timbra
 de verdad hasta que exista la serie** en el portal de ContaDigital.
+
+**Global por PERIODO y por MONTO MANUAL** (4/11, migración
+`20261104140000`). La global ahora tiene tres formas, con un sub-switch dentro
+de «Factura global» (`apps/admin/src/pages/Facturacion.tsx`), todas en la Edge
+Function `contadigital-facturar` por `modo`:
+- **`dia`** (como siempre) — un día, un renglón por folio real.
+- **`periodo`** — un rango de fechas: `fn_facturacion_periodo(desde,hasta)` suma
+  los folios reales del rango, un renglón por folio. **El total lo sigue
+  poniendo el servidor.**
+- **`manual`** — la contadora teclea el IMPORTE de un periodo (un solo renglón).
+  Es el puente de la transición mientras el POS no captura todas las ventas, y
+  es el **único** camino donde el total NO lo pone el servidor; por eso va
+  marcado (`facturas_globales.tipo='manual'`) y con su aviso en pantalla.
+
+Las tres mandan el **complemento global** con su `PeriodicidadGlobal` (01 diario
+/ 02 semanal / 03 quincenal / 04 mensual) y el mes/año del inicio del periodo.
+**Anti doble facturación**: cada folio amparado por una global queda en la tabla
+nueva `facturas_globales_folios` (índice único por folio), y `fn_facturacion_dia`
+y `fn_facturacion_periodo` saltan los folios ya amparados —así la diaria y la de
+periodo no se pisan—; `manual` no ampara folios (es un importe, no una lista).
+Probado por pg_net con `SoloGuardar`: manual mensual ($5,160, un renglón) →
+Serie F Folio 84; periodo mensual (6 folios) → Folio 85. Se mira con
+`apps/admin/mirar/facturacion.html` (sub-switch Día/Periodo/Monto manual).
+Ojo fiscal: un periodo que cruce dos meses toma el mes de su inicio para el
+complemento; para la transición lo normal es mensual dentro de un mes.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

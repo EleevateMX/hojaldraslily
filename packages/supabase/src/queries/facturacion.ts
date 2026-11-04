@@ -46,6 +46,16 @@ export async function ventasDelDia(sb: ClienteLily, fecha: string): Promise<Vent
   return (await rpc<VentaDelDia[] | null>(sb, 'fn_facturacion_dia', { p_fecha: fecha })) ?? []
 }
 
+/** Una venta de un periodo: como la del día, pero trae su fecha. */
+export interface VentaDelPeriodo extends VentaDelDia {
+  fecha: string
+}
+
+/** Qué se factura en un rango de fechas: las ventas pagadas, una por folio. */
+export async function ventasDelPeriodo(sb: ClienteLily, desde: string, hasta: string): Promise<VentaDelPeriodo[]> {
+  return (await rpc<VentaDelPeriodo[] | null>(sb, 'fn_facturacion_periodo', { p_desde: desde, p_hasta: hasta })) ?? []
+}
+
 /** El historial de facturas globales en un rango de fechas. */
 export async function facturasListar(sb: ClienteLily, desde: string, hasta: string): Promise<FacturaGlobal[]> {
   return (await rpc<FacturaGlobal[] | null>(sb, 'fn_facturas_listar', { p_desde: desde, p_hasta: hasta })) ?? []
@@ -71,7 +81,39 @@ export async function timbrarGlobal(
   opts: { ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean } = {},
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
-    fecha, ambiente: opts.ambiente, solo_guardar: opts.soloGuardar,
+    modo: 'dia', fecha, ambiente: opts.ambiente, solo_guardar: opts.soloGuardar,
+  })
+}
+
+/** La periodicidad del complemento global del SAT. */
+export type PeriodicidadGlobal = '02' | '03' | '04' // semanal | quincenal | mensual
+
+/**
+ * Timbra una global por PERIODO: suma los folios reales del rango (el total lo
+ * sigue poniendo el servidor, un renglón por folio).
+ */
+export async function timbrarPeriodo(
+  sb: ClienteLily,
+  args: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean },
+): Promise<ResultadoTimbrado> {
+  return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
+    modo: 'periodo', desde: args.desde, hasta: args.hasta,
+    periodicidad: args.periodicidad, ambiente: args.ambiente, solo_guardar: args.soloGuardar,
+  })
+}
+
+/**
+ * Timbra una global por MONTO MANUAL (transición): un solo renglón con el
+ * importe que teclea la contadora para un periodo. Es el único camino donde el
+ * total no sale de las ventas registradas.
+ */
+export async function timbrarManual(
+  sb: ClienteLily,
+  args: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean },
+): Promise<ResultadoTimbrado> {
+  return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
+    modo: 'manual', desde: args.desde, hasta: args.hasta, total: args.total,
+    periodicidad: args.periodicidad, ambiente: args.ambiente, solo_guardar: args.soloGuardar,
   })
 }
 
