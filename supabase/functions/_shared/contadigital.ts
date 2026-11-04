@@ -156,6 +156,29 @@ export async function clientePorRfc(
   }
 }
 
+/** Los clientes de la empresa (para la factura nominativa). */
+export async function listarClientes(cfg: ConfigContaDigital, token: string, idEmpresa: number): Promise<any[]> {
+  const res = await pedir(cfg.base, `/clientes.json/${idEmpresa}`, {
+    method: 'GET',
+    headers: { authorization: `Bearer ${token}` },
+  })
+  return (desenvolver(res) as any[]) ?? []
+}
+
+/** Da de alta un cliente (persona física o moral). Devuelve el cliente creado. */
+export async function crearCliente(
+  cfg: ConfigContaDigital,
+  token: string,
+  cliente: Record<string, unknown>,
+): Promise<any> {
+  const res = await pedir(cfg.base, '/clientes.json', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(cliente),
+  })
+  return desenvolver(res)
+}
+
 /** Timbra (o guarda) la factura. Devuelve la respuesta cruda CfdiNuevoRes. */
 export async function timbrar(
   cfg: ConfigContaDigital,

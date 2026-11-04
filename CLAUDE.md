@@ -11,12 +11,14 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **224 migraciones aplicadas en orden, y 224
+`fzkdgqqvfkogmxdgqsxj` tiene **225 migraciones aplicadas en orden, y 225
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
 primero que hay que comprobar al retomar. (Ojo: dos archivos quedaron con un
 nombre de versión distinto al que `apply_migration` registró —`20261028120000`
 se aplicó como `20261028230830`, y el rol de contabilidad como
-`20261104121323`—; el CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
+`20261104121323`—; y `20261104130000_facturas_nominativas` se aplicó por
+`execute_sql` con su fila de `schema_migrations` insertada a mano, porque el
+`drop policy` colgaba el filtro del MCP. El CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
 inbursa como métodos, Rappi como método, y las de cancelar/modificar ventas.) Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
@@ -1638,6 +1640,26 @@ así que puede LEER lo que cualquier staff lee —es un contador, no molesta—.
 CUENTA en sí (empleado "Contabilidad" + PIN) es **dato**, no migración, para no
 dejar el PIN en el repo público: se creó con `execute_sql` como Rosa y Lily. El
 PIN se cambia en Admin → Empleados como cualquier otro.
+
+**Factura NOMINATIVA (a un RFC real) por folio** (4/11). Además de la global,
+Admin → Facturación tiene un switch **«Factura global diaria» / «Facturar a un
+cliente»**. El nominativo: se **agrega el cliente** (persona física o moral:
+RFC, razón social, régimen, uso, CP, calle…) y después se timbra un **FOLIO de
+venta** a su nombre. La casa lo decidió así (4/11): factura por folio, y el
+total lo pone el **servidor** (sale de `ordenes`, como la global), con el mismo
+trato fiscal (una línea de pan, clave 50181900, **IVA 0%**). Base: migración
+`20261104130000` — tabla `facturas_nominativas`, `fn_folio_facturable(folio)`
+(total + banderas) y `fn_facturas_nominativas_listar`. **Anti doble
+facturación**: un folio nominado se **excluye** de la global de su día
+(`fn_facturacion_dia` lleva un `not exists`), y no se puede nominar un folio
+cuyo día ya se timbró global (índice único + las banderas de
+`fn_folio_facturable`). El timbrado y el alta de clientes viven en la Edge
+Function **`contadigital-nominativa`** (acciones `clientes` / `agregar_cliente`
+/ `timbrar_folio`, gerencia+contabilidad por `fn_puede_facturar`); reusa
+`_shared/contadigital.ts` (se le agregaron `listarClientes` y `crearCliente`).
+UI en `apps/admin/src/pages/FacturacionCliente.tsx`, se mira con
+`apps/admin/mirar/facturacion-cliente.html`. Igual que la global: **no timbra
+de verdad hasta que exista la serie** en el portal de ContaDigital.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

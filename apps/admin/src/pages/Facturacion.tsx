@@ -6,6 +6,7 @@ import {
 } from '@lily/supabase'
 import { mxn, mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, Chip, cx } from '../ui'
+import FacturacionCliente from './FacturacionCliente'
 
 /**
  * Admin → Facturación: la factura GLOBAL diaria con ContaDigital (Isyconta).
@@ -47,6 +48,8 @@ export default function Facturacion({
   fuenteFacturas?: (desde: string, hasta: string) => Promise<FacturaGlobal[]>
   alTimbrar?: (fecha: string) => Promise<ResultadoTimbrado>
 } = {}) {
+  // Global (a público en general) o nominativa (a un cliente).
+  const [modo, setModo] = useState<'global' | 'cliente'>('global')
   const [fecha, setFecha] = useState(hoyMerida)
   const [ventas, setVentas] = useState<VentaDelDia[]>([])
   const [facturas, setFacturas] = useState<FacturaGlobal[]>([])
@@ -98,15 +101,30 @@ export default function Facturacion({
     }
   }
 
-  if (cargando) return <Loading>Cargando la facturación…</Loading>
-
   return (
     <div className="space-y-5">
       <PageHeader
         title="Facturación"
-        subtitle="Factura global diaria con ContaDigital — un renglón por folio, para comprobar ingresos."
+        subtitle="Factura global a público en general, o nominativa a un cliente (persona física o moral)."
       />
 
+      <div className="flex gap-2">
+        {([['global', 'Factura global diaria'], ['cliente', 'Facturar a un cliente']] as const).map(([m, label]) => (
+          <button
+            key={m}
+            onClick={() => setModo(m)}
+            aria-pressed={modo === m}
+            className={modo === m ? cx.btnPrimary : cx.btnSec}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {modo === 'cliente' ? <FacturacionCliente /> : cargando ? (
+        <Loading>Cargando la facturación…</Loading>
+      ) : (
+      <>
       {error && <ErrorMsg>{error}</ErrorMsg>}
       {ok && <OkMsg>{ok}</OkMsg>}
       {aviso && (
@@ -231,6 +249,8 @@ export default function Facturacion({
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   )
 }
