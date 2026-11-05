@@ -37,6 +37,11 @@ const CAMPOS_RESPUESTA = {
   controlNumber: 'ControlNumber',
   authCode: 'AuthCode',
   authResult: 'AuthResult',
+  // La REFERENCIA Payworks (la que va en el voucher y la que hay que guardar
+  // para cancelar/devolver). El setter PPSetPaywReference ya existe en el DLL;
+  // su getter sigue el mismo patrón PPGet<Campo>. Antes NO se leía y el voucher
+  // ponía `AuthResult` ('00' = aprobada) en su lugar, que no es una referencia.
+  paywReference: 'PaywReference',
   cardType: 'CardType',
   cardBrand: 'CardBrand',
   issuingBank: 'IssuingBank',
@@ -215,7 +220,7 @@ export function voucherDesde(campos) {
     afiliacion: campos.affiliation ?? null,
     controlNumber: campos.controlNumber ?? null,
     autorizacion: campos.authCode ?? null,
-    referencia: campos.authResult ?? null, // paywReference; el DLL lo entrega aquí según afiliación
+    referencia: campos.paywReference ?? null, // la referencia Payworks (PPGetPaywReference); con ella se cancela/devuelve
     terminalId: null,
     marca: campos.cardBrand ?? null,
     tipo: campos.cardType ?? null,
