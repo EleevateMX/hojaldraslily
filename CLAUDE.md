@@ -11,9 +11,15 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **222 migraciones aplicadas en orden, y 222
+`fzkdgqqvfkogmxdgqsxj` tiene **226 migraciones aplicadas en orden, y 226
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. (Las del 27/10: transferencia e
+primero que hay que comprobar al retomar. (Ojo: varios archivos quedaron con un
+nombre de versión distinto al que `apply_migration` registró —`20261028120000`
+se aplicó como `20261028230830`, el rol de contabilidad como `20261104121323`, y
+`20261104140000_facturacion_periodo_manual` como `20261104132012`—; y
+`20261104130000_facturas_nominativas` se aplicó por `execute_sql` con su fila de
+`schema_migrations` insertada a mano, porque el `drop policy` colgaba el filtro
+del MCP. El CONTEO cuadra, que es el invariante.) (Las del 27/10: transferencia e
 inbursa como métodos, Rappi como método, y las de cancelar/modificar ventas.) Ya corrió una venta
 de punta a punta contra ella (total calculado en el servidor, monto falso
 rechazado, doble cobro rebotado, comandas por estación y corte cuadrando);
@@ -706,7 +712,7 @@ empaquetador y se desvían solas:
 | Saber qué hay que empacar | Pantalla de **Empaque**: arriba, sumado por producto |
 | Apartar un encargo | Caja → **Encargos**, o Admin → **Almacén**. La cantidad **se teclea**: para 13 pastelitos se escribe 13, no se toca «+» trece veces |
 | Marcar un encargo empacado | Pantalla de **Empaque** → **Ya está empacado** (no cobra: solo avisa que está listo) |
-| Cobrar un encargo | Caja → **Encargos**. Si además se llevan otra cosa, **"Y algo más"**: el encargo pasa al ticket de la caja y se cobra todo junto, en un solo papel y con el anticipo ya descontado |
+| Cobrar un encargo | Caja → **Encargos** → **Cobrar**: el encargo pasa al carrito de la caja ya precargado, ahí se elige cómo paga y se puede agregar lo que se lleve de más. La **nota sale sola al cubrir el total**, con el anticipo ya descontado. Para abonar una parte, **Anticipo** (no da nota, dice cuánto falta) |
 | Cobrar | En el cobro hay **tres botones iguales: Efectivo, Terminal, Mixto**. En efectivo salen atajos con los billetes que de verdad entregan ($650, $700, $800, $1,000 para un ticket de $625) |
 | Cobrar con tarjeta | **Terminal** (o Mixto): al confirmar, el importe aparece solo en la pinpad de Banorte, el cliente pone la tarjeta y la venta queda registrada con su voucher en el ticket. Si la pinpad no está conectada al sistema (faltan secretos), la caja lo avisa y se cobra a mano en la pinpad como hasta hoy, anotando el folio si se quiere |
 | Deshacer un cobro con tarjeta de hoy | Es de gerencia: `interredes-cancelar` manda el `void` a la pinpad y marca el pago y la orden cancelados. Todavía no tiene botón en pantalla; otro día ya es devolución, con el banco |
@@ -716,7 +722,7 @@ empaquetador y se desvían solas:
 | Dar de alta la térmica del mostrador | Admin → **Impresoras** → «Para qué sirve» = **Tickets del cliente**. Lo que sale al guardar es el `.env` del agente de caja, no el JSON de las etiquetadoras |
 | Se fue el internet | **Seguir vendiendo**: efectivo o terminal del banco. El folio sale como «S-01» y las ventas se registran solas al volver. No se puede cerrar la caja hasta que entren (ver `docs/sin-internet.md`) |
 | Salir de Costeos en una computadora prestada | El botón **Salir**: ahora vence la sesión en el servidor, no solo en ese navegador |
-| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma. **No pide método de pago** (paga Rappi, no el cliente): pide el **ID del pedido** (los números de la plataforma) y al confirmar imprime los dos tickets con «RAPPI #id». En el corte sale como «Rappi» aparte y no descuadra el cajón |
+| Vender por Rappi | En la caja, el interruptor **Mostrador / Rappi**: cobra la lista de precios de la plataforma. **No pide método de pago** (paga Rappi, no el cliente): pide el **ID de Pedido** y el **ID de entrega** (los dos números de la plataforma) y al confirmar imprime los dos tickets con «RAPPI #pedido» y «Entrega #id». En el corte sale como «Rappi» aparte y no descuadra el cajón |
 | Cobrar por transferencia o con la 2ª terminal (Inbursa) | En el cobro, **Transferencia** o **Inbursa** (Terminal 2): se cobra a mano en la cuenta/aparato y se registra aparte en el corte. Inbursa pregunta **¿Ya pagó? / ¿Rebotó?** antes de registrar |
 | Devolver una venta (cancelar) | Caja → **☰ Historial** → la venta → **Cancelar / Devolver**, con **PIN de gerencia**. El pan vuelve al inventario, el dinero sale del corte y se imprime un comprobante. Solo del turno actual |
 | Cambiar una venta por otra (modificar) | Caja → **☰ Historial** → la venta → **Modificar** (PIN de gerencia). Vuelve a la caja con el ticket vacío y un aviso «Modificando #N»: se arma el pedido nuevo y se **cobra la diferencia**. Si la nueva es más barata, se usa **Cancelar** y se cobra de nuevo |
@@ -1416,13 +1422,18 @@ logoTicket.ts`); cambiar ese tope exige RE-SUBIR el logo en Admin.
 la tienda le paga la PLATAFORMA días después, no el repartidor, así que un
 pedido de Rappi no se puede cobrar como efectivo/tarjeta —descuadraría el
 corte— ni llevar método en el ticket. Con el interruptor en Rappi, el cobro
-cambia: no pide método, pide el **ID de Rappi** (3–6 números que se copian de
-la plataforma) y cobra con método `'rappi'`. El corte lo cuenta en su propia
-línea (`total_rappi` en `vw_corte_resumen`) y el **efectivo esperado lo
-ignora**, igual que transferencia e inbursa: el cajón cuadra sin mentir. El
-ticket sale con **«RAPPI #id»** en vez de folio y «Pedido de Rappi — la
-plataforma paga» en vez del método. Enum y vista en las migraciones
-`20261027030000/030100`.
+cambia: no pide método, pide **dos IDs de la plataforma** —el **ID de Pedido**
+(3–6 números, lo que se canta) y el **ID de entrega** (3–12 números)— y cobra
+con método `'rappi'`. Los dos se teclean a mano (Rappi no da su API por un
+botón) y viajan al ticket (`rappiId` + `rappiEntregaId` en `@lily/ui`); la
+referencia del pago queda como `Rappi pedido N · entrega M`. El corte lo cuenta
+en su propia línea (`total_rappi` en `vw_corte_resumen`) y el **efectivo
+esperado lo ignora**, igual que transferencia e inbursa: el cajón cuadra sin
+mentir. El ticket sale con **«RAPPI #pedido»** en vez de folio, **«Entrega
+#id»** debajo, y «Pedido de Rappi» en vez del método —la casa pidió **quitar**
+la línea «la plataforma paga a la tienda» (3/11)—. Enum y vista en las
+migraciones `20261027030000/030100`; los dos campos y el ticket, agente 1.1.6
+(3/11).
 
 **Banorte por DLL, no por API** (27/10): la casa, probando contra la terminal
 real, se inclinó por el camino del **DLL** (`apps/agente-banorte`, `PINPAD.TPV`
@@ -1465,6 +1476,21 @@ la terminal de Banorte sale como **«Terminal 1»** y la de Inbursa como
 pantalla «¿Ya pagó? / ¿Rebotó?» en el cobro (no sabe si aprobó: lo dice el
 cajero). Y si la Terminal 1 (Banorte) declina en vivo, hay un botón para
 imprimirle al cliente un **comprobante de rechazo** con el motivo.
+
+**Cobrar un encargo pasa por el CARRITO, y la nota sale al cubrir el total**
+(3/11). Antes la tarjeta del encargo tenía botones de Efectivo/Terminal que
+cobraban en el acto **sin sacar nota**. Ahora el botón es uno, **«Cobrar»**, y
+hace lo que hacía «Y algo más»: manda el encargo al carrito de la caja ya
+precargado (`apps/pos/src/pages/Encargos.tsx` → `llevarAlCarrito`). Ahí se
+elige cómo paga (efectivo/terminal/mixto), se puede **agregar lo que se lleve
+de más**, y la nota sale **sola al cubrir el saldo** (`entregarEncargoConVenta`
++ `sacarTicket` en `Cobro.tsx`). Para un abono parcial sigue **«Anticipo»**,
+que NO da nota y dice cuánto falta; la tarjeta rotula «Pendiente de pago» /
+«Dejó $X · faltan $Y» / «Pagado · pendiente de entrega». Un encargo ya pagado
+no muestra Cobrar ni Anticipo. Respaldo: si un renglón del encargo ya salió del
+menú y no se puede armar en el carrito, se cobra directo en la tarjeta
+(`cobrarDirecto` → `cobrarEncargo` + nota por el navegador). Todo frontend, sin
+tocar la base.
 
 ### 2.12 Cancelar y modificar una venta (del turno, con PIN de gerencia)
 
@@ -1552,24 +1578,56 @@ impuesto **02** — justo lo que arma el módulo. (Ese `KALALEV` es el de la
 razón social; es el mismo que la casa pidió **no** imprimir en el ticket
 térmico, no el de otro negocio.)
 
-**Lo que FALTA para encender (todo del lado de ContaDigital / la casa):**
+**Lo que avanzó el 02/11 (probado punta a punta por pg_net desde la base):**
+KALALEV HOLDING **ya está de alta en ContaDigital** —la casa la agregó a la
+cuenta de esa API Key—: `conectar.json` ya la lista con **IdEmpresa 2274, CP
+97148, 10 timbres (Creditos)**. Sus catálogos (`cfdi/utiles.json/2274`):
+**IdRFC 246**, lugar de expedición **187 (MÉRIDA YUCATÁN)**, moneda **PESOS
+915**, forma **01 Efectivo (Id 1)**, uso **S01**, tipo **Factura**, régimen
+del público general **616** disponible, y la unidad **PZA/PIEZA ClaveSat H87 =
+Id 2436**. Desde aquí, por la API, se crearon las dos piezas que faltaban:
+- **Cliente Público en General** (XAXX010101000, régimen 616, uso S01, CP
+  97148) → **IdCliente 46392** (`POST /api/clientes.json`).
+- **Producto genérico de pan** (ClaveSat **50181900**, unidad H87/2436, tasa
+  **0%**) → **IdProducto 45977** (`POST /api/productos.json`).
+Y se corrigieron **dos bugs** de la Edge Function que la habrían bloqueado aun
+con todo listo: el cliente viene con campo **`Id`** (no `IdCliente`), y
+**`TipoRelacion` no acepta cadena vacía** —hay que mandar `'0'` (sin relación);
+el catálogo `TiposDeRelacionCFDI` trae la clave `"0"` justo para eso—. Un CFDI
+global de prueba con `SoloGuardar=true` (no consume timbre) validó toda la
+cadena: solo rebota ya en la serie (abajo).
 
-1. **Dar de alta la empresa KALALEV HOLDING (KHO2506056F0) en ContaDigital**
-   con su **CSD**. Hoy la casa factura con otra facturera (de ahí la Factura
-   74); en **ContaDigital todavía no está de alta** —confirmado el 28/10—, y la
-   API Key que dio la casa da acceso a 5 empresas, **ninguna es KALALEV**
-   (ve EDY MEDINA, MHS, SONERGY, NACJ, MABR). Por eso `conectar.json` no la
-   lista y el Edge Function se detiene con `empresa_no_alta` (correcto: no
-   inventa nada). Falta darla de alta —en la cuenta de esa llave, o en otra y
-   pasar su API Key.
-2. **Secretos** (Supabase Edge Function Secrets, nunca en el repo):
-   `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN` (los dio la casa),
-   `CONTADIGITAL_RFC` (el RFC emisor, una vez de alta), y
-   `CONTADIGITAL_ID_PRODUCTO` / `CONTADIGITAL_ID_UM` (el producto/unidad
-   genéricos del catálogo de esa empresa para el renglón global). Opcional
-   `CONTADIGITAL_SERIE`.
-3. El cliente **Público en General** (XAXX010101000) dado de alta en esa
-   empresa en ContaDigital, y **timbres** cargados.
+**La SERIE ya existe (4/11) y la cadena entera valida.** El único blocker que
+quedaba —la serie en el portal— ya está: la casa la creó y `cfdi/utiles.json/2274`
+ahora trae `Series: [{Id:550, Descripcion:"FACTURA"}]` (timbra como Serie **"F"**).
+Con la serie puesta, un CFDI global de prueba del **27/10** ($1,295, 6 folios) por
+pg_net con `SoloGuardar=true` **validó de punta a punta**: `Codigo 2 ·
+"Pre-factura guardada correctamente" · Serie F · Folio 83`. Lo único entre eso y
+un timbre real es `SoloGuardar:false` (consume un timbre y devuelve UUID). Créditos
+en KALALEV: **510** (la casa recargó).
+
+**Trampa que ese SoloGuardar destapó, ya ARREGLADA (4/11): el formato de FECHA.**
+ContaDigital quiere `dd-MM-yyyy HH:mm:ss`, NO el ISO con «T». El ISO rebota con
+*«Fecha: … no es válida. Formato válido (dd-MM-yyyy HH:mm:ss)»* y no timbra. Antes
+no se veía porque la serie ausente rechazaba primero; con la serie puesta,
+apareció. Se centralizó en `fechaContaDigital()` en `_shared/contadigital.ts` (con
+`hourCycle:'h23'` para que la medianoche no salga como «24»), se quitó el
+`ahoraMerida()` ISO de las DOS Edge Functions, y **se redesplegaron**
+(`contadigital-facturar` v4, `contadigital-nominativa` v2).
+
+**Lo que FALTA para encender (solo de la casa, ya no es código):**
+
+1. **Capturar los secretos** (Supabase Edge Function Secrets, nunca en el repo),
+   su VALOR en el dashboard: `CONTADIGITAL_API_KEY` y `CONTADIGITAL_PLUGIN_TOKEN`
+   (los dio la casa), `CONTADIGITAL_RFC = KHO2506056F0`, `CONTADIGITAL_ID_PRODUCTO
+   = 45977`, `CONTADIGITAL_ID_UM = 2436`, `CONTADIGITAL_AMBIENTE = pro`. Opcional
+   `CONTADIGITAL_SERIE = FACTURA` (si no, la toma sola del catálogo). Es lo único
+   que falta: la Edge Function los lee del entorno, por eso la prueba de arriba se
+   hizo por pg_net con la llave a mano.
+2. El primer timbre **real** (lo pidió la casa): hay días con ventas reales para
+   facturar —**27/10 (6 folios, $1,295)** y **28/10 (14 folios, $3,865)**—; el
+   total lo pone el servidor desde `fn_facturacion_dia`.
+3. **Rotar** la API Key y el Plugin Token después, porque pasaron por el chat.
 
 Ojo con los **ambientes**: la llave que dio la casa funciona en **PRODUCCIÓN**
 (`.../dev/pro/api`); el de **pruebas** (`.../dev/pruebas/api`) usa otra llave y
@@ -1581,6 +1639,67 @@ será un timbre **real** (lo pidió la casa) en cuanto la empresa esté de alta.
 Decisiones fiscales tomadas (28/10): **IVA tasa 0%** (pan), uso **S01**
 (sin efectos fiscales), periodicidad **diaria**, método **PUE**. Rappi entra
 como un folio más (es ingreso); confírmalo con el contador si quiere separarlo.
+
+**Cuenta "Contabilidad": ve SOLO Facturación y puede timbrar** (4/11). La casa
+pidió una cuenta para el contador que entre a Admin pero no vea nada más que
+el apartado de Facturación. Se agregó el rol **`contabilidad`** (migración
+`20261104121323`) y una función `fn_puede_facturar()` = gerencia
+(`fn_es_jefe`) **o** rol `contabilidad`; la Edge Function `contadigital-facturar`
+pregunta por esa en vez de `fn_es_jefe`, así contabilidad timbra pero el cajero
+no. En el frontend, `CandadoAdmin` deja pasar `contabilidad` y `App` le filtra
+la barra a solo «Facturación» (lee el rol de un `SesionContext`; se mira con
+`apps/admin/mirar/contabilidad.html`). NO es seguridad de pantalla a secas: lo
+de verdad es que `contabilidad` **no** es `fn_es_jefe`, así que no puede cambiar
+precios, personal ni configuración (todo eso es gerencia); sí es `fn_es_staff`,
+así que puede LEER lo que cualquier staff lee —es un contador, no molesta—. La
+CUENTA en sí (empleado "Contabilidad" + PIN) es **dato**, no migración, para no
+dejar el PIN en el repo público: se creó con `execute_sql` como Rosa y Lily. El
+PIN se cambia en Admin → Empleados como cualquier otro.
+
+**Factura NOMINATIVA (a un RFC real) por folio** (4/11). Además de la global,
+Admin → Facturación tiene un switch **«Factura global diaria» / «Facturar a un
+cliente»**. El nominativo: se **agrega el cliente** (persona física o moral:
+RFC, razón social, régimen, uso, CP, calle…) y después se timbra un **FOLIO de
+venta** a su nombre. La casa lo decidió así (4/11): factura por folio, y el
+total lo pone el **servidor** (sale de `ordenes`, como la global), con el mismo
+trato fiscal (una línea de pan, clave 50181900, **IVA 0%**). Base: migración
+`20261104130000` — tabla `facturas_nominativas`, `fn_folio_facturable(folio)`
+(total + banderas) y `fn_facturas_nominativas_listar`. **Anti doble
+facturación**: un folio nominado se **excluye** de la global de su día
+(`fn_facturacion_dia` lleva un `not exists`), y no se puede nominar un folio
+cuyo día ya se timbró global (índice único + las banderas de
+`fn_folio_facturable`). El timbrado y el alta de clientes viven en la Edge
+Function **`contadigital-nominativa`** (acciones `clientes` / `agregar_cliente`
+/ `timbrar_folio`, gerencia+contabilidad por `fn_puede_facturar`); reusa
+`_shared/contadigital.ts` (se le agregaron `listarClientes` y `crearCliente`).
+UI en `apps/admin/src/pages/FacturacionCliente.tsx`, se mira con
+`apps/admin/mirar/facturacion-cliente.html`. Igual que la global: **no timbra
+de verdad hasta que exista la serie** en el portal de ContaDigital.
+
+**Global por PERIODO y por MONTO MANUAL** (4/11, migración
+`20261104140000`). La global ahora tiene tres formas, con un sub-switch dentro
+de «Factura global» (`apps/admin/src/pages/Facturacion.tsx`), todas en la Edge
+Function `contadigital-facturar` por `modo`:
+- **`dia`** (como siempre) — un día, un renglón por folio real.
+- **`periodo`** — un rango de fechas: `fn_facturacion_periodo(desde,hasta)` suma
+  los folios reales del rango, un renglón por folio. **El total lo sigue
+  poniendo el servidor.**
+- **`manual`** — la contadora teclea el IMPORTE de un periodo (un solo renglón).
+  Es el puente de la transición mientras el POS no captura todas las ventas, y
+  es el **único** camino donde el total NO lo pone el servidor; por eso va
+  marcado (`facturas_globales.tipo='manual'`) y con su aviso en pantalla.
+
+Las tres mandan el **complemento global** con su `PeriodicidadGlobal` (01 diario
+/ 02 semanal / 03 quincenal / 04 mensual) y el mes/año del inicio del periodo.
+**Anti doble facturación**: cada folio amparado por una global queda en la tabla
+nueva `facturas_globales_folios` (índice único por folio), y `fn_facturacion_dia`
+y `fn_facturacion_periodo` saltan los folios ya amparados —así la diaria y la de
+periodo no se pisan—; `manual` no ampara folios (es un importe, no una lista).
+Probado por pg_net con `SoloGuardar`: manual mensual ($5,160, un renglón) →
+Serie F Folio 84; periodo mensual (6 folios) → Folio 85. Se mira con
+`apps/admin/mirar/facturacion.html` (sub-switch Día/Periodo/Monto manual).
+Ojo fiscal: un periodo que cruce dos meses toma el mes de su inicio para el
+complemento; para la transición lo normal es mensual dentro de un mes.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

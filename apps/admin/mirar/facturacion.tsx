@@ -11,7 +11,7 @@
  */
 import { createRoot } from 'react-dom/client'
 import Facturacion from '../src/pages/Facturacion'
-import type { VentaDelDia, FacturaGlobal, ResultadoTimbrado } from '@lily/supabase'
+import type { VentaDelDia, VentaDelPeriodo, FacturaGlobal, ResultadoTimbrado } from '@lily/supabase'
 import '../src/index.css'
 
 const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Merida' })
@@ -26,6 +26,14 @@ const VENTAS: VentaDelDia[] = [
   { folio: 106, total: 97.0, hora: '11:02 AM', canal: 'pos' },
   { folio: 107, total: 540.0, hora: '12:20 PM', canal: 'pos' },
   { folio: 108, total: 130.0, hora: '01:45 PM', canal: 'pos' },
+]
+
+const VENTAS_PERIODO: VentaDelPeriodo[] = [
+  { folio: 95, total: 410.0, fecha: '2026-10-27', hora: '09:10 AM', canal: 'pos' },
+  { folio: 96, total: 150.0, fecha: '2026-10-27', hora: '11:40 AM', canal: 'rappi' },
+  { folio: 97, total: 865.0, fecha: '2026-10-28', hora: '08:55 AM', canal: 'pos' },
+  { folio: 98, total: 230.0, fecha: '2026-10-28', hora: '01:05 PM', canal: 'pos' },
+  { folio: 99, total: 540.0, fecha: '2026-10-29', hora: '10:22 AM', canal: 'pos' },
 ]
 
 const FACTURAS: FacturaGlobal[] = [
@@ -45,19 +53,24 @@ const FACTURAS: FacturaGlobal[] = [
   },
 ]
 
+const avisoSecretos: ResultadoTimbrado = {
+  ok: false,
+  error: {
+    codigo: 'not_configured',
+    mensaje: 'Faltan los secretos de ContaDigital en el proyecto. Captúralos en Supabase para poder timbrar.',
+  },
+}
+
 createRoot(document.getElementById('root')!).render(
   <div className="min-h-screen bg-sa-cream-paper p-6">
     <div className="max-w-5xl mx-auto">
       <Facturacion
         fuenteVentas={async (f) => (f === hoy ? VENTAS : [])}
+        fuenteVentasPeriodo={async () => VENTAS_PERIODO}
         fuenteFacturas={async () => FACTURAS}
-        alTimbrar={async (): Promise<ResultadoTimbrado> => ({
-          ok: false,
-          error: {
-            codigo: 'empresa_no_alta',
-            mensaje: 'El RFC KHO250605 6F0 todavía no está dado de alta en ContaDigital. Hay que crear esa empresa (con su CSD) antes de poder timbrar.',
-          },
-        })}
+        alTimbrar={async (): Promise<ResultadoTimbrado> => avisoSecretos}
+        alTimbrarPeriodo={async (): Promise<ResultadoTimbrado> => avisoSecretos}
+        alTimbrarManual={async (): Promise<ResultadoTimbrado> => avisoSecretos}
       />
     </div>
   </div>,

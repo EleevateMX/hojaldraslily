@@ -288,6 +288,9 @@ export function armarTicket(
   // el cajero copia de la plataforma. Se canta «RAPPI #1234» en vez de FOLIO.
   L.push(data.rappiId ? 'RAPPI' : 'FOLIO')
   L.push(estilo(` #${data.rappiId || data.folio} `, { ancho: 2, alto: 2, invertido: true }))
+  // El ID de entrega de Rappi va debajo del de pedido: son dos números
+  // distintos de la plataforma y los dos hacen falta para cruzar el pedido.
+  if (data.rappiId && data.rappiEntregaId) L.push(`Entrega #${data.rappiEntregaId}`)
   L.push(estilo(fechaTxt, { alinear: 'der' }))
   const canalLinea = [data.canal, cajero].filter(Boolean).join(' · ')
   if (canalLinea) L.push(estilo(canalLinea, { alinear: 'der' }))
@@ -365,7 +368,6 @@ export function armarTicket(
   // mentir y descuadrar la lectura del corte. Solo se avisa que es de Rappi.
   if (data.rappiId) {
     L.push(centrar('Pedido de Rappi'))
-    L.push(centrar('La plataforma paga a la tienda'))
   } else if (data.partes?.length) {
     // Un renglón por parte: el cliente tiene que poder comprobar que las dos
     // suman lo que pagó. Una frase corrida («Efectivo $400 + Terminal $238»)

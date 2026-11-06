@@ -22,6 +22,21 @@ const BASES: Record<string, string> = {
   pruebas: 'https://app.contadigital.mx/dev/pruebas/api',
 }
 
+/**
+ * La fecha del CFDI como la quiere ContaDigital: `dd-MM-yyyy HH:mm:ss`, NO el
+ * ISO con la «T». Mandar ISO rebota con «Fecha: … no es válida. Formato válido
+ * (dd-MM-yyyy HH:mm:ss)» y la factura no se timbra — probado el 04/11 con un
+ * SoloGuardar. Se usa `h23` para que la medianoche no salga como «24».
+ */
+export function fechaContaDigital(d: Date = new Date()): string {
+  const f = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d)
+  const g = (t: string) => f.find((p) => p.type === t)?.value ?? '00'
+  return `${g('day')}-${g('month')}-${g('year')} ${g('hour')}:${g('minute')}:${g('second')}`
+}
+
 /** Faltan secretos. `faltan` dice cuáles, por nombre. */
 export class ContaDigitalSinCredenciales extends Error {
   readonly faltan: string[]
@@ -154,6 +169,29 @@ export async function clientePorRfc(
     if (e instanceof ContaDigitalError) return null
     throw e
   }
+}
+
+/** Los clientes de la empresa (para la factura nominativa). */
+export async function listarClientes(cfg: ConfigContaDigital, token: string, idEmpresa: number): Promise<any[]> {
+  const res = await pedir(cfg.base, `/clientes.json/${idEmpresa}`, {
+    method: 'GET',
+    headers: { authorization: `Bearer ${token}` },
+  })
+  return (desenvolver(res) as any[]) ?? []
+}
+
+/** Da de alta un cliente (persona física o moral). Devuelve el cliente creado. */
+export async function crearCliente(
+  cfg: ConfigContaDigital,
+  token: string,
+  cliente: Record<string, unknown>,
+): Promise<any> {
+  const res = await pedir(cfg.base, '/clientes.json', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` },
+    body: JSON.stringify(cliente),
+  })
+  return desenvolver(res)
 }
 
 /** Timbra (o guarda) la factura. Devuelve la respuesta cruda CfdiNuevoRes. */

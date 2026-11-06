@@ -154,12 +154,18 @@ export interface TicketData {
    *  se grita en el mostrador y lo que lleva la etiqueta. */
   clienteNombre?: string | null
   /**
-   * El ID del pedido de Rappi (cuatro números que el cajero copia de la
+   * El ID DEL PEDIDO de Rappi (los números que el cajero copia de la
    * plataforma). Cuando viene, el ticket se identifica con «RAPPI #id» en vez
    * del folio de la tienda, y NO se imprime método de pago: a la tienda le
    * paga Rappi días después, no el repartidor.
    */
   rappiId?: string | null
+  /**
+   * El ID DE ENTREGA de Rappi, el otro número que la plataforma da por pedido
+   * (el del repartidor/entrega). Va debajo del ID de pedido para poder cruzar
+   * el ticket con la plataforma. Vacío = no se imprime.
+   */
+  rappiEntregaId?: string | null
 }
 
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */

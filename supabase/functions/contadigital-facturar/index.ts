@@ -1,21 +1,29 @@
 // Edge Function: contadigital-facturar
 //
-// Timbra la FACTURA GLOBAL del día con ContaDigital (Isyconta): una sola
-// factura a público en general que lista CADA FOLIO del día como un renglón
-// (Comentarios = "Folio N", Importe = total de ese folio). El pan va a TASA 0%
-// de IVA, así que subtotal = total. Es como la casa comprueba ingresos diario.
+// Timbra la FACTURA GLOBAL con ContaDigital (Isyconta): una factura a público
+// en general. El pan va a TASA 0% de IVA, así que subtotal = total. Tres modos
+// (por `modo` en el body):
+//   * 'dia'     (default) — un día: un renglón por folio real de ese día.
+//   * 'periodo' — un rango de fechas: un renglón por folio real del rango.
+//   * 'manual'  — un IMPORTE que teclea la contadora para un periodo, de un
+//                 solo renglón. Es el puente de la transición mientras el POS
+//                 no captura todas las ventas; va marcado (`tipo='manual'`) y
+//                 es el ÚNICO camino donde el total no lo pone el servidor.
 //
 // Lo que NO se negocia:
-//   * **El total lo decide el servidor.** Los folios y sus totales salen de
-//     `fn_facturacion_dia` (ordenes pagadas, no canceladas, del día en Mérida),
-//     nunca de la pantalla.
-//   * **Solo gerencia.** Exige el JWT del usuario y pregunta `fn_es_jefe()`.
-//   * **Un día no se timbra dos veces.** El FolioOriginal es 'GLOBAL-YYYYMMDD';
-//     si ya hay una timbrada para ese día se devuelve esa, no se timbra otra.
+//   * **En 'dia' y 'periodo' el total lo decide el servidor.** Los folios y sus
+//     totales salen de `fn_facturacion_dia` / `fn_facturacion_periodo` (ordenes
+//     pagadas, no canceladas, en Mérida), nunca de la pantalla. En 'manual' el
+//     importe sí viene de la pantalla —es su razón de ser— y por eso va aparte.
+//   * **Solo gerencia o contabilidad.** Exige el JWT del usuario y pregunta
+//     `fn_puede_facturar()` (gerencia + el rol 'contabilidad').
+//   * **Un periodo no se timbra dos veces.** El FolioOriginal identifica al
+//     día/rango; si ya hay una timbrada para ese mismo se devuelve esa. Y un
+//     folio amparado por una global queda registrado en
+//     `facturas_globales_folios`, así que no entra en otra (anti doble).
 //   * **La API Key vive en los secrets**, nunca en el repo ni en el navegador.
 //   * **Sin emisor no se finge nada.** Si el RFC no está dado de alta en
-//     ContaDigital (hoy es el caso de Hojaldras Lily), se detiene con un
-//     mensaje claro; no inventa una factura.
+//     ContaDigital, se detiene con un mensaje claro; no inventa una factura.
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
@@ -26,6 +34,7 @@ import {
   conectar,
   configContaDigital,
   empresaPorRfc,
+  fechaContaDigital,
   porClave,
   porDescripcion,
   timbrar,
@@ -42,16 +51,6 @@ const falla = (status: number, codigo: string, mensaje: string, extra: Record<st
 
 const redondea = (n: number) => Math.round(Number(n) * 100) / 100
 
-/** 'YYYY-MM-DD' y 'YYYY-MM-DDTHH:MM:SS' en horario de Mérida. */
-function ahoraMerida(): { fechaHora: string } {
-  const f = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Merida', year: 'numeric', month: '2-digit', day: '2-digit',
-    hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false,
-  }).formatToParts(new Date())
-  const g = (t: string) => f.find((p) => p.type === t)?.value ?? '00'
-  return { fechaHora: `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}:${g('second')}` }
-}
-
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders })
   if (req.method !== 'POST') return falla(405, 'metodo', 'Usa POST')
@@ -59,21 +58,77 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const auth = req.headers.get('Authorization') ?? ''
 
-  // --- Solo gerencia ---------------------------------------------------------
+  // --- Solo gerencia o contabilidad ------------------------------------------
   const sbUsuario = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
     global: { headers: { Authorization: auth } },
   })
-  const { data: esJefe } = await sbUsuario.rpc('fn_es_jefe')
-  if (!esJefe) return falla(403, 'sin_permiso', 'Solo gerencia puede facturar')
+  const { data: puedeFacturar } = await sbUsuario.rpc('fn_puede_facturar')
+  if (!puedeFacturar) return falla(403, 'sin_permiso', 'Solo gerencia o contabilidad pueden facturar')
   const { data: { user } } = await sbUsuario.auth.getUser()
 
-  let body: { fecha?: string; ambiente?: string; solo_guardar?: boolean }
+  let body: {
+    modo?: 'dia' | 'periodo' | 'manual'
+    fecha?: string; desde?: string; hasta?: string
+    total?: number; periodicidad?: string
+    ambiente?: string; solo_guardar?: boolean
+  }
   try { body = await req.json() } catch { return falla(400, 'cuerpo', 'JSON inválido') }
-  const fecha = (body.fecha ?? '').trim()
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) return falla(400, 'fecha', 'Falta la fecha (YYYY-MM-DD)')
+  const modo = body.modo ?? 'dia'
+  const esFecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
+  const soloDigitos = (s: string) => s.replaceAll('-', '')
 
   const sb = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
-  const folioOriginal = `GLOBAL-${fecha.replaceAll('-', '')}`
+
+  // Qué se factura, según el modo. `lineas` son los folios reales (vacío en
+  // 'manual'); el mes/año del complemento global salen de `periodoDesde`.
+  let lineas: { folio: number; total: number }[] = []
+  let total = 0
+  let folioOriginal = ''
+  let tipo: 'diaria' | 'periodo' | 'manual' = 'diaria'
+  let periodoDesde = ''
+  let periodoHasta = ''
+  let fechaFila = ''
+  let periodicidadGlobal = '01'
+  let comentarioManual = ''
+
+  // '01' diario, '02' semanal, '03' quincenal, '04' mensual.
+  const periodicidadPedida = ['02', '03', '04'].includes(body.periodicidad ?? '') ? body.periodicidad! : '04'
+
+  if (modo === 'dia') {
+    const fecha = (body.fecha ?? '').trim()
+    if (!esFecha(fecha)) return falla(400, 'fecha', 'Falta la fecha (YYYY-MM-DD)')
+    const { data: ventas, error: eVentas } = await sb.rpc('fn_facturacion_dia', { p_fecha: fecha })
+    if (eVentas) return falla(500, 'ventas', `No se pudo leer el día: ${eVentas.message}`)
+    if (!ventas || ventas.length === 0) return falla(400, 'sin_ventas', `No hay ventas por facturar el ${fecha}`)
+    lineas = (ventas as { folio: number; total: number }[]).map((v) => ({ folio: v.folio, total: redondea(v.total) }))
+    total = redondea(lineas.reduce((s, l) => s + l.total, 0))
+    folioOriginal = `GLOBAL-${soloDigitos(fecha)}`
+    tipo = 'diaria'; periodoDesde = fecha; periodoHasta = fecha; fechaFila = fecha; periodicidadGlobal = '01'
+  } else if (modo === 'periodo') {
+    const desde = (body.desde ?? '').trim(), hasta = (body.hasta ?? '').trim()
+    if (!esFecha(desde) || !esFecha(hasta)) return falla(400, 'periodo', 'Falta el rango (desde/hasta, YYYY-MM-DD)')
+    if (hasta < desde) return falla(400, 'periodo', 'El fin del periodo es antes del inicio')
+    const { data: ventas, error: eVentas } = await sb.rpc('fn_facturacion_periodo', { p_desde: desde, p_hasta: hasta })
+    if (eVentas) return falla(500, 'ventas', `No se pudo leer el periodo: ${eVentas.message}`)
+    if (!ventas || ventas.length === 0) return falla(400, 'sin_ventas', `No hay ventas por facturar entre el ${desde} y el ${hasta}`)
+    lineas = (ventas as { folio: number; total: number }[]).map((v) => ({ folio: v.folio, total: redondea(v.total) }))
+    total = redondea(lineas.reduce((s, l) => s + l.total, 0))
+    folioOriginal = `GLOBAL-${soloDigitos(desde)}-${soloDigitos(hasta)}`
+    tipo = 'periodo'; periodoDesde = desde; periodoHasta = hasta; fechaFila = hasta; periodicidadGlobal = periodicidadPedida
+  } else if (modo === 'manual') {
+    const desde = (body.desde ?? '').trim(), hasta = (body.hasta ?? '').trim()
+    if (!esFecha(desde) || !esFecha(hasta)) return falla(400, 'periodo', 'Falta el periodo (desde/hasta, YYYY-MM-DD)')
+    if (hasta < desde) return falla(400, 'periodo', 'El fin del periodo es antes del inicio')
+    total = redondea(Number(body.total))
+    if (!(total > 0)) return falla(400, 'total', 'Falta el importe a facturar (mayor que 0)')
+    folioOriginal = `GLOBAL-MANUAL-${soloDigitos(desde)}-${soloDigitos(hasta)}`
+    tipo = 'manual'; periodoDesde = desde; periodoHasta = hasta; fechaFila = hasta; periodicidadGlobal = periodicidadPedida
+    comentarioManual = `Ventas al público en general del ${desde} al ${hasta}`
+  } else {
+    return falla(400, 'modo', 'Modo no reconocido (dia | periodo | manual)')
+  }
+
+  const [anioGlobal, mesGlobal] = periodoDesde.split('-')
 
   // --- Ya timbrada: idempotente ---------------------------------------------
   const { data: yaHay } = await sb
@@ -83,16 +138,6 @@ Deno.serve(async (req) => {
     .eq('estatus', 'timbrada')
     .maybeSingle()
   if (yaHay) return json(200, { ok: true, yaExistia: true, factura: yaHay })
-
-  // --- Qué se factura ese día ------------------------------------------------
-  const { data: ventas, error: eVentas } = await sb.rpc('fn_facturacion_dia', { p_fecha: fecha })
-  if (eVentas) return falla(500, 'ventas', `No se pudo leer el día: ${eVentas.message}`)
-  if (!ventas || ventas.length === 0) return falla(400, 'sin_ventas', `No hay ventas pagadas el ${fecha}`)
-
-  const lineas = (ventas as { folio: number; total: number }[]).map((v) => ({
-    folio: v.folio, total: redondea(v.total),
-  }))
-  const total = redondea(lineas.reduce((s, l) => s + l.total, 0))
 
   // --- Config + conexión -----------------------------------------------------
   let cfg
@@ -124,11 +169,15 @@ Deno.serve(async (req) => {
     const idExp = u.IdExpedidoENDefault
     const cp = empresa.CP || ''
     const serie = (cfg.serie ? porDescripcion(u.Series, cfg.serie) : null) ?? porDescripcion(u.Series, 'factura') ?? (u.Series ?? [])[0]
-    if (!serie) return falla(409, 'sin_serie', 'El emisor no tiene una serie de facturas configurada en ContaDigital.')
     const moneda = porDescripcion(u.Monedas, 'peso') ?? (u.Monedas ?? [])[0]
     const forma = porDescripcion(u.FormasDePago, 'efectivo') ?? (u.FormasDePago ?? [])[0]
     const usoS01 = porClave(u.UsosDeCFDI, 'S01')
     if (!usoS01) return falla(409, 'sin_uso', 'El emisor no tiene el uso de CFDI S01 (Sin efectos fiscales) disponible.')
+
+    if (!serie) return falla(409, 'sin_serie',
+      'El emisor no tiene una serie de facturas configurada en ContaDigital. ' +
+      'Hay que crear una serie en el portal de ContaDigital (Configuración de la empresa → Series/Folios); ' +
+      'la API no crea series.')
 
     if (!cfg.idProducto || !cfg.idUm) {
       return falla(503, 'not_configured',
@@ -139,39 +188,47 @@ Deno.serve(async (req) => {
 
     // --- Receptor: público en general ---------------------------------------
     const cliente = await clientePorRfc(cfg, token, empresa.Id, RFC_PUBLICO)
-    if (!cliente || !cliente.IdCliente) {
+    // ContaDigital devuelve el cliente con el campo `Id` (no `IdCliente`).
+    const idCliente = cliente?.Id ?? cliente?.IdCliente
+    if (!cliente || !idCliente) {
       return falla(409, 'sin_cliente_global',
         `Falta dar de alta el cliente "Público en General" (RFC ${RFC_PUBLICO}) en ContaDigital para esta empresa.`)
     }
 
     // --- Armar la factura global --------------------------------------------
-    const productos = lineas.map((l) => ({
+    // 'dia'/'periodo': un renglón por folio real. 'manual': un solo renglón con
+    // el importe que tecleó la contadora.
+    const renglon = (importe: number, comentario: string) => ({
       IdProducto: cfg.idProducto, IdUM: cfg.idUm,
-      Cantidad: 1, Precio: l.total, Descuento: 0,
+      Cantidad: 1, Precio: importe, Descuento: 0,
       PorcentajeIVA: 0, IVA: 0, TasaCero: true,
       TasaIEPS: 0, ImporteIEPS: 0,
       BaseRetIVA: 0, TipoRetIVA: 0, RetIVA: 0, TasaISR: 0, RetISR: 0,
-      Importe: l.total, Total: l.total,
-      Comentarios: `Folio ${l.folio}`,
+      Importe: importe, Total: importe,
+      Comentarios: comentario,
       ClaveIdentificacion: '01010101',
-    }))
+    })
+    const productos = tipo === 'manual'
+      ? [renglon(total, comentarioManual)]
+      : lineas.map((l) => renglon(l.total, `Folio ${l.folio}`))
 
-    const [anio, mes] = fecha.split('-')
     const factura: Record<string, unknown> = {
       Id: 0,
       IdEmpresa: empresa.Id,
       IdRFC: idRFC,
       FolioOriginal: folioOriginal,
-      Fecha: ahoraMerida().fechaHora,
+      Fecha: fechaContaDigital(),
       TipoComprobante: (porClave(u.TiposDeComprobante, 'Factura')?.Clave) ?? 'Factura',
       IdSerie: serie.Id,
       IdSucursal: idExp,
       IdLugarDeExpedicion: idExp,
       LugarDeExpedicion: cp,
-      IdCliente: cliente.IdCliente,
+      IdCliente: idCliente,
       IdSucursalCliente: cliente.IdSucursalDefault ?? cliente.IdSucursalCliente ?? 0,
       UsoCFDI: usoS01.Clave,
-      TipoRelacion: '',
+      // '0' = sin relación. ContaDigital rechaza la cadena vacía ("Es necesario
+      // que especifique el dato para el campo TipoRelacion"), aun omitiéndola.
+      TipoRelacion: '0',
       CFDIRelacionados: '',
       TipoDeCambio: 1,
       IdMoneda: moneda?.Id ?? 0,
@@ -185,10 +242,11 @@ Deno.serve(async (req) => {
       TotalImpuestosLocalesRetenidos: 0, TotalImpuestosLocalesTrasladados: 0,
       Subtotal: total, Total: total,
       Productos: productos,
-      // Factura global: periodicidad diaria, el mes y el año del día facturado.
-      PeriodicidadGlobal: '01',
-      MesesGlobal: mes,
-      AnioGlobal: Number(anio),
+      // Complemento global: periodicidad del periodo, con el mes y el año de su
+      // inicio (en 'dia' el inicio es el propio día).
+      PeriodicidadGlobal: periodicidadGlobal,
+      MesesGlobal: mesGlobal,
+      AnioGlobal: Number(anioGlobal),
       AgregarLeyendasFiscales: false,
       TipoComplementoAddenda: 0,
       SoloGuardar: body.solo_guardar === true,
@@ -197,7 +255,8 @@ Deno.serve(async (req) => {
     const res = await timbrar(cfg, token, factura)
     const timbrada = res.Codigo === 0 && !!res.Resultado?.UUID
     const fila = {
-      fecha, folio_original: folioOriginal, ambiente: cfg.ambiente, id_empresa: empresa.Id,
+      fecha: fechaFila, folio_original: folioOriginal, ambiente: cfg.ambiente, id_empresa: empresa.Id,
+      tipo, periodo_desde: periodoDesde, periodo_hasta: periodoHasta, periodicidad: periodicidadGlobal,
       uuid: res.Resultado?.UUID ?? null,
       serie: res.Resultado?.Serie ?? serie.Descripcion,
       folio_cfdi: res.Resultado?.Folio ?? null,
@@ -215,6 +274,14 @@ Deno.serve(async (req) => {
 
     if (!timbrada) {
       return falla(502, 'no_timbrada', res.Mensaje || 'ContaDigital no timbró la factura', { factura: guardada })
+    }
+
+    // Deja registro de qué folios quedaron amparados, para que no entren en otra
+    // global. 'manual' no ampara folios (es un importe, no una lista).
+    if (guardada && lineas.length > 0 && !(body.solo_guardar === true)) {
+      await sb.from('facturas_globales_folios').insert(
+        lineas.map((l) => ({ factura_id: (guardada as { id: string }).id, folio_venta: l.folio })),
+      )
     }
     return json(200, { ok: true, factura: guardada })
   } catch (e) {

@@ -134,10 +134,12 @@ export function Cobro() {
   const [mixto, setMixto] = useState(false)
   const [parteEfectivo, setParteEfectivo] = useState('')
   const [referencia, setReferencia] = useState('')
-  // Rappi: el ID de 4 números que el cajero copia de la plataforma. No se
-  // vincula solo —Rappi no da su API por un botón—, se teclea a mano, y es lo
-  // que identifica el pedido en vez del folio de la tienda.
+  // Rappi: dos números que el cajero copia de la plataforma —el ID del PEDIDO
+  // y el ID de ENTREGA—. No se vinculan solos (Rappi no da su API por un
+  // botón), se teclean a mano, y el de pedido es lo que identifica la venta en
+  // vez del folio de la tienda.
   const [rappiId, setRappiId] = useState('')
+  const [rappiEntrega, setRappiEntrega] = useState('')
   const [recibido, setRecibido] = useState('')
   const [procesando, setProcesando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -178,7 +180,11 @@ export function Cobro() {
   const totalNeto = aCobrar()
   // Rappi: no se cobra aquí (paga la plataforma), no hay método ni mixto.
   const esRappi = canal === 'rappi'
-  const rappiIdOk = /^\d{3,6}$/.test(rappiId.trim())
+  // Los dos IDs de la plataforma: pedido (lo que se canta, 3–6 números) y
+  // entrega (el otro número de Rappi). Ahora hacen falta los dos para cobrar.
+  const rappiPedidoOk = /^\d{3,6}$/.test(rappiId.trim())
+  const rappiEntregaOk = /^\d{3,12}$/.test(rappiEntrega.trim())
+  const rappiIdOk = rappiPedidoOk && rappiEntregaOk
   // Modificación: se cobra la DIFERENCIA contra lo ya pagado (el crédito). El
   // nuevo total es el del carrito. Si la nueva es más barata, no se puede por
   // aquí (habría que devolver): se manda a Cancelar.
@@ -209,8 +215,10 @@ export function Cobro() {
       cajero: empleado?.nombre,
       canal: esRappi ? 'Rappi' : 'Caja',
       // El pedido de Rappi se identifica con su ID, no con el folio, y el
-      // ticket no lleva método de pago (lo decide `rappiId` en @lily/ui).
+      // ticket no lleva método de pago (lo decide `rappiId` en @lily/ui). El
+      // ID de entrega va debajo, para poder cruzarlo con la plataforma.
       rappiId: esRappi ? (rappiId.trim() || null) : undefined,
+      rappiEntregaId: esRappi ? (rappiEntrega.trim() || null) : undefined,
       items: items.map((l) => ({
         cantidad: l.cantidad,
         nombre: l.producto.nombre,
@@ -377,7 +385,7 @@ export function Cobro() {
             })),
           ))
         await cobrarOrden(sb, orden.id, 'rappi', totalNeto, {
-          referencia: `Rappi ${rappiId.trim()}`,
+          referencia: `Rappi pedido ${rappiId.trim()} · entrega ${rappiEntrega.trim()}`,
           idempotencyKey: crypto.randomUUID(),
         })
         ordenViva.current = null
@@ -717,22 +725,43 @@ export function Cobro() {
               <p className="font-display text-lg text-sa-green-ink mb-1">Pedido de Rappi</p>
               <p className="font-mono text-xs text-sa-green-ink/50 mb-3 leading-relaxed">
                 A la tienda le paga Rappi, no el cliente: no se cobra aquí. Escribe el ID del
-                pedido (los números de la plataforma) y dale «Cobrar e imprimir».
+                pedido y el ID de entrega (los dos números de la plataforma) y dale «Cobrar e
+                imprimir».
               </p>
-              <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
-                ID de Rappi
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={rappiId}
-                onChange={(e) => setRappiId(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                placeholder="1234"
-                className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl tracking-[0.3em] text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
-              />
-              {!rappiIdOk && rappiId.length > 0 && (
-                <p className="font-mono text-xs text-sa-strawberry mt-2">El ID es de 3 a 6 números.</p>
-              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                    ID de Pedido
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={rappiId}
+                    onChange={(e) => setRappiId(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    placeholder="1234"
+                    className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl tracking-[0.3em] text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+                  />
+                  {!rappiPedidoOk && rappiId.length > 0 && (
+                    <p className="font-mono text-xs text-sa-strawberry mt-2">El ID de pedido es de 3 a 6 números.</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block font-mono text-xs uppercase tracking-wide text-sa-green-ink/60 mb-2">
+                    ID de entrega
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={rappiEntrega}
+                    onChange={(e) => setRappiEntrega(e.target.value.replace(/\D/g, '').slice(0, 12))}
+                    placeholder="567890"
+                    className="w-full px-4 py-3 bg-sa-cream-soft border border-sa-green-ink/10 rounded-sa font-mono text-2xl tracking-[0.2em] text-sa-green-ink focus:outline-none focus:ring-2 focus:ring-sa-green/30"
+                  />
+                  {!rappiEntregaOk && rappiEntrega.length > 0 && (
+                    <p className="font-mono text-xs text-sa-strawberry mt-2">El ID de entrega es de 3 a 12 números.</p>
+                  )}
+                </div>
+              </div>
             </div>
           )}
           {!esRappi && (<>

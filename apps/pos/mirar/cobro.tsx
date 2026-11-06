@@ -3,6 +3,7 @@
  *
  *     cd apps/pos && pnpm dev  →  /mirar/cobro.html          (venta normal)
  *                                 /mirar/cobro.html#encargo  (encargo con anticipo)
+ *                                 /mirar/cobro.html#rappi    (pedido de Rappi: dos IDs)
  *
  * Es la pantalla más importante de la caja y no se podía abrir sin Supabase:
  * el store se siembra aquí con un turno, un cajero y tres renglones, y la
@@ -21,12 +22,16 @@ const prod = (id: string, nombre: string, precio: number): ProductoVenta =>
   ({ id, nombre, precio, activo: true, es_extra: false, categorias: null }) as unknown as ProductoVenta
 
 const encargo = location.hash === '#encargo'
+const rappi = location.hash === '#rappi'
 
 usePosStore.setState({
   empleado: { id: 'e1', nombre: 'Rosa M.', rol: 'caja', sucursal_id: 's1' } as never,
   almacen: { id: 'a1', sucursal_id: 's1', nombre: 'Kiosko', tipo: 'kiosko' } as never,
   caja: { id: 'c1', nombre: 'Caja mostrador', sucursal_id: 's1' } as never,
   corte: { id: 'k1', estado: 'abierta' } as never,
+  // El pedido de Rappi cobra por la lista de la plataforma; aquí solo importa
+  // que la pantalla pida los dos IDs (pedido y entrega) en vez de método.
+  canal: rappi ? 'rappi' : 'pos',
   items: [
     { lineaId: 'l1', producto: prod('p1', 'Jamón y Queso · Chica · 24 cuadros', 310), cantidad: 1, personalizacion: null },
     { lineaId: 'l2', producto: prod('p2', 'Pastelitos de Lomo · 5 pzas', 140), cantidad: 2, personalizacion: null },

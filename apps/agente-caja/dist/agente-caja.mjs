@@ -154,6 +154,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   const cajero = negocio.mostrarCajero === false ? "" : data.cajero ?? "";
   L.push(data.rappiId ? "RAPPI" : "FOLIO");
   L.push(estilo(` #${data.rappiId || data.folio} `, { ancho: 2, alto: 2, invertido: true }));
+  if (data.rappiId && data.rappiEntregaId) L.push(`Entrega #${data.rappiEntregaId}`);
   L.push(estilo(fechaTxt, { alinear: "der" }));
   const canalLinea = [data.canal, cajero].filter(Boolean).join(" \xB7 ");
   if (canalLinea) L.push(estilo(canalLinea, { alinear: "der" }));
@@ -202,7 +203,6 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   L.push("");
   if (data.rappiId) {
     L.push(centrar("Pedido de Rappi"));
-    L.push(centrar("La plataforma paga a la tienda"));
   } else if (data.partes?.length) {
     for (const p of data.partes) L.push(parear(p.metodo, pesos(p.monto)));
   } else {
@@ -713,7 +713,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.5";
+var VERSION = "1.1.6";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
