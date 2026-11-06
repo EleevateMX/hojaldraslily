@@ -62,7 +62,7 @@ function resumen(cfg, op, r) {
     linea('Afiliacion', c.affiliation) +
     linea('No. control', c.controlNumber) +
     linea('Autorizacion', c.authCode) +
-    linea('Referencia', c.authResult) +
+    linea('Referencia', c.paywReference) +
     linea('Tarjeta', [c.cardBrand, c.cardType, c.pan].filter(Boolean).join(' ')) +
     linea('Emisor', c.issuingBank) +
     linea('Entrada', c.entryMode) +
