@@ -429,6 +429,28 @@ function DatosDelTicketPanel() {
             Imprimir el nombre de quien cobró
           </label>
 
+          {/* ---- El voucher de la terminal (Banorte) ---- */}
+          <div className="sm:col-span-2 border-t border-sa-green-ink/15 pt-4">
+            <Field label="Voucher de la terminal (al cobrar con tarjeta)">
+              <select
+                className={cx.input}
+                value={datos?.voucherImpresion ?? 'preguntar'}
+                onChange={(e) =>
+                  setDatos({ ...datos, voucherImpresion: e.target.value as 'siempre' | 'preguntar' | 'nota' })
+                }
+              >
+                <option value="preguntar">Preguntar después de cada venta con tarjeta</option>
+                <option value="siempre">Imprimirlo siempre (un voucher chico aparte)</option>
+                <option value="nota">No imprimirlo aparte (va dentro de la nota)</option>
+              </select>
+            </Field>
+            <p className={`text-xs mt-1 ${cx.muted}`}>
+              El voucher es el comprobante del banco de la tarjeta. «Preguntar» no gasta rollo si
+              el cliente no lo pide; «Siempre» saca un comprobante chico con el logo; «Dentro de la
+              nota» lo imprime pegado al ticket, como antes.
+            </p>
+          </div>
+
           {/* ---- Vista previa ---- */}
           <div className="sm:col-span-2 border-t border-sa-green-ink/15 pt-4">
             <div className="text-sm font-semibold text-sa-green-ink mb-2">Vista previa del ticket</div>

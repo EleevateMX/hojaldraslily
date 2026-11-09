@@ -1,5 +1,8 @@
-import { encolarTicketCaja, datosDelTicket } from '@lily/supabase'
-import { imprimirTicket, NEGOCIO_DEFAULT, type TicketData, type TicketNegocio } from '@lily/ui'
+import { encolarTicketCaja, encolarVoucherCaja, datosDelTicket } from '@lily/supabase'
+import {
+  imprimirTicket, imprimirVoucher, NEGOCIO_DEFAULT,
+  type TicketData, type TicketNegocio, type VoucherTarjeta,
+} from '@lily/ui'
 import { sb } from './sb'
 import { conRespaldo } from './respaldo'
 
@@ -61,6 +64,56 @@ export async function sacarTicket(ordenId: string | null, ticket: TicketData): P
   // del driver de la térmica, salen cortadas por separado. Por el agente
   // ESC/POS esto será cosa del agente; por ahora la caja imprime por navegador.
   imprimirTicket(ticket, negocioCargado, 2)
+}
+
+/**
+ * Qué hacer con el voucher de la terminal, según lo que puso Admin.
+ *
+ *   - `'siempre'`   — sale un voucher chico aparte al cobrar con tarjeta.
+ *   - `'preguntar'` — la caja pregunta antes de imprimirlo (por omisión).
+ *   - `'nota'`      — no sale aparte; va embebido en la nota (como antes).
+ *
+ * Vive en `parametros.ticket` y se carga con `cargarDatosDelTicket`. Lo lee la
+ * caja para decidir si embeber el voucher en la nota o sacarlo aparte.
+ */
+export function modoVoucher(): 'siempre' | 'preguntar' | 'nota' {
+  return negocioCargado.voucherImpresion ?? 'preguntar'
+}
+
+/**
+ * El VOUCHER de la terminal (Anexo VII de Banorte) como comprobante CHICO y
+ * aparte, con el logotipo de la casa.
+ *
+ * Es el mismo dato que va embebido en la nota cuando el modo es `'nota'`
+ * (`parejasDeVoucher` / `validacionDeVoucher`, compartidas con el papel y el
+ * HTML del ticket), pero suelto: así no hay que reimprimir la nota entera para
+ * darle al cliente su comprobante de la tarjeta, y en `'preguntar'` no se gasta
+ * rollo si no hace falta. Sale por el navegador (no hay orden que encolar) con
+ * la cabecera del negocio de siempre.
+ */
+export async function imprimirVoucherBanorte(
+  ordenId: string | null,
+  voucher: VoucherTarjeta,
+  datos: { folio: number | string; monto: number; fecha?: Date },
+): Promise<void> {
+  // Como la nota: primero la térmica por la cola —así un voucher que no sale se
+  // ve en Admin—, y si no hay térmica dada de alta, por el navegador.
+  if (ordenId) {
+    try {
+      const payload = {
+        comprobante: 'voucher' as const,
+        folio: datos.folio,
+        monto: datos.monto,
+        fecha: (datos.fecha ?? new Date()).toISOString(),
+        tarjeta: voucher,
+      }
+      const trabajo = await encolarVoucherCaja(sb, ordenId, payload)
+      if (trabajo) return
+    } catch {
+      // Da igual por qué falló: el voucher sale por el navegador.
+    }
+  }
+  imprimirVoucher(voucher, negocioCargado, datos)
 }
 
 /**

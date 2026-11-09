@@ -36,7 +36,10 @@ var NEGOCIO_DEFAULT = {
   ],
   mostrarLogo: true,
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
-  mostrarCajero: false
+  mostrarCajero: false,
+  // Por omisión se PREGUNTA si imprimir el voucher de la terminal, para no
+  // gastar rollo en cada venta con tarjeta. La casa lo cambia en Admin.
+  voucherImpresion: "preguntar"
 };
 
 // ../../packages/ui/src/ticketLineas.ts
@@ -132,8 +135,8 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
   }
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
-  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l));
   const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l));
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
   if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l));
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));
@@ -242,6 +245,45 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(regla());
     for (const a of avisos) for (const l of envolver(a)) L.push(centrar(l.trim()));
   }
+  return L;
+}
+function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
+  const { centrar, parear, regla, envolver } = formato(ancho);
+  const L = [];
+  const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
+  if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l));
+  if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
+  L.push(regla());
+  L.push(estilo("COMPROBANTE DE VENTA", { negrita: true, alinear: "centro" }));
+  const f = data.fecha == null ? /* @__PURE__ */ new Date() : data.fecha instanceof Date ? data.fecha : new Date(data.fecha);
+  const fechaTxt = f.toLocaleString("es-MX", {
+    timeZone: "America/Merida",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+  L.push(centrar(`${fechaTxt}  Folio #${data.folio}`));
+  L.push(regla());
+  L.push(estilo(parear("IMPORTE", pesos(data.monto)), { alto: 2, negrita: true }));
+  L.push("");
+  L.push(estilo("BANORTE", { negrita: true, alinear: "centro" }));
+  for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
+  const validacion = validacionDeVoucher(data.tarjeta.pin);
+  if (validacion === "nip") {
+    L.push("");
+    L.push(estilo("AUTORIZADO CON FIRMA ELECTRONICA", { negrita: true, alinear: "centro" }));
+  } else if (validacion === "firma") {
+    L.push("");
+    L.push("");
+    L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
+    L.push(centrar("Firma"));
+  }
+  L.push(regla());
+  L.push(estilo("APROBADA", { negrita: true, alinear: "centro" }));
   return L;
 }
 function lineasDeAvisos(negocio) {
@@ -472,6 +514,11 @@ function esPayloadDeTicket(p) {
 function esPayloadDePrueba(p) {
   return !!p && typeof p === "object" && p.prueba === true;
 }
+function esPayloadDeVoucher(p) {
+  if (!p || typeof p !== "object") return false;
+  const d = p;
+  return d.comprobante === "voucher" && !!d.tarjeta && typeof d.tarjeta === "object";
+}
 function construirPrueba(p, ancho) {
   const b = new ConstructorEscPos().inicializar().alinear(1);
   const centrar = (s) => s.length >= ancho ? s.slice(0, ancho) : " ".repeat(Math.floor((ancho - s.length) / 2)) + s;
@@ -494,6 +541,14 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   if (esPayloadDeCorte(trabajo.payload)) {
     const b2 = new ConstructorEscPos().inicializar().alinear(0);
     for (const l of armarCorte(trabajo.payload, neg, ancho)) dibujar(b2, l);
+    return b2.cortar().construir();
+  }
+  if (esPayloadDeVoucher(trabajo.payload)) {
+    const img2 = logo ?? logoDelNegocio(neg);
+    const b2 = new ConstructorEscPos().inicializar();
+    if (img2) b2.alinear(1).logo(img2);
+    b2.alinear(0);
+    for (const l of armarVoucher(trabajo.payload, neg, ancho)) dibujar(b2, l);
     return b2.cortar().construir();
   }
   if (!esPayloadDeTicket(trabajo.payload)) {
@@ -713,7 +768,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.6";
+var VERSION = "1.1.7";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
@@ -760,7 +815,7 @@ async function cicloDeImpresion() {
     for (const t of trabajos) {
       try {
         const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO);
-        const copias = t.tipo_documento === "ticket" ? COPIAS_TICKET : 1;
+        const copias = t.tipo_documento === "ticket" && !esPayloadDeVoucher(t.payload) ? COPIAS_TICKET : 1;
         const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno;
         if (WINDOWS) await imprimirWindows(bytes, WINDOWS);
         else await enviar(bytes, HOST, PUERTO);

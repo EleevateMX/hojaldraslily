@@ -145,6 +145,24 @@ export async function encolarTicketCaja(
 }
 
 /**
+ * Manda el VOUCHER suelto (la autorización de la tarjeta) a la térmica del
+ * mostrador, por la cola. Como el ticket: devuelve el id del trabajo o **null**
+ * si no hay térmica dada de alta, y entonces la caja lo imprime por el
+ * navegador. Idempotente por orden (clave distinta a la del ticket, así el
+ * voucher y la nota conviven).
+ */
+export async function encolarVoucherCaja(
+  sb: ClienteLily,
+  ordenId: string,
+  voucher: unknown,
+): Promise<string | null> {
+  return rpc<string | null>(sb, 'fn_imprimir_voucher_caja', {
+    p_orden_id: ordenId,
+    p_voucher: voucher,
+  })
+}
+
+/**
  * El código con el que una PC se conecta a las impresoras.
  *
  * El instalador corre en la PC de la tienda, **sin sesión**, y necesita el
@@ -317,6 +335,8 @@ export interface DatosDelTicket {
   logoRaster?: { ancho: number; alto: number; datos: string }
   /** `false` = no imprimir el logo arriba (sale el nombre en grande). */
   mostrarLogo?: boolean
+  /** Qué hacer con el voucher de la terminal: `'siempre'` | `'preguntar'` | `'nota'`. */
+  voucherImpresion?: 'siempre' | 'preguntar' | 'nota'
 }
 
 export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {

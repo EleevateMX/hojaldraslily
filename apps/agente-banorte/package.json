@@ -10,9 +10,11 @@
   "scripts": {
     "llave": "node index.mjs llave",
     "venta": "node index.mjs venta",
-    "serve": "node index.mjs serve"
+    "serve": "node index.mjs serve",
+    "cola": "node index.mjs cola"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.47.0",
     "dotenv": "^16.4.5",
     "koffi": "2.9.0"
   }

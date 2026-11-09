@@ -11,9 +11,11 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **226 migraciones aplicadas en orden, y 226
+`fzkdgqqvfkogmxdgqsxj` tiene **228 migraciones aplicadas en orden, y 228
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. (Ojo: varios archivos quedaron con un
+primero que hay que comprobar al retomar. (Las dos últimas son del 9/11, §2.14:
+`20261109120000_terminal_cola_dll` —la cola de cobro con tarjeta por el agente
+DLL— y `20261109130000_voucher_termica` —el voucher suelto por la térmica—.) (Ojo: varios archivos quedaron con un
 nombre de versión distinto al que `apply_migration` registró —`20261028120000`
 se aplicó como `20261028230830`, el rol de contabilidad como `20261104121323`, y
 `20261104140000_facturacion_periodo_manual` como `20261104132012`—; y
@@ -1700,6 +1702,78 @@ Serie F Folio 84; periodo mensual (6 folios) → Folio 85. Se mira con
 `apps/admin/mirar/facturacion.html` (sub-switch Día/Periodo/Monto manual).
 Ojo fiscal: un periodo que cruce dos meses toma el mes de su inicio para el
 complemento; para la transición lo normal es mensual dentro de un mes.
+
+### 2.14 Cobro con tarjeta por el agente DLL (cola), y el voucher opcional
+
+La casa se fue por el camino **certificado** de Banorte: el DLL `PINPAD.TPV`
+en la PC (`apps/agente-banorte`), no la API de TPV Solutions. Pero la caja vive
+en la nube y no llega a la LAN de la pinpad, así que se cableó por **cola**,
+igual que el agente de tickets (9/11, migración `20261109120000`):
+
+1. La caja **encola** (`fn_terminal_cobro_pedir`): el SERVIDOR decide el importe
+   (total − efectivo, o lo del encargo) y el número de control, nunca la
+   pantalla. Si la sucursal no tiene terminal dada de alta, contesta
+   `hay_terminal=false` y la caja **cae al cobro manual** en la pinpad, igual
+   que cuando faltan secretos.
+2. El agente de la PC **reclama** su cola por su TOKEN
+   (`fn_terminal_cola_reclamar`), cobra en la pinpad por DLL, y **reporta**
+   (`fn_terminal_cobro_resultado`).
+3. Al aprobar, el servidor registra la venta por **el mismo camino de siempre**
+   —`fn_cobrar_orden` / `_mixto` / `fn_encargo_entregar_con_venta`—: **un solo
+   camino del dinero**, el mismo que la API y el mostrador. El pago cae al
+   corte, el trigger descuenta inventario y manda comandas.
+4. La caja **sondea** (`fn_terminal_cobro_estado`) hasta que resuelve, con el
+   overlay «Cobra en la terminal» puesto (la pinpad del otro lado espera la
+   tarjeta ~90 s).
+
+**El rollback distribuido**: si la tarjeta aprobó pero la venta no se pudo
+registrar, `fn_terminal_cobro_resultado` responde `anular=true` y el AGENTE
+anula el cobro en la pinpad (la anulación del DLL vive en la PC, no en la base).
+Nunca un cobro sin venta, como en la Edge Function de la API.
+
+Las tablas: `terminales` (el dispositivo, con su token = identidad, como
+`impresoras`) y `terminal_cola` (los cobros). Seguridad igual que las
+impresoras: las funciones de TOKEN abiertas a `anon` (el agente usa la llave
+publicable, sin sesión) pero no tocan nada sin un token válido; las de la caja
+exigen `fn_es_staff()`; las de Admin, `fn_es_jefe()`.
+
+- **La caja** elige el camino en `obtenerTerminal(sb)` (`@lily/payments`): por
+  omisión **DLL** (`BanorteDllTerminal`), que encola y sondea; `'api'` deja el
+  viejo `BanorteTerminal` como referencia. Misma interfaz `TerminalDeCobro`: la
+  pantalla no sabe por cuál cobra.
+- **El agente**: `node index.mjs cola` (self-contained, deps de npm —
+  `@supabase/supabase-js` + `koffi`; NO importa paquetes del monorepo, así que
+  un `npm install` en la PC basta, sin empaquetar). El token y la parte de la
+  nube salen de **Admin → Impresoras → «Terminal de Banorte»**
+  (`fn_terminal_registrar`); `PAYWORKS_PASSWORD` y la IP de la pinpad **se
+  quedan en la PC**, nunca salen de Admin.
+
+**Pendiente de probar EN LA TIENDA** (regla del repo: el dinero se prueba ahí,
+por lo del temp-table/MCP y porque este contenedor no llega a la pinpad):
+registrar la terminal, correr `node index.mjs cola` en modo `AUT` (aprueba sin
+cobrar) y hacer una venta con tarjeta desde la caja de punta a punta —¿aparece
+el importe en la pinpad, se registra la venta, cuadra el corte?—; luego a `PRD`.
+
+**El voucher ahora es OPCIONAL y aparte.** Antes el voucher (Anexo VII) iba
+embebido siempre en la nota. Ahora hay una casilla en **Admin → Sistema** con
+tres modos (`parametros.ticket.voucherImpresion`): **preguntar** (por omisión;
+la caja pregunta «¿Imprimir voucher?» tras la venta con tarjeta), **siempre**
+(sale un voucher chico aparte) y **nota** (embebido, como antes). En los dos
+primeros la nota NO lleva el voucher embebido (solo una `Ref.` corta), así no
+se imprime dos veces. La **razón social y el RFC** van chicos (FontB en
+térmica): son secundarios al logo.
+
+**El voucher suelto sale por la TÉRMICA (cola), no por el navegador** (9/11,
+migración `20261109130000`). Antes `imprimirVoucherBanorte` iba por
+`window.print()` a la predeterminada de Windows —el mismo fallo silencioso que
+tenía la nota antes de la cola—. Ahora encola con `fn_imprimir_voucher_caja`
+(devuelve null → cae al navegador si no hay térmica), el agente lo dibuja con
+`armarVoucher` (`@lily/ui/papel`, misma data que `voucherTicketHTML` y que el
+voucher embebido) y **se ve en Admin** si no sale. Va como trabajo tipo
+`'ticket'` con la marca `comprobante:'voucher'` en el payload (el agente lo
+distingue: una copia, no dos). Requiere **agente de caja 1.1.7**: el de 1.1.6 no
+conoce el payload y lo marca fallido, así que el voucher térmico solo funciona
+cuando la tienda auto-actualiza desde `main`.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

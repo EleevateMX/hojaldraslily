@@ -33,7 +33,7 @@
  * cabe, y si no cabe se envuelve.
  */
 
-import type { TicketData, TicketNegocio, TicketItem, CorteData } from './ticketTipos'
+import type { TicketData, TicketNegocio, TicketItem, CorteData, VoucherPapel } from './ticketTipos'
 
 /** FontA en papel de 80 mm. Es el que usa la casa. */
 export const COLUMNAS_80MM = 48
@@ -250,13 +250,15 @@ export function armarTicket(
   // El lema, debajo del logo (o del nombre): identidad de la casa. Se envuelve
   // si no cabe en el ancho del papel.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
-  // La razón social (KALALEV HOLDING), debajo del lema y encima del RFC: es el
-  // nombre fiscal del emisor, distinto del nombre comercial que va en el logo.
-  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l))
-  // El bloque fiscal —RFC y régimen— va en fuente chica (FontB): tiene que
-  // estar para facturar, pero es secundario, no compite con el nombre. Solo
-  // si existe: «RFC —» a la vista del cliente es peor que no imprimirlo.
+  // El bloque fiscal —razón social, RFC y régimen— va en fuente chica (FontB):
+  // tiene que estar para facturar, pero es secundario, no compite con el nombre
+  // ni con el logo. Solo si existe: «RFC —» a la vista del cliente es peor que
+  // no imprimirlo.
   const chico = (t: string): MarcaEstilo => estilo(t, { alinear: 'centro', fuente: 'B' })
+  // La razón social (KALALEV HOLDING), debajo del lema: el nombre fiscal del
+  // emisor, distinto del nombre comercial que va en el logo. En FontB (chica),
+  // como pidió la casa: es secundaria.
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l))
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
   if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l))
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
@@ -427,6 +429,63 @@ export function armarTicket(
     for (const a of avisos) for (const l of envolver(a)) L.push(centrar(l.trim()))
   }
 
+  return L
+}
+
+/**
+ * El VOUCHER suelto (Anexo VII de Banorte) en líneas para la térmica.
+ *
+ * Es el comprobante de la tarjeta, chico y aparte de la nota: logo (lo dibuja
+ * el agente, como en la nota), bloque fiscal chico, el importe grande, las
+ * parejas del voucher y cómo se validó. Come el mismo `VoucherTarjeta` y usa
+ * `parejasDeVoucher`/`validacionDeVoucher`, así dice EXACTAMENTE lo mismo que
+ * el voucher del navegador (`voucherTicketHTML`) y que el que la nota embebe.
+ */
+export function armarVoucher(
+  data: VoucherPapel,
+  negocio: TicketNegocio,
+  ancho: number = COLUMNAS_80MM,
+): LineaTicket[] {
+  const { centrar, parear, regla, envolver } = formato(ancho)
+  const L: LineaTicket[] = []
+  const chico = (t: string): MarcaEstilo => estilo(t, { alinear: 'centro', fuente: 'B' })
+
+  // Cabecera: el logo lo pega el agente arriba; aquí va el lema y el bloque
+  // fiscal chico, como en la nota.
+  if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l))
+  if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
+
+  L.push(regla())
+  L.push(estilo('COMPROBANTE DE VENTA', { negrita: true, alinear: 'centro' }))
+  const f = data.fecha == null ? new Date() : data.fecha instanceof Date ? data.fecha : new Date(data.fecha)
+  const fechaTxt = f.toLocaleString('es-MX', {
+    timeZone: 'America/Merida', day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+  L.push(centrar(`${fechaTxt}  Folio #${data.folio}`))
+  L.push(regla())
+
+  // El importe, al doble de alto: es lo que el cliente comprueba de un vistazo.
+  L.push(estilo(parear('IMPORTE', pesos(data.monto)), { alto: 2, negrita: true }))
+  L.push('')
+
+  // El voucher del banco (mismas parejas y validación que la nota).
+  L.push(estilo('BANORTE', { negrita: true, alinear: 'centro' }))
+  for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
+  const validacion = validacionDeVoucher(data.tarjeta.pin)
+  if (validacion === 'nip') {
+    L.push('')
+    L.push(estilo('AUTORIZADO CON FIRMA ELECTRONICA', { negrita: true, alinear: 'centro' }))
+  } else if (validacion === 'firma') {
+    L.push('')
+    L.push('')
+    L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
+    L.push(centrar('Firma'))
+  }
+
+  L.push(regla())
+  L.push(estilo('APROBADA', { negrita: true, alinear: 'centro' }))
   return L
 }
 

@@ -26,12 +26,12 @@ import { createClient } from '@supabase/supabase-js'
 // el `imprimirTicket` que toca `document`, y aquí no hay navegador.
 import { NEGOCIO_DEFAULT, type TicketNegocio } from '@lily/ui/tipos'
 import { COLUMNAS_80MM, COLUMNAS_58MM } from '@lily/ui/papel'
-import { construirDocumento, type TrabajoCaja } from './render.js'
+import { construirDocumento, esPayloadDeVoucher, type TrabajoCaja } from './render.js'
 import { enviar, estaViva } from './socket.js'
 import { imprimirWindows } from './windows.js'
 import { revisarActualizacion } from './autoactualizar.js'
 
-const VERSION = '1.1.6'
+const VERSION = '1.1.7'
 
 function requerido(clave: string): string {
   const v = process.env[clave]?.trim()
@@ -99,8 +99,10 @@ async function cicloDeImpresion(): Promise<void> {
       try {
         const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO)
         // Ticket de venta: original + copia (cada copia trae su propio corte
-        // ESC/POS, así que salen dos papeles cortados). Corte y prueba: una.
-        const copias = t.tipo_documento === 'ticket' ? COPIAS_TICKET : 1
+        // ESC/POS, así que salen dos papeles cortados). Corte, prueba y voucher
+        // suelto: una. (El voucher viaja como tipo 'ticket' pero con la marca
+        // `comprobante:'voucher'`, así que se distingue por el payload.)
+        const copias = t.tipo_documento === 'ticket' && !esPayloadDeVoucher(t.payload) ? COPIAS_TICKET : 1
         const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno
         if (WINDOWS) await imprimirWindows(bytes, WINDOWS)
         else await enviar(bytes, HOST, PUERTO)

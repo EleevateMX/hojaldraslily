@@ -189,10 +189,112 @@ export class BanorteTerminal implements TerminalDeCobro {
 }
 
 /**
- * La terminal de la caja. Hoy es Banorte y punto: la casa lo decidió el
- * 20/10/26. Si un día hay que elegir por sucursal, se elige aquí y la caja
- * no se entera.
+ * La terminal por el AGENTE DLL de la PC (cola), que es el camino CERTIFICADO
+ * de Banorte. La caja no llega a la pinpad; encola el cobro, el agente de la
+ * tienda lo toma y cobra por el DLL, y el servidor registra la venta al
+ * aprobar. La pantalla solo encola y sondea.
+ *
+ * Misma interfaz que `BanorteTerminal` (la de la API): la caja no sabe por cuál
+ * de los dos cobra. La diferencia es que aquí la respuesta no es inmediata —el
+ * cajero del otro lado tiene que poner la tarjeta—, así que `cobrar` sondea.
  */
-export function obtenerTerminal(sb: ClienteLily): TerminalDeCobro {
-  return new BanorteTerminal(sb)
+export class BanorteDllTerminal implements TerminalDeCobro {
+  readonly nombre = 'banorte-dll'
+  private readonly sb: ClienteLily
+  /** Cuánto se sondea antes de rendirse (la pinpad espera ~90 s la tarjeta). */
+  private readonly maxEsperaMs = 120_000
+  private readonly intervaloMs = 1_500
+
+  constructor(sb: ClienteLily) {
+    this.sb = sb
+  }
+
+  private async rpc<T>(fn: string, args: Record<string, unknown>): Promise<T[]> {
+    const { data, error } = await (this.sb.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(fn, args)
+    if (error) throw new Error((error as { message?: string }).message ?? 'Error de red con el servidor de cobro.')
+    return (data ?? []) as T[]
+  }
+
+  async cobrar(p: CobroDeOrden | CobroDeEncargo): Promise<ResultadoCobroTerminal> {
+    // 1) Encolar. El servidor decide el importe y el número de control.
+    let pedido
+    try {
+      const filas = await this.rpc<{ cobro_id: string | null; estado: string; monto: number; control_number: string; hay_terminal: boolean }>(
+        'fn_terminal_cobro_pedir',
+        'ordenId' in p
+          ? { p_idempotency_key: p.idempotencyKey, p_orden_id: p.ordenId, p_efectivo: p.efectivo ?? 0, p_empleado_id: p.empleadoId ?? null }
+          : { p_idempotency_key: p.idempotencyKey, p_encargo: p.encargo, p_empleado_id: p.empleadoId ?? null },
+      )
+      pedido = filas[0]
+    } catch (e) {
+      return { ok: false, estado: 'error', codigo: 'edge_function_error', mensaje: e instanceof Error ? e.message : 'No se pudo encolar el cobro.' }
+    }
+    if (!pedido || pedido.hay_terminal === false) {
+      return {
+        ok: false,
+        estado: 'no_configurado',
+        codigo: 'not_configured',
+        mensaje: 'La terminal de Banorte todavía no está conectada al sistema: cobra en la pinpad a mano y confirma aquí.',
+      }
+    }
+    const cobroId = pedido.cobro_id!
+
+    // 2) Sondear hasta que el agente reporte. La pinpad del otro lado está
+    //    mostrando el importe y esperando la tarjeta.
+    const hasta = Date.now() + this.maxEsperaMs
+    while (Date.now() < hasta) {
+      await new Promise((r) => setTimeout(r, this.intervaloMs))
+      let est
+      try {
+        const filas = await this.rpc<{
+          estado: string; monto: number; folio: number | null; orden_id: string | null; pago_id: string | null
+          voucher: VoucherTerminal | null; codigo: string | null; texto: string | null; detalle: string | null; modo: string | null
+        }>('fn_terminal_cobro_estado', { p_cobro_id: cobroId })
+        est = filas[0]
+      } catch {
+        continue // un parpadeo de red no cancela el cobro; se vuelve a preguntar
+      }
+      if (!est) continue
+      if (est.estado === 'en_cola' || est.estado === 'reclamado') continue
+
+      if (est.estado === 'aprobado') {
+        return {
+          ok: true, estado: 'aprobado',
+          ordenId: est.orden_id ?? '', folio: est.folio ?? null, pagoId: est.pago_id ?? null,
+          monto: Number(est.monto ?? 0), modo: est.modo ?? null, voucher: est.voucher ?? null,
+        }
+      }
+      const estado = (est.estado === 'sin_respuesta' ? 'sin_respuesta' : est.estado === 'anulado' ? 'anulado' : est.estado === 'error' ? 'error' : 'rechazado') as Exclude<EstadoCobroTerminal, 'aprobado'>
+      const mensaje =
+        est.estado === 'sin_respuesta'
+          ? 'La terminal no contestó y no se sabe si cobró. NO vuelvas a cobrar: revisa la pinpad y, si cobró, avisa a gerencia.'
+          : est.estado === 'error'
+          ? (est.detalle ?? 'La tarjeta se aprobó pero la venta no se registró; se anuló en la terminal. Vuelve a intentar.')
+          : (est.texto ?? 'La tarjeta no se aprobó.')
+      return { ok: false, estado, codigo: est.codigo ?? estado, mensaje, voucher: est.voucher }
+    }
+
+    // Se acabó la espera sin respuesta del agente.
+    return {
+      ok: false, estado: 'sin_respuesta', codigo: 'timeout',
+      mensaje: 'La terminal no contestó a tiempo. Revisa que el agente de la PC esté corriendo y la pinpad encendida; si la tarjeta ya se cobró, búscala en el corte.',
+    }
+  }
+
+  async cancelar(): Promise<{ ordenId: string; voucher: VoucherTerminal | null }> {
+    // La anulación del DLL la hace el agente en la pinpad (la cola la dispara
+    // sola cuando una venta no se registra). Un botón de «deshacer cobro» por
+    // cola es otra pieza; hoy no hay pantalla que lo pida.
+    throw new Error('Deshacer un cobro con el agente DLL todavía no tiene camino desde la caja.')
+  }
+}
+
+/**
+ * La terminal de la caja. Hoy es Banorte por el AGENTE DLL (lo que certificó la
+ * casa). Si faltara el agente, la caja cae al cobro manual sola (el `pedir`
+ * contesta `no_configurado`). El camino por API (`BanorteTerminal`) queda como
+ * referencia por si se vuelve a él.
+ */
+export function obtenerTerminal(sb: ClienteLily, via: 'dll' | 'api' = 'dll'): TerminalDeCobro {
+  return via === 'api' ? new BanorteTerminal(sb) : new BanorteDllTerminal(sb)
 }

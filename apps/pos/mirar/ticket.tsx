@@ -27,7 +27,7 @@
  * en el repo.
  */
 import { createRoot } from 'react-dom/client'
-import { ticketHTML, imprimirTicket, NEGOCIO_DEFAULT, type TicketData } from '../../../packages/ui/src/ticket'
+import { ticketHTML, voucherTicketHTML, imprimirTicket, NEGOCIO_DEFAULT, type TicketData } from '../../../packages/ui/src/ticket'
 
 const mostrador: TicketData = {
   folio: 1042,
@@ -104,6 +104,8 @@ const tarjetaBanorte: TicketData = {
   canal: 'Caja',
   items: [
     { cantidad: 1, nombre: 'Jamón y Queso · Grande · 48 cuadros', precioUnitario: 540 },
+    { cantidad: 2, nombre: 'Guayaba · Chica · 24 cuadros', precioUnitario: 300 },
+    { cantidad: 3, nombre: 'Pan de Muerto Tradicional · Chica', precioUnitario: 55 },
     { cantidad: 1, nombre: 'Café de olla', precioUnitario: 35 },
   ],
   metodoPago: 'Terminal',
@@ -126,16 +128,41 @@ const tarjetaBanorte: TicketData = {
   },
 }
 
-const Muestra = ({ t, rotulo }: { t: TicketData; rotulo: string }) => (
+/**
+ * La venta con tarjeta como la imprime la caja cuando el voucher va APARTE
+ * (modo «siempre»/«preguntar»): la NOTA sin el voucher embebido (solo una
+ * `Ref.` corta), y el voucher como comprobante suelto. En modo «dentro de la
+ * nota» se usaría `tarjetaBanorte` de arriba, con el voucher pegado.
+ */
+const tarjetaNotaSola: TicketData = {
+  ...tarjetaBanorte,
+  metodoPago: 'Terminal 1',
+  referenciaPago: tarjetaBanorte.tarjeta!.autorizacion,
+  tarjeta: undefined,
+}
+
+const Muestra = ({ html, rotulo }: { html: string; rotulo: string }) => (
   <div>
     <p style={{
       fontFamily: 'Jost, sans-serif', fontSize: 11, letterSpacing: '.22em',
       textTransform: 'uppercase', color: '#C4463C', margin: '0 0 10px',
     }}>{rotulo}</p>
     <div style={{ width: '80mm', background: '#fff', boxShadow: '0 6px 24px rgba(46,36,32,.14)' }}
-      dangerouslySetInnerHTML={{ __html: ticketHTML(t, NEGOCIO_DEFAULT) }} />
+      dangerouslySetInnerHTML={{ __html: html }} />
   </div>
 )
+
+// Para la vista previa se llenan el RFC y el régimen, que en el código van
+// vacíos (son dato fiscal y viven en Admin → Sistema / parametros.ticket).
+// Así se ve cómo salen KALALEV HOLDING y el RFC, chicos, bajo el logo.
+const NEGOCIO = {
+  ...NEGOCIO_DEFAULT,
+  rfc: 'KHO2506056F0',
+  regimen: 'Régimen General de Ley Personas Morales',
+}
+
+const vFolio = tarjetaBanorte.folio
+const vMonto = tarjetaBanorte.items.reduce((a, i) => a + i.cantidad * i.precioUnitario, 0)
 
 createRoot(document.getElementById('root')!).render(
   <div style={{ padding: 28, background: '#F8EDD5', minHeight: '100vh', fontFamily: 'sans-serif' }}>
@@ -145,10 +172,12 @@ createRoot(document.getElementById('root')!).render(
       </button>
     </p>
     <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <Muestra t={mostrador} rotulo="Venta en mostrador · Efectivo" />
-      <Muestra t={tarjetaBanorte} rotulo="Venta con tarjeta · Voucher Banorte (Anexo VII)" />
-      <Muestra t={encargo} rotulo="Encargo · Pago mixto" />
-      <Muestra t={entrega} rotulo="Entrega de encargo · con anticipo y algo más" />
+      <Muestra html={ticketHTML(tarjetaNotaSola, NEGOCIO, 2)} rotulo="Venta con tarjeta · la nota, dos copias (original + copia)" />
+      <Muestra html={voucherTicketHTML(tarjetaBanorte.tarjeta!, NEGOCIO, { folio: vFolio, monto: vMonto })} rotulo="La autorización · voucher Banorte (opcional)" />
+      <Muestra html={ticketHTML(mostrador, NEGOCIO)} rotulo="Venta en mostrador · Efectivo" />
+      <Muestra html={ticketHTML(tarjetaBanorte, NEGOCIO)} rotulo="Tarjeta · voucher DENTRO de la nota (modo «nota»)" />
+      <Muestra html={ticketHTML(encargo, NEGOCIO)} rotulo="Encargo · Pago mixto" />
+      <Muestra html={ticketHTML(entrega, NEGOCIO)} rotulo="Entrega de encargo · con anticipo y algo más" />
     </div>
   </div>,
 )
