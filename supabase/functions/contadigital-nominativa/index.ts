@@ -101,6 +101,8 @@ Deno.serve(async (req) => {
     }
 
     // ---- Listar clientes ----------------------------------------------------
+    // (La lista COMPLETA con dirección la sirve `contadigital-clientes`, una
+    // función chica y autocontenida; aquí queda la mínima por compatibilidad.)
     if (accion === 'clientes') {
       const lista = await listarClientes(cfg, token, empresa.Id)
       const clientes = (lista ?? []).map((c: any) => ({

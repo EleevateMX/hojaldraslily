@@ -141,7 +141,7 @@ async function invocarFn<T>(sb: ClienteLily, fn: string, body: Record<string, un
 // Timbrar un FOLIO de venta a un cliente real (persona física o moral), aparte
 // de la global. Vive en la Edge Function `contadigital-nominativa`.
 
-/** Un cliente dado de alta en ContaDigital. */
+/** Un cliente dado de alta en ContaDigital, con su dirección completa. */
 export interface ClienteCD {
   id: number
   rfc: string
@@ -149,6 +149,21 @@ export interface ClienteCD {
   regimenFiscal: string | null
   usoCFDI: string | null
   cp: string | null
+  calle?: string
+  noExterior?: string
+  noInterior?: string
+  /** La colonia va como «código-nombre» (p. ej. «0095-Miguel Alemán»). */
+  colonia?: string
+  municipio?: string
+  localidad?: string
+  /** El texto suele venir vacío; el estado real está en `claveEstado`. */
+  estado?: string
+  /** Código SAT del estado (p. ej. «YUC»). Es de donde sale el estado legible. */
+  claveEstado?: string
+  claveMunicipio?: string
+  pais?: string
+  email?: string
+  contacto?: string
 }
 
 /** Lo que el servidor sabe de un folio para poder nominarlo. */
@@ -217,9 +232,12 @@ export interface ResultadoNominativa {
   faltan?: string[]
 }
 
-/** Los clientes de ContaDigital (para elegir a quién facturar). */
+/**
+ * Los clientes de ContaDigital, con TODA su dirección (para elegir a quién
+ * facturar y ver sus datos). Los sirve la función chica `contadigital-clientes`.
+ */
 export async function clientesContaDigital(sb: ClienteLily): Promise<ResultadoClientes> {
-  return invocarFn<ResultadoClientes>(sb, 'contadigital-nominativa', { accion: 'clientes' })
+  return invocarFn<ResultadoClientes>(sb, 'contadigital-clientes', {})
 }
 
 /** Da de alta un cliente (persona física o moral) en ContaDigital. */

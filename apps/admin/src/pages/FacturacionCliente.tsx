@@ -46,6 +46,35 @@ const USOS: { clave: string; nombre: string }[] = [
   { clave: 'S01', nombre: 'S01 · Sin efectos fiscales' },
 ]
 
+// ContaDigital guarda el estado por CÓDIGO SAT (c_Estado) y deja el texto
+// vacío; este mapa lo vuelve legible al mostrarlo.
+const ESTADOS_SAT: Record<string, string> = {
+  AGU: 'Aguascalientes', BCN: 'Baja California', BCS: 'Baja California Sur', CAM: 'Campeche',
+  CHP: 'Chiapas', CHH: 'Chihuahua', COA: 'Coahuila', COL: 'Colima', CMX: 'Ciudad de México',
+  DUR: 'Durango', GUA: 'Guanajuato', GRO: 'Guerrero', HID: 'Hidalgo', JAL: 'Jalisco',
+  MEX: 'México', MIC: 'Michoacán', MOR: 'Morelos', NAY: 'Nayarit', NLE: 'Nuevo León',
+  OAX: 'Oaxaca', PUE: 'Puebla', QUE: 'Querétaro', ROO: 'Quintana Roo', SLP: 'San Luis Potosí',
+  SIN: 'Sinaloa', SON: 'Sonora', TAB: 'Tabasco', TAM: 'Tamaulipas', TLA: 'Tlaxcala',
+  VER: 'Veracruz', YUC: 'Yucatán', ZAC: 'Zacatecas',
+}
+/** El estado legible: el texto si viene, si no el nombre del código SAT. */
+function estadoLegible(c: ClienteCD): string {
+  if (c.estado?.trim()) return c.estado.trim()
+  const k = (c.claveEstado ?? '').trim().toUpperCase()
+  return ESTADOS_SAT[k] ?? k
+}
+/** La colonia legible: «0095-Miguel Alemán» → «Miguel Alemán». */
+function coloniaLegible(colonia?: string): string {
+  const v = (colonia ?? '').trim()
+  const m = v.match(/^\d{3,4}\s*-\s*(.+)$/)
+  return m ? m[1].trim() : v
+}
+/** La calle con número, armada de lo que haya. */
+function calleLegible(c: ClienteCD): string {
+  return [c.calle, c.noExterior && `No. ${c.noExterior}`, c.noInterior && `Int. ${c.noInterior}`]
+    .filter((x) => x && String(x).trim()).join(' ')
+}
+
 function EstatusChip({ e }: { e: FacturaNominativa['estatus'] }) {
   if (e === 'timbrada') return <Chip tone="si">Timbrada</Chip>
   if (e === 'error') return <Chip tone="no">Error</Chip>
@@ -235,6 +264,34 @@ export default function FacturacionCliente({
             {agregando ? 'Cerrar' : 'Agregar cliente'}
           </button>
         </div>
+
+        {/* Datos del cliente elegido: toda su información, con el estado y la
+            colonia ya legibles (ContaDigital los guarda por código SAT). */}
+        {clienteSel && (
+          <div className="mt-4 rounded-sa border border-sa-green-ink/10 bg-sa-cream-soft p-4">
+            <p className={`${cx.label} mb-2`}>Datos del cliente</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-sa-green-ink">
+              <div><span className={cx.muted}>Razón social: </span>{clienteSel.razonSocial}</div>
+              <div><span className={cx.muted}>RFC: </span><span className="font-mono">{clienteSel.rfc}</span></div>
+              <div><span className={cx.muted}>Régimen fiscal: </span>{clienteSel.regimenFiscal ?? '—'}</div>
+              <div><span className={cx.muted}>Uso CFDI: </span>{clienteSel.usoCFDI ?? '—'}</div>
+              <div><span className={cx.muted}>C.P.: </span>{clienteSel.cp ?? '—'}</div>
+              <div><span className={cx.muted}>Estado: </span>{estadoLegible(clienteSel) || '—'}</div>
+              {calleLegible(clienteSel) && (
+                <div><span className={cx.muted}>Calle: </span>{calleLegible(clienteSel)}</div>
+              )}
+              {coloniaLegible(clienteSel.colonia) && (
+                <div><span className={cx.muted}>Colonia: </span>{coloniaLegible(clienteSel.colonia)}</div>
+              )}
+              {clienteSel.localidad?.trim() && (
+                <div><span className={cx.muted}>Localidad: </span>{clienteSel.localidad}</div>
+              )}
+              {clienteSel.email?.trim() && (
+                <div><span className={cx.muted}>Correo: </span>{clienteSel.email}</div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 2b. Alta de cliente */}
         {agregando && (
