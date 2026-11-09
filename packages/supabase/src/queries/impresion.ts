@@ -317,6 +317,8 @@ export interface DatosDelTicket {
   logoRaster?: { ancho: number; alto: number; datos: string }
   /** `false` = no imprimir el logo arriba (sale el nombre en grande). */
   mostrarLogo?: boolean
+  /** Qué hacer con el voucher de la terminal: `'siempre'` | `'preguntar'` | `'nota'`. */
+  voucherImpresion?: 'siempre' | 'preguntar' | 'nota'
 }
 
 export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {

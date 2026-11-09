@@ -76,6 +76,20 @@ export interface TicketNegocio {
   logoRaster?: { ancho: number; alto: number; datos: string }
   /** `false` esconde quién cobró. Sirve para aclaraciones, así que viene encendido. */
   mostrarCajero?: boolean
+  /**
+   * Qué hacer con el VOUCHER de la terminal (Anexo VII de Banorte) cuando se
+   * cobra con tarjeta, para no gastar rollo imprimiéndolo siempre:
+   *
+   *   - `'siempre'`   — sale solo un voucher chico aparte después del cobro.
+   *   - `'preguntar'` — la caja pregunta «¿Imprimir voucher?» tras la venta.
+   *   - `'nota'`      — no sale aparte; el voucher va DENTRO de la nota (como
+   *                     hasta antes de esta casilla).
+   *
+   * Vacío = `'preguntar'`. Se edita en Admin → Sistema. En `'siempre'` y
+   * `'preguntar'` la nota NO lleva el voucher embebido (sale chico aparte); en
+   * `'nota'` sí, y no hay impresión aparte: así nunca se imprime dos veces.
+   */
+  voucherImpresion?: 'siempre' | 'preguntar' | 'nota'
 }
 
 export interface VoucherTarjeta {
@@ -200,6 +214,9 @@ export const NEGOCIO_DEFAULT: TicketNegocio = {
   mostrarLogo: true,
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
   mostrarCajero: false,
+  // Por omisión se PREGUNTA si imprimir el voucher de la terminal, para no
+  // gastar rollo en cada venta con tarjeta. La casa lo cambia en Admin.
+  voucherImpresion: 'preguntar',
 }
 
 /**

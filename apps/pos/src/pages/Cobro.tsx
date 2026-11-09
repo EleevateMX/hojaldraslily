@@ -11,7 +11,7 @@ import {
 } from '@lily/supabase'
 import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
 import { type TicketData } from '@lily/ui'
-import { sacarTicket, imprimirComprobanteRechazo } from '../lib/ticket'
+import { sacarTicket, imprimirComprobanteRechazo, imprimirVoucherBanorte, modoVoucher } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
 import type { MetodoPago } from '@lily/types'
 import { useConexion, esErrorDeRed, revisarAhora } from '../lib/conexion'
@@ -160,6 +160,13 @@ export function Cobro() {
    */
   const [rechazo, setRechazo] = useState<{ monto: number; motivo: string } | null>(null)
   /**
+   * Cuando Admin puso «preguntar»: la venta ya quedó cobrada e impresa, y falta
+   * decidir si se imprime el voucher chico de la terminal. Se guarda aquí para
+   * enseñar el aviso; al contestar se limpia el ticket y se vuelve a la caja.
+   */
+  const [voucherPendiente, setVoucherPendiente] =
+    useState<{ voucher: VoucherTerminal; folio: number | string; monto: number } | null>(null)
+  /**
    * La orden que ya nació para este ticket. Si la tarjeta se rechaza y el
    * cajero vuelve a intentar, se cobra ESTA orden en vez de crear otra: una
    * orden sin pagar por cada intento ensucia los folios y el corte.
@@ -209,7 +216,10 @@ export function Cobro() {
   /** El ticket del papel, con el folio que corresponda y, si la terminal cobró, su voucher. */
   function armarDatosDelTicket(folio: number | string, voucher: VoucherTerminal | null = null): TicketData {
     return {
-      tarjeta: voucher ?? undefined,
+      // El voucher solo se embebe en la nota cuando Admin lo puso en «dentro de
+      // la nota». En «siempre» o «preguntar» sale chico aparte, así que aquí no
+      // va: imprimirlo en los dos lados lo sacaría dos veces.
+      tarjeta: voucher && modoVoucher() === 'nota' ? voucher : undefined,
       folio,
       fecha: new Date(),
       cajero: empleado?.nombre,
@@ -605,6 +615,20 @@ export function Cobro() {
 
       await sacarTicket(ordenId, armarDatosDelTicket(folio, voucher))
 
+      // El voucher de la terminal: según lo que puso Admin, sale chico aparte
+      // («siempre»), se pregunta («preguntar») o ya fue dentro de la nota
+      // («nota»). Solo hay voucher si la pinpad cobró de verdad.
+      if (voucher && conTarjeta > 0 && modoVoucher() !== 'nota') {
+        if (modoVoucher() === 'siempre') {
+          imprimirVoucherBanorte(voucher, { folio, monto: conTarjeta })
+        } else {
+          // Preguntar: la venta YA está cobrada e impresa; solo falta decidir
+          // el voucher. El cajón se limpia y se sale desde el aviso.
+          setVoucherPendiente({ voucher, folio, monto: conTarjeta })
+          return
+        }
+      }
+
       limpiarOrden()
       navigate('/', { replace: true })
     } catch (e) {
@@ -676,6 +700,44 @@ export function Cobro() {
               className="flex-1 bg-transparent border-2 border-sa-cream/40 text-sa-cream py-5 rounded-sa-lg font-display text-xl active:scale-[0.98] transition-all"
             >
               No, rebotó el pago
+            </button>
+          </div>
+        </div>
+      )}
+      {/* Preguntar por el voucher: la venta ya quedó cobrada e impresa. Es una
+          decisión de rollo, no del cobro, así que el fondo es carmín suave y los
+          dos caminos salen igual de limpios a la caja. */}
+      {voucherPendiente && (
+        <div className="fixed inset-0 z-50 bg-sa-green-deep flex flex-col items-center justify-center gap-6 px-8 text-sa-cream text-center">
+          <div>
+            <p className="font-display text-3xl md:text-4xl leading-tight">Venta cobrada</p>
+            <p className="font-body text-base text-sa-cream/70 mt-2 max-w-sm">
+              ¿Imprimir el voucher de la terminal para el cliente? La nota ya salió.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
+            <button
+              onClick={() => {
+                imprimirVoucherBanorte(voucherPendiente.voucher, {
+                  folio: voucherPendiente.folio, monto: voucherPendiente.monto,
+                })
+                setVoucherPendiente(null)
+                limpiarOrden()
+                navigate('/', { replace: true })
+              }}
+              className="flex-1 bg-sa-cream text-sa-green-deep py-5 rounded-sa-lg font-display text-xl active:scale-[0.98] transition-all"
+            >
+              Imprimir voucher
+            </button>
+            <button
+              onClick={() => {
+                setVoucherPendiente(null)
+                limpiarOrden()
+                navigate('/', { replace: true })
+              }}
+              className="flex-1 bg-transparent border-2 border-sa-cream/40 text-sa-cream py-5 rounded-sa-lg font-display text-xl active:scale-[0.98] transition-all"
+            >
+              Solo la nota
             </button>
           </div>
         </div>

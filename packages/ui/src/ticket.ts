@@ -14,7 +14,7 @@ import { LOGO_TICKET } from './logoTicket'
 import type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
 import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher } from './ticketLineas'
 
-export type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
+export type { TicketNegocio, TicketItem, TicketData, CorteData, VoucherTarjeta } from './ticketTipos'
 export { NEGOCIO_DEFAULT } from './ticketTipos'
 
 const money = (n: number) =>

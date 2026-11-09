@@ -2,6 +2,7 @@
 // La lógica de negocio vive en @lily/utils y @lily/supabase.
 export * from './ticket'
 export * from './ticketLineas'
+export * from './logoTicket'
 export * from './components/Spinner'
 export * from './components/Button'
 export * from './components/Card'
