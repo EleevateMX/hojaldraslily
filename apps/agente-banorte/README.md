@@ -99,6 +99,29 @@ node index.mjs verificar L...  REM consulta una operación por su número de con
   que el **monto** y los campos del voucher se lean bien; si el monto sale
   corrido (×100), avisa para ajustar una línea.
 
+## Matriz de certificación de Banorte (va en PRODUCTIVO)
+
+Banorte certifica contra una **matriz** de transacciones, y pidió (9/11/26)
+que **todas vayan en modo Productivo**, no en AUT: AUT aprueba sin cobrar y no
+sirve para la matriz. O sea, para la certificación: `PAYWORKS_MODE=PRD` en el
+`.env`. (El agente avisa en el arranque si NO está en PRD.) Las pruebas van con
+montos chicos ($1) y, si procede, su cancelación/devolución el mismo día.
+
+También pidió que el **voucher** (el comprobante de la tarjeta, Anexo VII) diga
+tres cosas que antes no salían —ya corregidas en `@lily/ui` y en el agente de
+caja 1.1.8—:
+
+- el **tipo de operación**: `VENTA` (o `DEVOLUCIÓN`), bajo «BANORTE»;
+- la **leyenda de validación**: en chip + NIP y en **contactless (CTS)** sale
+  **AUTORIZADO SIN FIRMA** (el CTS antes no decía nada: eso fue lo que
+  observaron); con firma, la raya;
+- el **resultado**: `APROBADA` o `DECLINADA`, en el sello del pie.
+
+El voucher sale por la térmica del mostrador (cola del agente de caja), así que
+para que la matriz lo imprima con estos campos la tienda tiene que estar en el
+agente de caja **1.1.8** (se auto-actualiza desde `main`). El formato se revisa
+sin pinpad en `apps/pos/mirar/voucher-cert.html`.
+
 ## Dejarlo escuchando (para que la caja le pida cobros)
 
 ```bat

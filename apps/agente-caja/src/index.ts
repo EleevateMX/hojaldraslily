@@ -31,7 +31,7 @@ import { enviar, estaViva } from './socket.js'
 import { imprimirWindows } from './windows.js'
 import { revisarActualizacion } from './autoactualizar.js'
 
-const VERSION = '1.1.7'
+const VERSION = '1.1.8'
 
 function requerido(clave: string): string {
   const v = process.env[clave]?.trim()

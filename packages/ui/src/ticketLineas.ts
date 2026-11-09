@@ -149,6 +149,44 @@ export function validacionDeVoucher(pin: string | null | undefined): 'nip' | 'fi
   return 'firma'
 }
 
+/**
+ * La LEYENDA de validación que va en el papel, por caso:
+ *
+ *   - `nip`   — «AUTORIZADO SIN FIRMA» + la nota de que el NIP sustituye la
+ *               firma: con chip y NIP el tarjetahabiente ya se identificó.
+ *   - `nada`  — «AUTORIZADO SIN FIRMA»: es el caso contactless/QPS (CTS), y
+ *               Banorte pide esa leyenda EXPRESA en el voucher de certificación
+ *               (antes no salía nada, que fue justo lo que observaron).
+ *   - `firma` — no hay leyenda: va la raya para firmar (banda / chip con firma).
+ *
+ * Se devuelve el texto, no se pinta aquí, porque el HTML y la térmica lo
+ * maquetan distinto pero tienen que decir lo mismo.
+ */
+export function leyendaDeValidacion(v: 'nip' | 'firma' | 'nada'): string | null {
+  if (v === 'nip') return 'AUTORIZADO SIN FIRMA (NIP)'
+  if (v === 'nada') return 'AUTORIZADO SIN FIRMA'
+  return null
+}
+
+/**
+ * El TIPO DE OPERACIÓN del voucher, en mayúsculas para el papel: «VENTA» por
+ * omisión, «DEVOLUCIÓN» (o lo que venga) si la operación no fue una venta.
+ * Banorte lo exige en el voucher de certificación.
+ */
+export function operacionDeVoucher(t: import('./ticketTipos').VoucherTarjeta): string {
+  const v = (t.operacion ?? '').trim()
+  return (v || 'Venta').toUpperCase()
+}
+
+/**
+ * El RESULTADO de la transacción para el papel: «APROBADA» salvo que el dato
+ * diga explícitamente que fue declinada. Banorte lo quiere escrito, no dado
+ * por hecho.
+ */
+export function resultadoDeVoucher(t: import('./ticketTipos').VoucherTarjeta): 'APROBADA' | 'DECLINADA' {
+  return t.aprobada === false ? 'DECLINADA' : 'APROBADA'
+}
+
 /** Los cuatro gestos de un papel monoespaciado. */
 function formato(ancho: number) {
   const W = ancho
@@ -381,21 +419,26 @@ export function armarTicket(
   if (data.referenciaPago && !data.tarjeta) L.push(`Ref. ${data.referenciaPago}`)
   if (data.tarjeta) {
     // ---- El voucher de la terminal (Anexo VII de Interredes) ----
-    // Pareja por renglón, con lo que vino. Cierra con cómo se validó: la
-    // leyenda del NIP, la raya de la firma, o nada si fue QPS.
+    // Pareja por renglón, con lo que vino. La matriz de certificación de
+    // Banorte pide tres cosas explícitas: el tipo de operación (VENTA), la
+    // leyenda de validación y el resultado (APROBADA / DECLINADA).
     L.push('')
     L.push(estilo('BANORTE', { negrita: true, alinear: 'centro' }))
+    L.push(estilo(operacionDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
     for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
     const validacion = validacionDeVoucher(data.tarjeta.pin)
-    if (validacion === 'nip') {
+    const leyenda = leyendaDeValidacion(validacion)
+    if (leyenda) {
       L.push('')
-      L.push(estilo('AUTORIZADO CON FIRMA ELECTRONICA', { negrita: true, alinear: 'centro' }))
+      L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
     } else if (validacion === 'firma') {
       L.push('')
       L.push('')
       L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
       L.push(centrar('Firma'))
     }
+    L.push('')
+    L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
   }
   if (data.recibido != null && data.recibido >= total) {
     L.push(parear('Recibido', pesos(data.recibido)))
@@ -456,8 +499,11 @@ export function armarVoucher(
   if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l))
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
 
+  // El título dice qué operación fue (venta o devolución), que es lo primero
+  // que la matriz de Banorte busca en el comprobante.
+  const esDevolucion = operacionDeVoucher(data.tarjeta) === 'DEVOLUCIÓN'
   L.push(regla())
-  L.push(estilo('COMPROBANTE DE VENTA', { negrita: true, alinear: 'centro' }))
+  L.push(estilo(esDevolucion ? 'COMPROBANTE DE DEVOLUCION' : 'COMPROBANTE DE VENTA', { negrita: true, alinear: 'centro' }))
   const f = data.fecha == null ? new Date() : data.fecha instanceof Date ? data.fecha : new Date(data.fecha)
   const fechaTxt = f.toLocaleString('es-MX', {
     timeZone: 'America/Merida', day: '2-digit', month: '2-digit', year: 'numeric',
@@ -472,11 +518,13 @@ export function armarVoucher(
 
   // El voucher del banco (mismas parejas y validación que la nota).
   L.push(estilo('BANORTE', { negrita: true, alinear: 'centro' }))
+  L.push(estilo(operacionDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
   for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
   const validacion = validacionDeVoucher(data.tarjeta.pin)
-  if (validacion === 'nip') {
+  const leyenda = leyendaDeValidacion(validacion)
+  if (leyenda) {
     L.push('')
-    L.push(estilo('AUTORIZADO CON FIRMA ELECTRONICA', { negrita: true, alinear: 'centro' }))
+    L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
   } else if (validacion === 'firma') {
     L.push('')
     L.push('')
@@ -485,7 +533,7 @@ export function armarVoucher(
   }
 
   L.push(regla())
-  L.push(estilo('APROBADA', { negrita: true, alinear: 'centro' }))
+  L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
   return L
 }
 

@@ -141,7 +141,8 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.some((x) => x.startsWith('Tarjeta') && x.endsWith('VISA CREDITO **** 9876'))).toBe(true)
     expect(l.some((x) => x.startsWith('Autorización') && x.endsWith('123456'))).toBe(true)
     expect(l.some((x) => x.startsWith('AID') && x.endsWith('A0000000031010'))).toBe(true)
-    expect(l).toContain('AUTORIZADO CON FIRMA ELECTRONICA')
+    // Con chip + NIP el tarjetahabiente ya se identificó: AUTORIZADO SIN FIRMA.
+    expect(l).toContain('AUTORIZADO SIN FIRMA (NIP)')
     // El PAN completo no sale en ningún renglón, y la referencia manual no se
     // duplica cuando ya va en el voucher.
     expect(l.some((x) => x.includes('4152'))).toBe(false)
@@ -151,14 +152,50 @@ describe('armarTicket (líneas de la térmica)', () => {
     // Y el HTML dice lo mismo.
     const html = ticketHTML(conTarjeta, NEGOCIO_DEFAULT)
     expect(html).toContain('**** 9876')
-    expect(html).toContain('AUTORIZADO CON FIRMA ELECTRÓNICA')
+    expect(html).toContain('AUTORIZADO SIN FIRMA (NIP)')
     expect(html).not.toContain('4152')
-    // Con firma: la raya; con QPS: nada.
+    // Con firma: la raya; con QPS/contactless: AUTORIZADO SIN FIRMA, sin raya.
     const firma = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '0' } }, NEGOCIO_DEFAULT))
     expect(firma.some((x) => x.trim() === 'Firma')).toBe(true)
     const qps = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '2' } }, NEGOCIO_DEFAULT))
     expect(qps.some((x) => x.trim() === 'Firma')).toBe(false)
-    expect(qps).not.toContain('AUTORIZADO CON FIRMA ELECTRONICA')
+    expect(qps).toContain('AUTORIZADO SIN FIRMA')
+  })
+
+  it('el voucher trae lo que pide la matriz de Banorte: operación, leyenda y resultado', () => {
+    // Banorte observó que faltaban el tipo de operación (VENTA/DEVOLUCIÓN) y el
+    // resultado (APROBADA/DECLINADA), y en contactless (CTS) la leyenda
+    // «AUTORIZADO SIN FIRMA». Los tres salen en el papel y en el HTML.
+    const base: TicketData = {
+      ...venta, metodoPago: 'Terminal', recibido: undefined,
+      tarjeta: {
+        afiliacion: '7156971', controlNumber: 'LMW9JEFU07059', marca: 'VISA', tipo: 'DEBITO',
+        banco: 'AZTECA', pan: '************1985', autorizacion: '810565', referencia: '732298128494',
+        entrada: 'CONTACTLESSCHIP', pin: '2', operacion: 'Venta', aprobada: true,
+      },
+    }
+    // Venta contactless aprobada: VENTA, AUTORIZADO SIN FIRMA, APROBADA.
+    const cts = texto(armarTicket(base, NEGOCIO_DEFAULT))
+    expect(cts).toContain('VENTA')
+    expect(cts).toContain('AUTORIZADO SIN FIRMA')
+    expect(cts).toContain('APROBADA')
+    expect(cts).not.toContain('DECLINADA')
+
+    // Devolución declinada: los dos campos cambian, la leyenda CTS se queda.
+    const dev = texto(armarTicket(
+      { ...base, tarjeta: { ...base.tarjeta!, operacion: 'Devolución', aprobada: false } },
+      NEGOCIO_DEFAULT,
+    ))
+    expect(dev).toContain('DEVOLUCIÓN')
+    expect(dev).toContain('DECLINADA')
+    expect(dev).not.toContain('APROBADA')
+    expect(dev).toContain('AUTORIZADO SIN FIRMA')
+
+    // El HTML dice lo mismo.
+    const html = ticketHTML(base, NEGOCIO_DEFAULT)
+    expect(html).toContain('VENTA')
+    expect(html).toContain('AUTORIZADO SIN FIRMA')
+    expect(html).toContain('APROBADA')
   })
 
   it('el pago mixto sale con un renglón por parte', () => {
