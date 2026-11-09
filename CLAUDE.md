@@ -11,11 +11,11 @@ Supabase y el dominio. Las trampas documentadas abajo se aprendieron con
 la tienda original abierta: siguen aplicando tal cual.
 
 **Estado: pre-apertura, con el motor ya probado.** La base
-`fzkdgqqvfkogmxdgqsxj` tiene **227 migraciones aplicadas en orden, y 227
+`fzkdgqqvfkogmxdgqsxj` tiene **228 migraciones aplicadas en orden, y 228
 archivos en `supabase/migrations/`** — el número tiene que cuadrar, y es lo
-primero que hay que comprobar al retomar. (La 227 es
-`20261109120000_terminal_cola_dll`: la cola de cobro con tarjeta por el agente
-DLL, ver §2.14.) (Ojo: varios archivos quedaron con un
+primero que hay que comprobar al retomar. (Las dos últimas son del 9/11, §2.14:
+`20261109120000_terminal_cola_dll` —la cola de cobro con tarjeta por el agente
+DLL— y `20261109130000_voucher_termica` —el voucher suelto por la térmica—.) (Ojo: varios archivos quedaron con un
 nombre de versión distinto al que `apply_migration` registró —`20261028120000`
 se aplicó como `20261028230830`, el rol de contabilidad como `20261104121323`, y
 `20261104140000_facturacion_periodo_manual` como `20261104132012`—; y
@@ -1760,10 +1760,20 @@ tres modos (`parametros.ticket.voucherImpresion`): **preguntar** (por omisión;
 la caja pregunta «¿Imprimir voucher?» tras la venta con tarjeta), **siempre**
 (sale un voucher chico aparte) y **nota** (embebido, como antes). En los dos
 primeros la nota NO lleva el voucher embebido (solo una `Ref.` corta), así no
-se imprime dos veces. El voucher suelto lo arma `voucherTicketHTML` en
-`@lily/ui` (misma piel que la nota: logo, bloque fiscal, fuentes de la marca) y
-lo imprime la caja con `imprimirVoucherBanorte`. La **razón social y el RFC**
-van chicos (FontB en térmica): son secundarios al logo.
+se imprime dos veces. La **razón social y el RFC** van chicos (FontB en
+térmica): son secundarios al logo.
+
+**El voucher suelto sale por la TÉRMICA (cola), no por el navegador** (9/11,
+migración `20261109130000`). Antes `imprimirVoucherBanorte` iba por
+`window.print()` a la predeterminada de Windows —el mismo fallo silencioso que
+tenía la nota antes de la cola—. Ahora encola con `fn_imprimir_voucher_caja`
+(devuelve null → cae al navegador si no hay térmica), el agente lo dibuja con
+`armarVoucher` (`@lily/ui/papel`, misma data que `voucherTicketHTML` y que el
+voucher embebido) y **se ve en Admin** si no sale. Va como trabajo tipo
+`'ticket'` con la marca `comprobante:'voucher'` en el payload (el agente lo
+distingue: una copia, no dos). Requiere **agente de caja 1.1.7**: el de 1.1.6 no
+conoce el payload y lo marca fallido, así que el voucher térmico solo funciona
+cuando la tienda auto-actualiza desde `main`.
 
 ### Qué sigue diciendo «shake», y por qué no se toca
 

@@ -165,7 +165,7 @@ export function Cobro() {
    * enseñar el aviso; al contestar se limpia el ticket y se vuelve a la caja.
    */
   const [voucherPendiente, setVoucherPendiente] =
-    useState<{ voucher: VoucherTerminal; folio: number | string; monto: number } | null>(null)
+    useState<{ ordenId: string | null; voucher: VoucherTerminal; folio: number | string; monto: number } | null>(null)
   /**
    * La orden que ya nació para este ticket. Si la tarjeta se rechaza y el
    * cajero vuelve a intentar, se cobra ESTA orden en vez de crear otra: una
@@ -620,11 +620,11 @@ export function Cobro() {
       // («nota»). Solo hay voucher si la pinpad cobró de verdad.
       if (voucher && conTarjeta > 0 && modoVoucher() !== 'nota') {
         if (modoVoucher() === 'siempre') {
-          imprimirVoucherBanorte(voucher, { folio, monto: conTarjeta })
+          void imprimirVoucherBanorte(ordenId, voucher, { folio, monto: conTarjeta })
         } else {
           // Preguntar: la venta YA está cobrada e impresa; solo falta decidir
           // el voucher. El cajón se limpia y se sale desde el aviso.
-          setVoucherPendiente({ voucher, folio, monto: conTarjeta })
+          setVoucherPendiente({ ordenId, voucher, folio, monto: conTarjeta })
           return
         }
       }
@@ -718,7 +718,7 @@ export function Cobro() {
           <div className="flex flex-col sm:flex-row gap-3 w-full max-w-md">
             <button
               onClick={() => {
-                imprimirVoucherBanorte(voucherPendiente.voucher, {
+                void imprimirVoucherBanorte(voucherPendiente.ordenId, voucherPendiente.voucher, {
                   folio: voucherPendiente.folio, monto: voucherPendiente.monto,
                 })
                 setVoucherPendiente(null)

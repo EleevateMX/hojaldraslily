@@ -15,8 +15,8 @@
 // arrastra los componentes de React y el `imprimirTicket` que toca
 // `document`, y aquí no hay navegador. `tsc` lo caza aunque el import sea
 // solo de tipos.
-import { armarTicket, armarCorte, COLUMNAS_80MM, type LineaTicket } from '@lily/ui/papel'
-import type { TicketData, TicketNegocio, CorteData } from '@lily/ui/tipos'
+import { armarTicket, armarCorte, armarVoucher, COLUMNAS_80MM, type LineaTicket } from '@lily/ui/papel'
+import type { TicketData, TicketNegocio, CorteData, VoucherPapel } from '@lily/ui/tipos'
 import { ConstructorEscPos, type LogoRaster } from './escpos.js'
 
 export type TipoDocumento = 'ticket' | 'comanda' | 'corte'
@@ -122,6 +122,17 @@ export function esPayloadDePrueba(p: unknown): p is PayloadPrueba {
   return !!p && typeof p === 'object' && (p as { prueba?: unknown }).prueba === true
 }
 
+/**
+ * Un voucher suelto (la autorización de la tarjeta), marcado con
+ * `comprobante: 'voucher'`. Va aparte de la nota y la casilla de Admin decide
+ * si se imprime.
+ */
+export function esPayloadDeVoucher(p: unknown): p is VoucherPapel {
+  if (!p || typeof p !== 'object') return false
+  const d = p as Partial<VoucherPapel>
+  return d.comprobante === 'voucher' && !!d.tarjeta && typeof d.tarjeta === 'object'
+}
+
 function construirPrueba(p: PayloadPrueba, ancho: number): Buffer {
   const b = new ConstructorEscPos().inicializar().alinear(1)
   const centrar = (s: string) =>
@@ -156,6 +167,16 @@ export function construirDocumento(
   if (esPayloadDeCorte(trabajo.payload)) {
     const b = new ConstructorEscPos().inicializar().alinear(0)
     for (const l of armarCorte(trabajo.payload, neg, ancho)) dibujar(b, l)
+    return b.cortar().construir()
+  }
+
+  // El voucher suelto: logo arriba (como la nota) y después el comprobante.
+  if (esPayloadDeVoucher(trabajo.payload)) {
+    const img = logo ?? logoDelNegocio(neg)
+    const b = new ConstructorEscPos().inicializar()
+    if (img) b.alinear(1).logo(img)
+    b.alinear(0)
+    for (const l of armarVoucher(trabajo.payload, neg, ancho)) dibujar(b, l)
     return b.cortar().construir()
   }
 

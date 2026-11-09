@@ -1,4 +1,4 @@
-import { encolarTicketCaja, datosDelTicket } from '@lily/supabase'
+import { encolarTicketCaja, encolarVoucherCaja, datosDelTicket } from '@lily/supabase'
 import {
   imprimirTicket, imprimirVoucher, NEGOCIO_DEFAULT,
   type TicketData, type TicketNegocio, type VoucherTarjeta,
@@ -91,10 +91,28 @@ export function modoVoucher(): 'siempre' | 'preguntar' | 'nota' {
  * rollo si no hace falta. Sale por el navegador (no hay orden que encolar) con
  * la cabecera del negocio de siempre.
  */
-export function imprimirVoucherBanorte(
+export async function imprimirVoucherBanorte(
+  ordenId: string | null,
   voucher: VoucherTarjeta,
   datos: { folio: number | string; monto: number; fecha?: Date },
-): void {
+): Promise<void> {
+  // Como la nota: primero la térmica por la cola —así un voucher que no sale se
+  // ve en Admin—, y si no hay térmica dada de alta, por el navegador.
+  if (ordenId) {
+    try {
+      const payload = {
+        comprobante: 'voucher' as const,
+        folio: datos.folio,
+        monto: datos.monto,
+        fecha: (datos.fecha ?? new Date()).toISOString(),
+        tarjeta: voucher,
+      }
+      const trabajo = await encolarVoucherCaja(sb, ordenId, payload)
+      if (trabajo) return
+    } catch {
+      // Da igual por qué falló: el voucher sale por el navegador.
+    }
+  }
   imprimirVoucher(voucher, negocioCargado, datos)
 }
 
