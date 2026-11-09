@@ -158,16 +158,19 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     : ''
   // La razón social (KALALEV HOLDING), bajo el lema y encima del RFC: nombre
   // fiscal del emisor, distinto del nombre comercial del logo.
+  // La razón social va CHICA: es el nombre fiscal del emisor, secundario al
+  // logo. Más chica que el lema para que no compita con él.
   const razonSocialHtml = negocio.razonSocial?.trim()
-    ? `<div style="font-size:10px;margin-top:2px">${esc(negocio.razonSocial.trim())}</div>`
+    ? `<div style="font-size:8px;letter-spacing:.04em;margin-top:3px">${esc(negocio.razonSocial.trim())}</div>`
     : ''
-  // RFC y régimen en chico: están para facturar, pero son secundarios.
+  // RFC y régimen todavía más chicos: están para facturar, pero son lo último
+  // que mira el cliente.
   const fiscal = [
     negocio.rfc?.trim() ? `RFC: ${esc(negocio.rfc.trim())}` : '',
     negocio.regimen?.trim() ? esc(negocio.regimen.trim()) : '',
   ].filter(Boolean).join('<br />')
   const fiscalHtml = fiscal
-    ? `<div style="font-size:8px;line-height:1.35;margin-top:4px">${fiscal}</div>`
+    ? `<div style="font-size:7px;line-height:1.35;margin-top:2px">${fiscal}</div>`
     : ''
   // El logotipo es la imagen real de la marca (negro sobre blanco, recortada al
   // trazo), incrustada como data URI para que imprima sin red. Antes se
@@ -349,10 +352,10 @@ export function voucherTicketHTML(
       ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:14px;letter-spacing:.24em;text-transform:uppercase;line-height:1">${esc(negocio.nombre)}</div>`
       : `<img src="${negocio.logo || LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:140px;max-width:60%;height:auto;display:block;margin:0 auto" />`
   const razonSocialHtml = negocio.razonSocial?.trim()
-    ? `<div style="font-size:10px;margin-top:3px">${esc(negocio.razonSocial.trim())}</div>`
+    ? `<div style="font-size:8px;letter-spacing:.04em;margin-top:3px">${esc(negocio.razonSocial.trim())}</div>`
     : ''
   const rfcHtml = negocio.rfc?.trim()
-    ? `<div style="font-size:8px;margin-top:2px">RFC: ${esc(negocio.rfc.trim())}</div>`
+    ? `<div style="font-size:7px;margin-top:2px">RFC: ${esc(negocio.rfc.trim())}</div>`
     : ''
 
   return `<!doctype html><html lang="es"><head><meta charset="utf-8">

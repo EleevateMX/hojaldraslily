@@ -150,6 +150,15 @@ const Muestra = ({ html, rotulo }: { html: string; rotulo: string }) => (
   </div>
 )
 
+// Para la vista previa se llenan el RFC y el régimen, que en el código van
+// vacíos (son dato fiscal y viven en Admin → Sistema / parametros.ticket).
+// Así se ve cómo salen KALALEV HOLDING y el RFC, chicos, bajo el logo.
+const NEGOCIO = {
+  ...NEGOCIO_DEFAULT,
+  rfc: 'KHO2506056F0',
+  regimen: 'Régimen General de Ley Personas Morales',
+}
+
 const vFolio = tarjetaBanorte.folio
 const vMonto = tarjetaBanorte.items.reduce((a, i) => a + i.cantidad * i.precioUnitario, 0)
 
@@ -161,12 +170,12 @@ createRoot(document.getElementById('root')!).render(
       </button>
     </p>
     <div style={{ display: 'flex', gap: 36, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-      <Muestra html={ticketHTML(tarjetaNotaSola, NEGOCIO_DEFAULT, 2)} rotulo="Venta con tarjeta · la nota, dos copias (original + copia)" />
-      <Muestra html={voucherTicketHTML(tarjetaBanorte.tarjeta!, NEGOCIO_DEFAULT, { folio: vFolio, monto: vMonto })} rotulo="La autorización · voucher Banorte (opcional)" />
-      <Muestra html={ticketHTML(mostrador, NEGOCIO_DEFAULT)} rotulo="Venta en mostrador · Efectivo" />
-      <Muestra html={ticketHTML(tarjetaBanorte, NEGOCIO_DEFAULT)} rotulo="Tarjeta · voucher DENTRO de la nota (modo «nota»)" />
-      <Muestra html={ticketHTML(encargo, NEGOCIO_DEFAULT)} rotulo="Encargo · Pago mixto" />
-      <Muestra html={ticketHTML(entrega, NEGOCIO_DEFAULT)} rotulo="Entrega de encargo · con anticipo y algo más" />
+      <Muestra html={ticketHTML(tarjetaNotaSola, NEGOCIO, 2)} rotulo="Venta con tarjeta · la nota, dos copias (original + copia)" />
+      <Muestra html={voucherTicketHTML(tarjetaBanorte.tarjeta!, NEGOCIO, { folio: vFolio, monto: vMonto })} rotulo="La autorización · voucher Banorte (opcional)" />
+      <Muestra html={ticketHTML(mostrador, NEGOCIO)} rotulo="Venta en mostrador · Efectivo" />
+      <Muestra html={ticketHTML(tarjetaBanorte, NEGOCIO)} rotulo="Tarjeta · voucher DENTRO de la nota (modo «nota»)" />
+      <Muestra html={ticketHTML(encargo, NEGOCIO)} rotulo="Encargo · Pago mixto" />
+      <Muestra html={ticketHTML(entrega, NEGOCIO)} rotulo="Entrega de encargo · con anticipo y algo más" />
     </div>
   </div>,
 )

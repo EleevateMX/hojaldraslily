@@ -250,13 +250,15 @@ export function armarTicket(
   // El lema, debajo del logo (o del nombre): identidad de la casa. Se envuelve
   // si no cabe en el ancho del papel.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
-  // La razón social (KALALEV HOLDING), debajo del lema y encima del RFC: es el
-  // nombre fiscal del emisor, distinto del nombre comercial que va en el logo.
-  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l))
-  // El bloque fiscal —RFC y régimen— va en fuente chica (FontB): tiene que
-  // estar para facturar, pero es secundario, no compite con el nombre. Solo
-  // si existe: «RFC —» a la vista del cliente es peor que no imprimirlo.
+  // El bloque fiscal —razón social, RFC y régimen— va en fuente chica (FontB):
+  // tiene que estar para facturar, pero es secundario, no compite con el nombre
+  // ni con el logo. Solo si existe: «RFC —» a la vista del cliente es peor que
+  // no imprimirlo.
   const chico = (t: string): MarcaEstilo => estilo(t, { alinear: 'centro', fuente: 'B' })
+  // La razón social (KALALEV HOLDING), debajo del lema: el nombre fiscal del
+  // emisor, distinto del nombre comercial que va en el logo. En FontB (chica),
+  // como pidió la casa: es secundaria.
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l))
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
   if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l))
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`))
