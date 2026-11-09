@@ -31,24 +31,24 @@ interface Comprobante {
 
 const T1: Comprobante = {
   importe: 1.0,
-  fecha: new Date(1793126752503), // del control LMVR1DD6F1047
+  fecha: new Date(1794245426856), // del control LMW9JEFU07059 (9/11/2026 11:30 a.m.)
   estado: 'APROBADA',
   v: {
-    afiliacion: '7156971', terminalId: null, controlNumber: 'LMVR1DD6F1047',
+    afiliacion: '7156971', terminalId: null, controlNumber: 'LMW9JEFU07059',
     marca: 'VISA', tipo: 'DEBITO', pan: '1985', banco: 'AZTECA',
-    autorizacion: '177303', referencia: '00', entrada: 'CONTACTLESSCHIP', pin: '2',
+    autorizacion: '810565', referencia: '732298128494', entrada: 'CONTACTLESSCHIP', pin: '2',
     aid: 'A0000000031010', aplicacion: 'VISA DEBITO', tvr: '95050000000000', tsi: null,
   },
 }
 
 const T2: Comprobante = {
   importe: 2.0,
-  fecha: new Date(1793126565352), // del control LMVR19CRS3071
+  fecha: new Date(1794245563908), // del control LMW9JHDL07668 (9/11/2026 11:32 a.m.)
   estado: 'APROBADA',
   v: {
-    afiliacion: '7156971', terminalId: null, controlNumber: 'LMVR19CRS3071',
-    marca: 'VISA', tipo: 'DEBITO', pan: '7647', banco: 'BANORTE',
-    autorizacion: '000038', referencia: '00', entrada: 'CHIP', pin: '1',
+    afiliacion: '7156971', terminalId: null, controlNumber: 'LMW9JHDL07668',
+    marca: 'VISA', tipo: 'DEBITO', pan: '1985', banco: 'AZTECA',
+    autorizacion: '813687', referencia: '732298135453', entrada: 'CHIP', pin: '1',
     aid: 'A0000000031010', aplicacion: 'VISA DEBITO', tvr: '95050080008000', tsi: null,
   },
 }
