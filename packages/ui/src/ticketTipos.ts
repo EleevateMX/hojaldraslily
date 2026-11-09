@@ -113,6 +113,19 @@ export interface VoucherTarjeta {
   aplicacion?: string | null
   tvr?: string | null
   tsi?: string | null
+  /**
+   * El TIPO DE OPERACIÓN del voucher: `'Venta'` (por omisión) o `'Devolución'`.
+   * Lo exige la matriz de certificación de Banorte —el voucher tiene que decir
+   * qué operación fue—, así que se imprime siempre, aunque casi todo sea venta.
+   */
+  operacion?: string | null
+  /**
+   * El RESULTADO de la transacción: `true` = APROBADA, `false` = DECLINADA.
+   * `null`/ausente = APROBADA (el voucher suelto solo se encola al aprobar).
+   * Banorte lo quiere explícito en el papel, no dado por hecho: un comprobante
+   * de rechazo también es un voucher, y la matriz pide verlo escrito.
+   */
+  aprobada?: boolean | null
 }
 
 export interface TicketItem {

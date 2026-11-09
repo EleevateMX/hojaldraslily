@@ -12,7 +12,10 @@
  * decodificada del número de control (lo trae codificado).
  */
 import { createRoot } from 'react-dom/client'
-import { parejasDeVoucher, validacionDeVoucher } from '../../../packages/ui/src/ticketLineas'
+import {
+  parejasDeVoucher, validacionDeVoucher, leyendaDeValidacion,
+  operacionDeVoucher, resultadoDeVoucher,
+} from '../../../packages/ui/src/ticketLineas'
 import { LOGO_TICKET } from '../../../packages/ui/src/logoTicket'
 import type { VoucherTarjeta } from '../../../packages/ui/src/ticketTipos'
 
@@ -25,31 +28,30 @@ const CREMA = '#FDF6E3'
 interface Comprobante {
   importe: number
   fecha: Date
-  estado: string
   v: VoucherTarjeta
 }
 
 const T1: Comprobante = {
   importe: 1.0,
   fecha: new Date(1794245426856), // del control LMW9JEFU07059 (9/11/2026 11:30 a.m.)
-  estado: 'APROBADA',
   v: {
     afiliacion: '7156971', terminalId: null, controlNumber: 'LMW9JEFU07059',
     marca: 'VISA', tipo: 'DEBITO', pan: '1985', banco: 'AZTECA',
     autorizacion: '810565', referencia: '732298128494', entrada: 'CONTACTLESSCHIP', pin: '2',
     aid: 'A0000000031010', aplicacion: 'VISA DEBITO', tvr: '95050000000000', tsi: null,
+    operacion: 'Venta', aprobada: true,
   },
 }
 
 const T2: Comprobante = {
   importe: 2.0,
   fecha: new Date(1794245563908), // del control LMW9JHDL07668 (9/11/2026 11:32 a.m.)
-  estado: 'APROBADA',
   v: {
     afiliacion: '7156971', terminalId: null, controlNumber: 'LMW9JHDL07668',
     marca: 'VISA', tipo: 'DEBITO', pan: '1985', banco: 'AZTECA',
     autorizacion: '813687', referencia: '732298135453', entrada: 'CHIP', pin: '1',
     aid: 'A0000000031010', aplicacion: 'VISA DEBITO', tvr: '95050080008000', tsi: null,
+    operacion: 'Venta', aprobada: true,
   },
 }
 
@@ -67,6 +69,10 @@ const mono = { fontFamily: '"DM Mono", "Courier New", monospace' }
 function Voucher({ c }: { c: Comprobante }) {
   const pares = parejasDeVoucher(c.v)
   const val = validacionDeVoucher(c.v.pin)
+  const leyenda = leyendaDeValidacion(val)
+  const operacion = operacionDeVoucher(c.v)
+  const resultado = resultadoDeVoucher(c.v)
+  const declinada = resultado === 'DECLINADA'
   return (
     <div style={{
       width: 320, background: '#fff', color: MORADO, padding: '22px 22px 18px',
@@ -101,6 +107,9 @@ function Voucher({ c }: { c: Comprobante }) {
       <div style={{ ...jost, textAlign: 'center', fontWeight: 500, letterSpacing: '.16em', color: CARMIN_DEEP }}>
         BANORTE
       </div>
+      <div style={{ ...jost, textAlign: 'center', fontWeight: 500, letterSpacing: '.12em', marginTop: 2 }}>
+        {operacion}
+      </div>
       <div style={{ ...mono, marginTop: 8, fontSize: 12 }}>
         {pares.map(([k, v]) => (
           <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '1px 0' }}>
@@ -110,9 +119,9 @@ function Voucher({ c }: { c: Comprobante }) {
         ))}
       </div>
 
-      {val === 'nip' && (
+      {leyenda && (
         <div style={{ ...jost, textAlign: 'center', fontWeight: 500, marginTop: 14, letterSpacing: '.04em' }}>
-          AUTORIZADO CON FIRMA ELECTRÓNICA
+          {leyenda}
         </div>
       )}
       {val === 'firma' && (
@@ -121,18 +130,15 @@ function Voucher({ c }: { c: Comprobante }) {
           <div style={{ fontSize: 11 }}>Firma</div>
         </div>
       )}
-      {val === 'nada' && (
-        <div style={{ textAlign: 'center', fontSize: 11, marginTop: 12, opacity: 0.7 }}>
-          Operación sin NIP ni firma (contactless)
-        </div>
-      )}
 
       <div style={regla} />
       <div style={{ textAlign: 'center', marginTop: 4 }}>
         <span style={{
-          ...jost, display: 'inline-block', background: CARMIN, color: CREMA,
+          ...jost, display: 'inline-block',
+          background: declinada ? CREMA : CARMIN, color: declinada ? CARMIN_DEEP : CREMA,
+          border: declinada ? `1.5px solid ${CARMIN_DEEP}` : 'none',
           padding: '4px 18px', borderRadius: 999, fontWeight: 500, letterSpacing: '.1em', fontSize: 13,
-        }}>{c.estado}</span>
+        }}>{resultado}</span>
       </div>
     </div>
   )
@@ -154,5 +160,12 @@ createRoot(document.getElementById('root')!).render(
         <Voucher c={T2} />
       </div>
     </div>
+    <p style={{ fontSize: 12, color: MORADO, marginTop: 28, maxWidth: 720, lineHeight: 1.6 }}>
+      Los dos vouchers ya traen lo que pidió Banorte: el <b>tipo de operación</b> (VENTA) bajo
+      «BANORTE», la leyenda <b>AUTORIZADO SIN FIRMA</b> en el contactless (CTS) y bajo el NIP, y el
+      <b> resultado</b> (APROBADA) en el sello. Una <b>devolución</b> sale con el mismo formato pero
+      «DEVOLUCIÓN» en la operación y el título; una transacción <b>declinada</b>, con «DECLINADA» en
+      el sello. La matriz de certificación se corre en modo <b>Productivo</b>.
+    </p>
   </div>,
 )

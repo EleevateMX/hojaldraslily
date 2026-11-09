@@ -81,6 +81,18 @@ function validacionDeVoucher(pin) {
   if (v === "2") return "nada";
   return "firma";
 }
+function leyendaDeValidacion(v) {
+  if (v === "nip") return "AUTORIZADO SIN FIRMA (NIP)";
+  if (v === "nada") return "AUTORIZADO SIN FIRMA";
+  return null;
+}
+function operacionDeVoucher(t) {
+  const v = (t.operacion ?? "").trim();
+  return (v || "Venta").toUpperCase();
+}
+function resultadoDeVoucher(t) {
+  return t.aprobada === false ? "DECLINADA" : "APROBADA";
+}
 function formato(ancho) {
   const W = ancho;
   const centrar = (s) => s.length >= W ? s.slice(0, W) : " ".repeat(Math.floor((W - s.length) / 2)) + s;
@@ -215,17 +227,21 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
   if (data.tarjeta) {
     L.push("");
     L.push(estilo("BANORTE", { negrita: true, alinear: "centro" }));
+    L.push(estilo(operacionDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
     for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
     const validacion = validacionDeVoucher(data.tarjeta.pin);
-    if (validacion === "nip") {
+    const leyenda = leyendaDeValidacion(validacion);
+    if (leyenda) {
       L.push("");
-      L.push(estilo("AUTORIZADO CON FIRMA ELECTRONICA", { negrita: true, alinear: "centro" }));
+      L.push(estilo(leyenda, { negrita: true, alinear: "centro" }));
     } else if (validacion === "firma") {
       L.push("");
       L.push("");
       L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
       L.push(centrar("Firma"));
     }
+    L.push("");
+    L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
   }
   if (data.recibido != null && data.recibido >= total) {
     L.push(parear("Recibido", pesos(data.recibido)));
@@ -254,8 +270,9 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
   if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l));
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
+  const esDevolucion = operacionDeVoucher(data.tarjeta) === "DEVOLUCI\xD3N";
   L.push(regla());
-  L.push(estilo("COMPROBANTE DE VENTA", { negrita: true, alinear: "centro" }));
+  L.push(estilo(esDevolucion ? "COMPROBANTE DE DEVOLUCION" : "COMPROBANTE DE VENTA", { negrita: true, alinear: "centro" }));
   const f = data.fecha == null ? /* @__PURE__ */ new Date() : data.fecha instanceof Date ? data.fecha : new Date(data.fecha);
   const fechaTxt = f.toLocaleString("es-MX", {
     timeZone: "America/Merida",
@@ -271,11 +288,13 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
   L.push(estilo(parear("IMPORTE", pesos(data.monto)), { alto: 2, negrita: true }));
   L.push("");
   L.push(estilo("BANORTE", { negrita: true, alinear: "centro" }));
+  L.push(estilo(operacionDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
   for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
   const validacion = validacionDeVoucher(data.tarjeta.pin);
-  if (validacion === "nip") {
+  const leyenda = leyendaDeValidacion(validacion);
+  if (leyenda) {
     L.push("");
-    L.push(estilo("AUTORIZADO CON FIRMA ELECTRONICA", { negrita: true, alinear: "centro" }));
+    L.push(estilo(leyenda, { negrita: true, alinear: "centro" }));
   } else if (validacion === "firma") {
     L.push("");
     L.push("");
@@ -283,7 +302,7 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(centrar("Firma"));
   }
   L.push(regla());
-  L.push(estilo("APROBADA", { negrita: true, alinear: "centro" }));
+  L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
   return L;
 }
 function lineasDeAvisos(negocio) {
@@ -768,7 +787,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.7";
+var VERSION = "1.1.8";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {

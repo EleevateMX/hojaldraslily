@@ -12,7 +12,7 @@
 import { NEGOCIO_DEFAULT } from './ticketTipos'
 import { LOGO_TICKET } from './logoTicket'
 import type { TicketNegocio, TicketItem, TicketData, CorteData, VoucherTarjeta } from './ticketTipos'
-import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher } from './ticketLineas'
+import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher, leyendaDeValidacion, operacionDeVoucher, resultadoDeVoucher } from './ticketLineas'
 
 export type { TicketNegocio, TicketItem, TicketData, CorteData, VoucherTarjeta } from './ticketTipos'
 export { NEGOCIO_DEFAULT } from './ticketTipos'
@@ -125,18 +125,24 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     ? (() => {
         const parejas = parejasDeVoucher(data.tarjeta)
         const validacion = validacionDeVoucher(data.tarjeta.pin)
+        const leyenda = leyendaDeValidacion(validacion)
+        // La matriz de certificación de Banorte pide tres cosas explícitas en
+        // el voucher: el tipo de operación (VENTA), la leyenda de validación y
+        // el resultado (APROBADA / DECLINADA).
         return `<div style="margin-top:8px;padding-top:6px;border-top:1px dashed #000;font-size:9px;line-height:1.4">
     <div style="text-align:center;font-weight:600;letter-spacing:.12em">BANORTE</div>
+    <div style="text-align:center;font-weight:600;letter-spacing:.1em;margin-top:1px">${esc(operacionDeVoucher(data.tarjeta))}</div>
     <div class="cuentas" style="margin-top:3px">
       ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right">${esc(v)}</div>`).join('')}
     </div>
     ${
-      validacion === 'nip'
-        ? `<div style="text-align:center;margin-top:6px;font-weight:600">AUTORIZADO CON FIRMA ELECTRÓNICA</div>`
+      leyenda
+        ? `<div style="text-align:center;margin-top:6px;font-weight:600">${esc(leyenda)}</div>`
         : validacion === 'firma'
           ? `<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>`
           : ''
     }
+    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.1em">${esc(resultadoDeVoucher(data.tarjeta))}</div>
   </div>`
       })()
     : ''
@@ -346,6 +352,10 @@ export function voucherTicketHTML(
   })
   const parejas = parejasDeVoucher(voucher)
   const validacion = validacionDeVoucher(voucher.pin)
+  const leyenda = leyendaDeValidacion(validacion)
+  const operacion = operacionDeVoucher(voucher)
+  const resultado = resultadoDeVoucher(voucher)
+  const esDevolucion = operacion === 'DEVOLUCIÓN'
 
   const logo =
     negocio.mostrarLogo === false
@@ -387,7 +397,7 @@ export function voucherTicketHTML(
     </div>
 
     <div class="regla"></div>
-    <div class="center mini" style="font-weight:600;letter-spacing:.2em">Comprobante de venta</div>
+    <div class="center mini" style="font-weight:600;letter-spacing:.2em">${esDevolucion ? 'Comprobante de devolución' : 'Comprobante de venta'}</div>
     <div class="center" style="font-size:9.5px;margin-top:2px">${esc(fechaTxt)} · Folio #${esc(datos.folio)}</div>
 
     <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
@@ -397,19 +407,20 @@ export function voucherTicketHTML(
 
     <div class="regla"></div>
     <div class="center" style="font-weight:600;letter-spacing:.14em">BANORTE</div>
+    <div class="center" style="font-weight:600;letter-spacing:.12em;margin-top:2px">${esc(operacion)}</div>
     <div class="cuentas" style="margin-top:4px">
       ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right;font-weight:500">${esc(v)}</div>`).join('')}
     </div>
     ${
-      validacion === 'nip'
-        ? `<div class="center" style="margin-top:10px;font-weight:600">AUTORIZADO CON FIRMA ELECTRÓNICA</div>`
+      leyenda
+        ? `<div class="center" style="margin-top:10px;font-weight:600">${esc(leyenda)}</div>`
         : validacion === 'firma'
           ? `<div style="margin-top:22px;border-top:1px solid #000;width:60%;margin-left:auto;margin-right:auto"></div><div class="center" style="font-size:9px">Firma</div>`
-          : `<div class="center" style="font-size:9px;margin-top:8px">Operación sin NIP ni firma (contactless)</div>`
+          : ''
     }
 
     <div class="regla"></div>
-    <div class="center"><span class="sello">APROBADA</span></div>
+    <div class="center"><span class="sello">${esc(resultado)}</span></div>
   </div>
 </body></html>`
 }
