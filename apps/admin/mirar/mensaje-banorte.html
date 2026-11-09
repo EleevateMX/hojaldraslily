@@ -1,0 +1,294 @@
+<title>Mensaje a Banorte</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=Karla:wght@400;500;700&family=DM+Mono:wght@400;500&family=Yellowtail&display=swap">
+<style>
+  /* Layout: una sola carta centrada, membrete de la casa arriba, los tres
+     puntos como lista de verificación, cierre y botón para copiar el texto. */
+  :root {
+    --crema: #FDF6E3;
+    --papel: #FFFFFF;
+    --morado: #4A3A52;
+    --morado-sutil: #6B5B72;
+    --carmin: #D81B4A;
+    --carmin-deep: #A8123A;
+    --dorado: #D9944B;
+    --linea: rgba(74, 58, 82, .14);
+    --tarjeta: #FBF3DF;
+    --sombra: 0 18px 50px rgba(74, 58, 82, .16);
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --crema: #221C28;
+      --papel: #2C2533;
+      --morado: #F2E9DC;
+      --morado-sutil: #BBA9C2;
+      --carmin: #F26E92;
+      --carmin-deep: #F49CAC;
+      --dorado: #E0A861;
+      --linea: rgba(242, 233, 220, .16);
+      --tarjeta: #352B3D;
+      --sombra: 0 18px 50px rgba(0, 0, 0, .45);
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --crema: #221C28;
+    --papel: #2C2533;
+    --morado: #F2E9DC;
+    --morado-sutil: #BBA9C2;
+    --carmin: #F26E92;
+    --carmin-deep: #F49CAC;
+    --dorado: #E0A861;
+    --linea: rgba(242, 233, 220, .16);
+    --tarjeta: #352B3D;
+    --sombra: 0 18px 50px rgba(0, 0, 0, .45);
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--crema);
+    color: var(--morado);
+    font-family: "Karla", system-ui, sans-serif;
+    line-height: 1.6;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: clamp(20px, 5vw, 56px);
+  }
+  .carta {
+    max-width: 680px;
+    margin: 0 auto;
+    background: var(--papel);
+    border: 1px solid var(--linea);
+    border-radius: 14px;
+    box-shadow: var(--sombra);
+    overflow: hidden;
+  }
+
+  /* Membrete */
+  .membrete {
+    padding: clamp(22px, 5vw, 36px) clamp(20px, 5vw, 44px) 22px;
+    border-bottom: 2px solid var(--carmin);
+    text-align: center;
+  }
+  .logo {
+    display: inline-flex;
+    align-items: baseline;
+    line-height: 1;
+    color: var(--morado);
+  }
+  .logo .h { font-family: "Jost", sans-serif; font-weight: 300; font-size: clamp(26px, 7vw, 34px); letter-spacing: .01em; }
+  .logo .l { font-family: "Yellowtail", cursive; font-size: clamp(40px, 11vw, 54px); color: var(--carmin); margin-left: -6px; transform: translateY(7px); }
+  .fiscal {
+    margin-top: 10px;
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: .02em;
+    color: var(--morado-sutil);
+    line-height: 1.5;
+  }
+  .fiscal strong { color: var(--morado); font-weight: 500; }
+
+  /* Cuerpo */
+  .cuerpo { padding: clamp(22px, 5vw, 36px) clamp(20px, 5vw, 44px) clamp(26px, 5vw, 40px); }
+  .eyebrow {
+    font-family: "DM Mono", ui-monospace, monospace;
+    text-transform: uppercase;
+    letter-spacing: .18em;
+    font-size: 11px;
+    color: var(--carmin-deep);
+    margin: 0 0 6px;
+  }
+  h1 {
+    font-family: "Jost", sans-serif;
+    font-weight: 500;
+    font-size: clamp(20px, 5vw, 26px);
+    line-height: 1.25;
+    text-wrap: balance;
+    margin: 0 0 20px;
+    color: var(--morado);
+  }
+  p { margin: 0 0 14px; }
+  .saludo { margin-bottom: 16px; }
+
+  .puntos {
+    list-style: none;
+    margin: 20px 0 22px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .punto {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 12px;
+    align-items: start;
+    background: var(--tarjeta);
+    border: 1px solid var(--linea);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .punto .check {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--carmin);
+    color: var(--papel);
+    display: grid; place-items: center;
+    font-size: 13px; font-weight: 700;
+    margin-top: 1px;
+  }
+  .punto .t { font-family: "Jost", sans-serif; font-weight: 500; font-size: 15px; color: var(--morado); }
+  .punto .d { font-size: 14px; color: var(--morado-sutil); margin-top: 2px; }
+  .punto .d b { color: var(--morado); font-weight: 700; }
+
+  .nota {
+    border-left: 3px solid var(--dorado);
+    background: color-mix(in srgb, var(--dorado) 12%, transparent);
+    padding: 12px 16px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    margin: 4px 0 20px;
+  }
+  .firma { margin-top: 22px; font-size: 14px; }
+  .firma .nombre { font-family: "Jost", sans-serif; font-weight: 500; font-size: 16px; color: var(--morado); }
+  .firma .rs { color: var(--morado-sutil); font-family: "DM Mono", ui-monospace, monospace; font-size: 12px; letter-spacing: .02em; }
+
+  .acciones {
+    display: flex; flex-wrap: wrap; gap: 10px;
+    padding: 0 clamp(20px, 5vw, 44px) clamp(22px, 5vw, 34px);
+  }
+  button {
+    font-family: "Jost", sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    letter-spacing: .02em;
+    border: none;
+    border-radius: 999px;
+    padding: 11px 22px;
+    cursor: pointer;
+    transition: transform .08s ease, background .15s ease;
+  }
+  button:active { transform: translateY(1px); }
+  .copiar { background: var(--carmin); color: var(--papel); }
+  .copiar:hover { background: var(--carmin-deep); }
+  .adjuntos {
+    background: transparent;
+    color: var(--morado);
+    border: 1px solid var(--linea);
+  }
+  :focus-visible { outline: 2px solid var(--carmin); outline-offset: 2px; }
+
+  .pie {
+    max-width: 680px;
+    margin: 14px auto 0;
+    font-size: 12.5px;
+    color: var(--morado-sutil);
+    text-align: center;
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="carta">
+  <div class="membrete">
+    <div class="logo"><span class="h">Hojaldras</span><span class="l">Lily</span></div>
+    <div class="fiscal">
+      <strong>KALALEV HOLDING</strong><br>
+      R.F.C. KHO2506056F0 · Mérida, Yucatán
+    </div>
+  </div>
+
+  <div class="cuerpo">
+    <p class="eyebrow">Certificación de terminal · Banorte</p>
+    <h1>Vouchers corregidos — matriz de certificación (CHIP NIP y CTS)</h1>
+
+    <p class="saludo">Estimado equipo de Banorte / Interredes:</p>
+    <p>Agradecemos sus observaciones sobre los vouchers. Ya quedaron atendidos los tres puntos:</p>
+
+    <ul class="puntos">
+      <li class="punto">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>
+          <span class="t">Voucher CHIP NIP</span>
+          <span class="d">Se agregó el <b>resultado de la transacción</b> (Aprobada / Declinada) y el <b>tipo de operación</b> (Venta / Devolución).</span>
+        </span>
+      </li>
+      <li class="punto">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>
+          <span class="t">Voucher CTS (contactless)</span>
+          <span class="d">Se agregó el <b>resultado</b> (Aprobada / Declinada), el <b>tipo de operación</b> (Venta / Devolución) y la leyenda <b>“AUTORIZADO SIN FIRMA”</b>.</span>
+        </span>
+      </li>
+      <li class="punto">
+        <span class="check" aria-hidden="true">✓</span>
+        <span>
+          <span class="t">Modo de la matriz</span>
+          <span class="d">Todas las transacciones de la matriz de certificación se correrán en <b>modo Productivo</b>.</span>
+        </span>
+      </li>
+    </ul>
+
+    <div class="nota">
+      Adjuntamos dos <b>vouchers de muestra</b> (CHIP NIP y CTS) con los campos ya corregidos para su revisión. Quedamos atentos para <b>agendar la matriz de certificación</b> en Productivo.
+    </div>
+
+    <p>Sin más por el momento, agradecemos su apoyo y quedamos a sus órdenes.</p>
+
+    <div class="firma">
+      <div>Saludos cordiales,</div>
+      <div class="nombre">Hojaldras Lily</div>
+      <div class="rs">KALALEV HOLDING · R.F.C. KHO2506056F0</div>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <button class="copiar" id="copiar" type="button">Copiar el mensaje</button>
+    <button class="adjuntos" type="button" disabled style="opacity:.75;cursor:default">Adjuntar: voucher CHIP NIP + voucher CTS</button>
+  </div>
+</div>
+
+<p class="pie" id="pie">Copia el texto y pégalo en tu correo a Banorte; adjunta los dos vouchers de muestra.</p>
+
+<script>
+  const texto = [
+    'Estimado equipo de Banorte / Interredes:',
+    '',
+    'Agradecemos sus observaciones sobre los vouchers. Ya quedaron atendidos los tres puntos:',
+    '',
+    '1. Voucher CHIP NIP — se agregó el resultado de la transacción (Aprobada / Declinada) y el tipo de operación (Venta / Devolución).',
+    '2. Voucher CTS (contactless) — se agregó el resultado (Aprobada / Declinada), el tipo de operación (Venta / Devolución) y la leyenda "AUTORIZADO SIN FIRMA".',
+    '3. Todas las transacciones de la matriz de certificación se correrán en modo Productivo.',
+    '',
+    'Adjuntamos dos vouchers de muestra (CHIP NIP y CTS) con los campos ya corregidos para su revisión. Quedamos atentos para agendar la matriz de certificación en Productivo.',
+    '',
+    'Saludos cordiales,',
+    'Hojaldras Lily — KALALEV HOLDING',
+    'R.F.C. KHO2506056F0',
+  ].join('\n');
+
+  const btn = document.getElementById('copiar');
+  const pie = document.getElementById('pie');
+  btn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(texto);
+      btn.textContent = '¡Copiado!';
+      pie.textContent = 'Mensaje copiado. Pégalo en tu correo y adjunta los dos vouchers de muestra.';
+      setTimeout(() => { btn.textContent = 'Copiar el mensaje'; }, 2200);
+    } catch (e) {
+      // Si el portapapeles está bloqueado, se selecciona el texto para copiar a mano.
+      const r = document.createRange();
+      const tmp = document.createElement('pre');
+      tmp.textContent = texto;
+      tmp.style.cssText = 'position:fixed;left:0;right:0;bottom:0;white-space:pre-wrap;background:var(--papel);color:var(--morado);padding:16px;margin:0;border-top:1px solid var(--linea);font-family:Karla,sans-serif';
+      document.body.appendChild(tmp);
+      r.selectNodeContents(tmp);
+      const sel = window.getSelection();
+      sel.removeAllRanges(); sel.addRange(r);
+      pie.textContent = 'Selecciona el texto de abajo y cópialo con Ctrl/Cmd+C.';
+    }
+  });
+</script>
