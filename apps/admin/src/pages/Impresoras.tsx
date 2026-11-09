@@ -9,6 +9,7 @@ import {
 import type { Cocina, TrabajoImpresion, TipoConexionImpresora, AnchoPapel, EstadoTrabajoImpresion } from '@lily/types'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, cx, Chip } from '../ui'
 import { mensajeDeError, fechaHoraEnMerida } from '@lily/utils'
+import { SeccionTerminal } from './TerminalBanorte'
 
 interface FormState {
   id: string | null
@@ -596,6 +597,8 @@ export default function Impresoras() {
           </table>
         </div>
       )}
+
+      <SeccionTerminal />
     </div>
   )
 }

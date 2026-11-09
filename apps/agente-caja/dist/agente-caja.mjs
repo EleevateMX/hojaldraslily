@@ -36,7 +36,10 @@ var NEGOCIO_DEFAULT = {
   ],
   mostrarLogo: true,
   // Apagado: la casa no quiere el nombre de quien atendió en el ticket.
-  mostrarCajero: false
+  mostrarCajero: false,
+  // Por omisión se PREGUNTA si imprimir el voucher de la terminal, para no
+  // gastar rollo en cada venta con tarjeta. La casa lo cambia en Admin.
+  voucherImpresion: "preguntar"
 };
 
 // ../../packages/ui/src/ticketLineas.ts
@@ -132,8 +135,8 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(estilo(negocio.nombre.toUpperCase().slice(0, Math.floor(ancho / 2)), { ancho: 2, alto: 2, alinear: "centro" }));
   }
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
-  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim())) L.push(centrar(l));
   const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
+  if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l));
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
   if (negocio.regimen?.trim()) for (const l of envolver(negocio.regimen.trim(), 0, 63)) L.push(chico(l));
   if (negocio.sucursal) L.push(centrar(`Sucursal ${negocio.sucursal}`));

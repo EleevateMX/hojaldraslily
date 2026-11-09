@@ -23,6 +23,7 @@
 import 'dotenv/config'
 import { createServer } from 'node:http'
 import { abrirPinpad, numeroDeControl, voucherDesde } from './pinpad.mjs'
+import { servirCola } from './cola.mjs'
 
 function cfgDesdeEnv() {
   const falta = []
@@ -80,6 +81,10 @@ async function main() {
   // levantar el servicio no falle si la pinpad está apagada en ese momento.
   if (comando === 'serve') return servir(cfg)
 
+  // El modo de PRODUCCIÓN: reclama cobros de la caja (nube) por cola y los
+  // cobra en la pinpad. No expone ningún puerto. Es el que corre en la tienda.
+  if (comando === 'cola') return servirCola(cfg)
+
   console.log(`DLL: ${cfg.dllPath} · pinpad: ${cfg.com || `${cfg.ip}:${cfg.port}`} · getters: ${cfg.getterStyle}`)
   let pinpad
   try {
@@ -120,7 +125,7 @@ async function main() {
       if (!ref || !auth || !monto) { console.error('Uso: node index.mjs cancelar <paywReference> <authCode> <monto>'); process.exit(1) }
       console.log(resumen(cfg, 'CANCELACION', pinpad.cancelar(numeroDeControl('V'), monto, ref, auth)))
     } else {
-      console.log('Comandos: llave | venta <monto> | verificar <control> | cancelar <ref> <auth> <monto> | serve')
+      console.log('Comandos: llave | venta <monto> | verificar <control> | cancelar <ref> <auth> <monto> | serve | cola')
       process.exit(1)
     }
   } catch (e) {
