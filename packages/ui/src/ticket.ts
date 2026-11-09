@@ -11,7 +11,7 @@
 
 import { NEGOCIO_DEFAULT } from './ticketTipos'
 import { LOGO_TICKET } from './logoTicket'
-import type { TicketNegocio, TicketItem, TicketData, CorteData } from './ticketTipos'
+import type { TicketNegocio, TicketItem, TicketData, CorteData, VoucherTarjeta } from './ticketTipos'
 import { lineasDeAvisos, parejasDeVoucher, validacionDeVoucher } from './ticketLineas'
 
 export type { TicketNegocio, TicketItem, TicketData, CorteData, VoucherTarjeta } from './ticketTipos'
@@ -312,6 +312,112 @@ export function imprimirTicket(
 /** El corte de caja por el navegador: Admin lo manda a la impresora de donde esté, o a PDF. */
 export function imprimirCorte(c: CorteData, negocio: TicketNegocio = NEGOCIO_DEFAULT): boolean {
   return imprimirHTML(corteHTML(c, negocio), 'Corte de caja')
+}
+
+/** Lo que identifica al voucher suelto: el folio de la venta y el importe. */
+export interface DatosVoucher {
+  folio: number | string
+  monto: number
+  fecha?: Date | string
+}
+
+/**
+ * El VOUCHER de la terminal (Anexo VII de Banorte) como comprobante CHICO y
+ * suelto, con la misma piel que la nota (logo, lema, bloque fiscal, fuentes de
+ * la marca) pero solo el cobro con tarjeta.
+ *
+ * Es el mismo dato que `ticketHTML` embebe cuando `data.tarjeta` viene; aquí
+ * va aparte, para imprimirlo opcionalmente sin reimprimir la nota entera. Las
+ * parejas y la validación salen de `ticketLineas`, así que dicen exactamente
+ * lo mismo que la nota y el papel térmico.
+ */
+export function voucherTicketHTML(
+  voucher: VoucherTarjeta,
+  negocio: TicketNegocio = NEGOCIO_DEFAULT,
+  datos: DatosVoucher,
+): string {
+  const fecha = datos.fecha == null ? new Date() : typeof datos.fecha === 'string' ? new Date(datos.fecha) : datos.fecha
+  const fechaTxt = fecha.toLocaleString('es-MX', {
+    timeZone: 'America/Merida', day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  })
+  const parejas = parejasDeVoucher(voucher)
+  const validacion = validacionDeVoucher(voucher.pin)
+
+  const logo =
+    negocio.mostrarLogo === false
+      ? `<div style="font-family:Jost,sans-serif;font-weight:500;font-size:14px;letter-spacing:.24em;text-transform:uppercase;line-height:1">${esc(negocio.nombre)}</div>`
+      : `<img src="${negocio.logo || LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:140px;max-width:60%;height:auto;display:block;margin:0 auto" />`
+  const razonSocialHtml = negocio.razonSocial?.trim()
+    ? `<div style="font-size:10px;margin-top:3px">${esc(negocio.razonSocial.trim())}</div>`
+    : ''
+  const rfcHtml = negocio.rfc?.trim()
+    ? `<div style="font-size:8px;margin-top:2px">RFC: ${esc(negocio.rfc.trim())}</div>`
+    : ''
+
+  return `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<title>Voucher ${esc(datos.folio)}</title>
+<link rel="stylesheet" href="${FUENTES_MARCA}">
+<style>
+  @page { size: 80mm auto; margin: 0; }
+  * { box-sizing: border-box; }
+  html,body { margin: 0; padding: 0; }
+  body {
+    width: 80mm; color: #000; background: #fff;
+    font-family: "DM Mono", ui-monospace, "Courier New", monospace;
+    font-size: 11px; line-height: 1.35; font-variant-numeric: tabular-nums;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .t { padding: 5mm 4mm 7mm; }
+  .center { text-align: center; }
+  .regla { border-top: 1px dashed #000; margin: 8px 0; }
+  .mini { font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
+  .cuentas { display: grid; grid-template-columns: minmax(0,1fr) 92px; gap: 3px 4px; font-size: 10px; }
+  .sello { display:inline-block; text-align:center; font-family:Jost,sans-serif; font-weight:500; font-size:13px; letter-spacing:.18em; border:1.5px solid #000; border-radius:999px; padding:3px 18px; }
+</style></head><body onload="window.print()">
+  <div class="t">
+    <div class="center">
+      ${logo}
+      ${negocio.slogan?.trim() ? `<div style="font-family:Jost,sans-serif;font-size:10px;font-style:italic;margin-top:2px">${esc(negocio.slogan.trim())}</div>` : ''}
+      ${razonSocialHtml}
+      ${rfcHtml}
+    </div>
+
+    <div class="regla"></div>
+    <div class="center mini" style="font-weight:600;letter-spacing:.2em">Comprobante de venta</div>
+    <div class="center" style="font-size:9.5px;margin-top:2px">${esc(fechaTxt)} · Folio #${esc(datos.folio)}</div>
+
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:8px">
+      <span class="mini">Importe</span>
+      <span style="font-family:Jost,sans-serif;font-weight:500;font-size:22px;line-height:1">${money(datos.monto)}</span>
+    </div>
+
+    <div class="regla"></div>
+    <div class="center" style="font-weight:600;letter-spacing:.14em">BANORTE</div>
+    <div class="cuentas" style="margin-top:4px">
+      ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right;font-weight:500">${esc(v)}</div>`).join('')}
+    </div>
+    ${
+      validacion === 'nip'
+        ? `<div class="center" style="margin-top:10px;font-weight:600">AUTORIZADO CON FIRMA ELECTRÓNICA</div>`
+        : validacion === 'firma'
+          ? `<div style="margin-top:22px;border-top:1px solid #000;width:60%;margin-left:auto;margin-right:auto"></div><div class="center" style="font-size:9px">Firma</div>`
+          : `<div class="center" style="font-size:9px;margin-top:8px">Operación sin NIP ni firma (contactless)</div>`
+    }
+
+    <div class="regla"></div>
+    <div class="center"><span class="sello">APROBADA</span></div>
+  </div>
+</body></html>`
+}
+
+/** Imprime el voucher suelto por el navegador (como la nota y el corte). */
+export function imprimirVoucher(
+  voucher: VoucherTarjeta,
+  negocio: TicketNegocio = NEGOCIO_DEFAULT,
+  datos: DatosVoucher,
+): boolean {
+  return imprimirHTML(voucherTicketHTML(voucher, negocio, datos), 'Voucher')
 }
 
 function imprimirHTML(html: string, titulo: string): boolean {

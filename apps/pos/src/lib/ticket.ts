@@ -1,7 +1,6 @@
 import { encolarTicketCaja, datosDelTicket } from '@lily/supabase'
 import {
-  imprimirTicket, NEGOCIO_DEFAULT, LOGO_TICKET,
-  parejasDeVoucher, validacionDeVoucher,
+  imprimirTicket, imprimirVoucher, NEGOCIO_DEFAULT,
   type TicketData, type TicketNegocio, type VoucherTarjeta,
 } from '@lily/ui'
 import { sb } from './sb'
@@ -96,65 +95,7 @@ export function imprimirVoucherBanorte(
   voucher: VoucherTarjeta,
   datos: { folio: number | string; monto: number; fecha?: Date },
 ): void {
-  const n = negocioCargado
-  const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]!))
-  const dinero = '$' + Math.abs(datos.monto).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-  const hora = (datos.fecha ?? new Date()).toLocaleString('es-MX', { timeZone: 'America/Merida', hour12: true })
-  const pares = parejasDeVoucher(voucher)
-  const val = validacionDeVoucher(voucher.pin)
-  const filas = pares
-    .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`)
-    .join('')
-  const validacion =
-    val === 'nip'
-      ? '<div class="firma-e">AUTORIZADO CON FIRMA ELECTR&Oacute;NICA</div>'
-      : val === 'firma'
-      ? '<div class="firma"><div class="raya"></div>Firma</div>'
-      : '<div class="qps">Operaci&oacute;n sin NIP ni firma (contactless)</div>'
-  // Sin logo apagado, va el logotipo de la casa (el subido por Admin o el del
-  // código); con `mostrarLogo:false`, el nombre en grande como en la nota.
-  const hayLogo = n.mostrarLogo !== false
-  const cabeza = hayLogo
-    ? `<img class="logo" src="${n.logo || LOGO_TICKET}" alt="${esc(n.nombre)}" />`
-    : `<div class="nom">${esc(n.nombre)}</div>`
-  const html = `<!doctype html><html><head><meta charset="utf-8" />
-<style>
-  @page { size: 80mm auto; margin: 0 }
-  * { margin: 0; padding: 0; box-sizing: border-box }
-  body { width: 80mm; padding: 6mm 4mm; font-family: 'Courier New', monospace; color: #000; text-align: center }
-  .logo { width: 150px; max-width: 62%; height: auto; display: block; margin: 0 auto 2px }
-  .nom { font-weight: 700; font-size: 16px; letter-spacing: .04em }
-  .razon { font-size: 11px; margin-top: 2px }
-  .dato { font-size: 10px }
-  .tit { font-weight: 700; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin: 10px 0 2px }
-  .hora { font-size: 10px }
-  .monto { font-weight: 700; font-size: 22px; margin: 8px 0 }
-  hr { border: 0; border-top: 1px dashed #000; margin: 8px 0 }
-  .banco { font-weight: 700; font-size: 12px; letter-spacing: .1em; margin-bottom: 4px }
-  table { width: 100%; font-size: 11px; border-collapse: collapse }
-  td { padding: 1px 0; vertical-align: top }
-  td:first-child { text-align: left; color: #333 }
-  td:last-child { text-align: right; font-weight: 600; white-space: nowrap; padding-left: 8px }
-  .firma-e { font-weight: 700; font-size: 11px; margin-top: 10px }
-  .firma { margin-top: 24px; font-size: 10px }
-  .raya { border-top: 1px solid #000; width: 60%; margin: 0 auto 2px }
-  .qps { font-size: 10px; color: #333; margin-top: 8px }
-  .ok { display: inline-block; border: 2px solid #000; border-radius: 999px; padding: 3px 16px; font-weight: 700; font-size: 13px; letter-spacing: .08em; margin-top: 8px }
-</style></head><body onload="window.print()">
-  ${cabeza}
-  ${n.razonSocial ? `<div class="razon">${esc(n.razonSocial)}</div>` : ''}
-  ${n.rfc ? `<div class="dato">R.F.C. ${esc(n.rfc)}</div>` : ''}
-  <div class="tit">Comprobante de venta</div>
-  <div class="hora">${esc(hora)} &middot; Folio #${esc(String(datos.folio))}</div>
-  <div class="monto">${dinero}</div>
-  <hr />
-  <div class="banco">BANORTE</div>
-  <table>${filas}</table>
-  ${validacion}
-  <hr />
-  <div class="ok">APROBADA</div>
-</body></html>`
-  imprimirEnMarco(html)
+  imprimirVoucher(voucher, negocioCargado, datos)
 }
 
 /**
