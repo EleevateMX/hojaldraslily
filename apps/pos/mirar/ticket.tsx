@@ -104,6 +104,8 @@ const tarjetaBanorte: TicketData = {
   canal: 'Caja',
   items: [
     { cantidad: 1, nombre: 'Jamón y Queso · Grande · 48 cuadros', precioUnitario: 540 },
+    { cantidad: 2, nombre: 'Guayaba · Chica · 24 cuadros', precioUnitario: 300 },
+    { cantidad: 3, nombre: 'Pan de Muerto Tradicional · Chica', precioUnitario: 55 },
     { cantidad: 1, nombre: 'Café de olla', precioUnitario: 35 },
   ],
   metodoPago: 'Terminal',
