@@ -174,12 +174,14 @@ describe('armarTicket (líneas de la térmica)', () => {
         entrada: 'CONTACTLESSCHIP', pin: '2', operacion: 'Venta', aprobada: true,
       },
     }
-    // Venta contactless aprobada: VENTA, AUTORIZADO SIN FIRMA, APROBADA.
+    // Venta contactless aprobada: VENTA, AUTORIZADO SIN FIRMA, y el resultado
+    // ROTULADO (Banorte lo busca nombrado, no como sello suelto).
     const cts = texto(armarTicket(base, NEGOCIO_DEFAULT))
     expect(cts).toContain('VENTA')
     expect(cts).toContain('AUTORIZADO SIN FIRMA')
+    expect(cts).toContain('RESULTADO DE LA TRANSACCION')
     expect(cts).toContain('APROBADA')
-    expect(cts).not.toContain('DECLINADA')
+    expect(cts.some((x) => x.includes('DECLINADA'))).toBe(false)
 
     // Devolución declinada: los dos campos cambian, la leyenda CTS se queda.
     const dev = texto(armarTicket(
@@ -187,15 +189,16 @@ describe('armarTicket (líneas de la térmica)', () => {
       NEGOCIO_DEFAULT,
     ))
     expect(dev).toContain('DEVOLUCIÓN')
+    expect(dev).toContain('RESULTADO DE LA TRANSACCION')
     expect(dev).toContain('DECLINADA')
-    expect(dev).not.toContain('APROBADA')
+    expect(dev.some((x) => x.includes('APROBADA'))).toBe(false)
     expect(dev).toContain('AUTORIZADO SIN FIRMA')
 
-    // El HTML dice lo mismo.
+    // El HTML dice lo mismo, con el resultado rotulado.
     const html = ticketHTML(base, NEGOCIO_DEFAULT)
     expect(html).toContain('VENTA')
     expect(html).toContain('AUTORIZADO SIN FIRMA')
-    expect(html).toContain('APROBADA')
+    expect(html).toContain('RESULTADO: APROBADA')
   })
 
   it('el pago mixto sale con un renglón por parte', () => {

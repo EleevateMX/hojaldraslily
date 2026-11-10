@@ -142,7 +142,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
           ? `<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>`
           : ''
     }
-    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.1em">${esc(resultadoDeVoucher(data.tarjeta))}</div>
+    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.06em">RESULTADO: ${esc(resultadoDeVoucher(data.tarjeta))}</div>
   </div>`
       })()
     : ''
@@ -420,7 +420,8 @@ export function voucherTicketHTML(
     }
 
     <div class="regla"></div>
-    <div class="center"><span class="sello">${esc(resultado)}</span></div>
+    <div class="center mini" style="font-weight:600;letter-spacing:.14em">Resultado de la transacción</div>
+    <div class="center" style="margin-top:4px"><span class="sello">${esc(resultado)}</span></div>
   </div>
 </body></html>`
 }

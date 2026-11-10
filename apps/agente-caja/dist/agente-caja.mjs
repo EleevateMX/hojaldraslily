@@ -241,6 +241,7 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
       L.push(centrar("Firma"));
     }
     L.push("");
+    L.push(estilo("RESULTADO DE LA TRANSACCION", { alinear: "centro" }));
     L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
   }
   if (data.recibido != null && data.recibido >= total) {
@@ -302,6 +303,7 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
     L.push(centrar("Firma"));
   }
   L.push(regla());
+  L.push(estilo("RESULTADO DE LA TRANSACCION", { alinear: "centro" }));
   L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: "centro" }));
   return L;
 }
@@ -787,7 +789,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.8";
+var VERSION = "1.1.9";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
