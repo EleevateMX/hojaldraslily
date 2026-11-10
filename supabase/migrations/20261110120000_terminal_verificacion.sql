@@ -144,11 +144,15 @@ begin
      set estado = 'reclamado', claimed_by = p_agente, terminal_id = v_term,
          claimed_at = now(), claim_expires_at = now() + interval '2 minutes', updated_at = now()
   from (
-    select id from public.terminal_cola
-     where sucursal_id = v_suc
-       and operacion <> 'cobro'
-       and (estado = 'en_cola' or (estado = 'reclamado' and claim_expires_at < now()))
-     order by created_at
+    -- Se califican las columnas con alias `tc`: `operacion` es también un
+    -- parámetro de salida de esta función (RETURNS TABLE), y sin calificar
+    -- Postgres no sabe si es la columna o el parámetro («column reference
+    -- "operacion" is ambiguous»).
+    select tc.id from public.terminal_cola tc
+     where tc.sucursal_id = v_suc
+       and tc.operacion <> 'cobro'
+       and (tc.estado = 'en_cola' or (tc.estado = 'reclamado' and tc.claim_expires_at < now()))
+     order by tc.created_at
      limit greatest(1, coalesce(p_limite, 3))
      for update skip locked
   ) e
