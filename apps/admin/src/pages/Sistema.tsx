@@ -449,6 +449,22 @@ function DatosDelTicketPanel() {
               el cliente no lo pide; «Siempre» saca un comprobante chico con el logo; «Dentro de la
               nota» lo imprime pegado al ticket, como antes.
             </p>
+
+            <label className="flex items-start gap-2 text-sm text-sa-green-ink mt-4">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={datos?.verificacionBanorte ?? false}
+                onChange={(e) => setDatos({ ...datos, verificacionBanorte: e.target.checked })}
+              />
+              <span>
+                Mostrar «Verificación Banorte» en la caja
+                <span className={`block text-xs ${cx.muted}`}>
+                  Herramienta de certificación (gerencia): corre la verificación de la matriz sobre
+                  una venta real. Enciéndela solo mientras certificas con Banorte y apágala después.
+                </span>
+              </span>
+            </label>
           </div>
 
           {/* ---- Vista previa ---- */}

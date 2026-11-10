@@ -163,6 +163,22 @@ export async function encolarVoucherCaja(
 }
 
 /**
+ * Manda a la térmica (y así GUARDA) el voucher de una VERIFICACIÓN de la matriz
+ * de Banorte, que no tiene orden. Devuelve el id del trabajo o **null** si no
+ * hay térmica dada de alta. Idempotente por número de control.
+ */
+export async function encolarVoucherDiag(
+  sb: ClienteLily,
+  control: string,
+  voucher: unknown,
+): Promise<string | null> {
+  return rpc<string | null>(sb, 'fn_imprimir_voucher_diag', {
+    p_control: control,
+    p_voucher: voucher,
+  })
+}
+
+/**
  * El código con el que una PC se conecta a las impresoras.
  *
  * El instalador corre en la PC de la tienda, **sin sesión**, y necesita el
@@ -337,6 +353,12 @@ export interface DatosDelTicket {
   mostrarLogo?: boolean
   /** Qué hacer con el voucher de la terminal: `'siempre'` | `'preguntar'` | `'nota'`. */
   voucherImpresion?: 'siempre' | 'preguntar' | 'nota'
+  /**
+   * Muestra en la caja el panel «Verificación Banorte» (gerencia), para correr
+   * la verificación de la matriz de certificación. Es opcional: se apaga aquí
+   * cuando ya no se ocupa. Por omisión, apagado.
+   */
+  verificacionBanorte?: boolean
 }
 
 export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {

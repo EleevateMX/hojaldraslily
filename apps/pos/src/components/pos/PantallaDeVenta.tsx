@@ -4,6 +4,7 @@ import { AvisoDeConexion } from './AvisoDeConexion'
 import { CatalogoBusqueda } from './CatalogoBusqueda'
 import { OrdenPanel } from './OrdenPanel'
 import { PanelDeProduccion } from './PanelDeProduccion'
+import { PanelVerificacionBanorte } from './PanelVerificacionBanorte'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import type { ProductoVenta, ExtraDeProducto, CanalDeVenta } from '@lily/supabase'
 import { mxn } from '@lily/utils'
@@ -139,6 +140,9 @@ export function PantallaDeVenta({
               tres ventanas -- la caja no navega a otra pagina con un ticket a
               medias. */}
           <PanelDeProduccion />
+          {/* Herramienta de certificación de Banorte (gerencia). Se auto-oculta
+              si la casa no la encendió en Admin → Sistema. */}
+          <PanelVerificacionBanorte />
           <div className="hidden lg:flex items-center gap-4">{secundarios}</div>
           {/* En angosto: un menú con lo que no se toca a cada rato. */}
           <div className="relative lg:hidden">

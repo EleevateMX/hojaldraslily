@@ -20,7 +20,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { abrirPinpad, numeroDeControl, voucherDesde } from './pinpad.mjs'
 
-export const VERSION_COLA = '1.0.0'
+export const VERSION_COLA = '1.1.0'
 
 export async function servirCola(cfg) {
   const url = process.env.SUPABASE_URL?.trim()
@@ -68,10 +68,18 @@ export async function servirCola(cfg) {
     if (ocupado) return
     ocupado = true
     try {
+      // 1) Cobros de la caja (el camino del dinero, sin cambios).
       const { data, error } = await sb.rpc('fn_terminal_cola_reclamar', { p_token: token, p_agente: agente, p_limite: 1 })
-      if (error) { err(`reclamando: ${error.message}`); return }
-      for (const job of data ?? []) {
+      if (error) err(`reclamando: ${error.message}`)
+      else for (const job of data ?? []) {
         await cobrarUno(sb, pinpad, token, job, { log, err })
+      }
+      // 2) Diagnósticos de la matriz (verificación), que NO cobran ni registran
+      //    venta: solo consultan la pinpad y guardan el voucher.
+      const { data: diag, error: e2 } = await sb.rpc('fn_terminal_diag_reclamar', { p_token: token, p_agente: agente, p_limite: 1 })
+      if (e2) err(`reclamando diagnóstico: ${e2.message}`)
+      else for (const job of diag ?? []) {
+        await diagUno(sb, pinpad, token, job, { log, err })
       }
     } finally {
       ocupado = false
@@ -134,6 +142,52 @@ async function cobrarUno(sb, pinpad, token, job, { log, err }) {
       err(`no hay referencia/autorización para anular. Avísale a gerencia: cobro sin venta (control ${control_number}).`)
     }
   }
+}
+
+/**
+ * Un DIAGNÓSTICO de la matriz (verificación de una transacción). No cobra ni
+ * registra venta: consulta la pinpad por el número de control de una venta real
+ * y guarda su voucher con `fn_terminal_diag_resultado`. La caja lo sondea con
+ * `fn_terminal_cobro_estado` (la misma que el cobro) y saca el voucher por la
+ * térmica.
+ */
+async function diagUno(sb, pinpad, token, job, { log, err }) {
+  const { cobro_id, operacion, monto, control_number } = job
+  log(`${operacion} (control ${control_number})…`)
+
+  let r
+  try {
+    if (operacion === 'verificacion') {
+      r = pinpad.verificar(control_number)
+    } else if (operacion === 'cancelacion') {
+      // La cancelación lleva la referencia y la autorización de la venta (van en
+      // el voucher del trabajo); el control es uno nuevo, como en el rollback.
+      r = pinpad.cancelar(numeroDeControl('V'), String(monto), job.referencia, job.autorizacion)
+    } else {
+      err(`operación de diagnóstico no soportada: ${operacion}`)
+      return
+    }
+  } catch (e) {
+    err(`la pinpad falló en ${operacion}: ${e.message}`)
+    await reportarDiag(sb, token, cobro_id, { aprobado: false, codigo: 'T', texto: e.message })
+    return
+  }
+
+  const voucher = voucherDesde(r.campos)
+  await reportarDiag(sb, token, cobro_id, {
+    aprobado: r.aprobado, voucher, crudo: r.campos, codigo: r.resultado,
+    texto: r.campos.text ?? r.campos.paywCode ?? null,
+  })
+  log(`${operacion}: ${r.aprobado ? 'APROBADA' : (r.campos.text || r.resultado)}`)
+}
+
+/** Reporta el resultado de un diagnóstico (no mueve dinero). */
+async function reportarDiag(sb, token, cobroId, { aprobado, voucher = null, crudo = null, codigo = null, texto = null }) {
+  const { error } = await sb.rpc('fn_terminal_diag_resultado', {
+    p_token: token, p_cobro_id: cobroId, p_aprobado: aprobado,
+    p_voucher: voucher, p_crudo: crudo, p_codigo: codigo, p_texto: texto,
+  })
+  if (error) console.error(`reportando diagnóstico de ${cobroId}: ${error.message}`)
 }
 
 /** Reporta al servidor y devuelve su respuesta (o null si falló la llamada). */
