@@ -119,8 +119,33 @@ caja 1.1.8—:
 
 El voucher sale por la térmica del mostrador (cola del agente de caja), así que
 para que la matriz lo imprima con estos campos la tienda tiene que estar en el
-agente de caja **1.1.8** (se auto-actualiza desde `main`). El formato se revisa
-sin pinpad en `apps/pos/mirar/voucher-cert.html`.
+agente de caja **1.1.9** (se auto-actualiza desde `main`). El resultado va
+ROTULADO —«RESULTADO DE LA TRANSACCIÓN: APROBADA / DECLINADA»—, no como sello
+suelto: el laboratorio marcó faltante el sello de 1.1.8 porque no leía como el
+campo de resultado. El formato se revisa sin pinpad en
+`apps/pos/mirar/voucher-cert.html`.
+
+### La VERIFICACIÓN va sobre una transacción VÁLIDA, no sobre un control vacío
+
+El laboratorio observó (10/11/26) que la **verificación** de la matriz se corrió
+«sobre un valor nulo». La verificación (`PPVerifyTxn`, consulta de estado) NO
+inventa una operación: consulta el **número de control de una venta real** y
+regresa su estado. Si se le pasa un control que nunca se usó en una venta —o uno
+vacío—, no hay nada que consultar y la respuesta sale nula.
+
+La secuencia correcta para la matriz (en **PRD**):
+
+```bat
+REM 1) una venta válida; APUNTA el número de control que imprime (p. ej. L9ABC…)
+node index.mjs venta 1.00
+REM 2) verifica ESE control (el de la venta de arriba), no uno nuevo
+node index.mjs verificar L9ABC...
+```
+
+Así la verificación cae sobre una transacción válida y su voucher sale con datos
+reales. El mismo control sirve para la **cancelación/devolución** del día. Nunca
+se verifica un control recién generado ni se deja el campo vacío: eso es el
+«valor nulo» que observaron.
 
 ## Dejarlo escuchando (para que la caja le pida cobros)
 
