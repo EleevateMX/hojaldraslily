@@ -437,7 +437,10 @@ export function armarTicket(
       L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
       L.push(centrar('Firma'))
     }
+    // El resultado va ROTULADO, no como un sello suelto: el certificador de
+    // Banorte lo busca como «resultado de la transacción», así que se nombra.
     L.push('')
+    L.push(estilo('RESULTADO DE LA TRANSACCION', { alinear: 'centro' }))
     L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
   }
   if (data.recibido != null && data.recibido >= total) {
@@ -533,6 +536,9 @@ export function armarVoucher(
   }
 
   L.push(regla())
+  // El resultado ROTULADO (Banorte lo pide nombrado como «resultado de la
+  // transacción», no como un sello suelto).
+  L.push(estilo('RESULTADO DE LA TRANSACCION', { alinear: 'centro' }))
   L.push(estilo(resultadoDeVoucher(data.tarjeta), { negrita: true, alinear: 'centro' }))
   return L
 }
