@@ -79,7 +79,7 @@ Mérida, Yuc., C.P. 97148`,telefono:"999 926 71 51",rfc:"",leyenda:"¡Gracias po
       ${ye.map(([xe,Ce])=>`<div>${Pe(xe)}</div><div style="text-align:right">${Pe(Ce)}</div>`).join("")}
     </div>
     ${te?`<div style="text-align:center;margin-top:6px;font-weight:600">${Pe(te)}</div>`:Z==="firma"?'<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>':""}
-    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.1em">${Pe(Mb(n.tarjeta))}</div>
+    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.06em">RESULTADO: ${Pe(Mb(n.tarjeta))}</div>
   </div>`})():"",L=(e.direccion??"").split(`
 `).filter(Boolean).map(ye=>Pe(ye)).join("<br />"),T=e.mostrarLogo===!1?`<div style="font-family:Jost,sans-serif;font-weight:500;font-size:14px;letter-spacing:.24em;text-transform:uppercase;line-height:1">${Pe(e.nombre)}</div>`:`<img src="${e.logo||Pb}" alt="${Pe(e.nombre)}" style="width:150px;max-width:62%;height:auto;display:block;margin:0 auto" />`,A=(ne=e.slogan)!=null&&ne.trim()?`<div style="font-family:Jost,sans-serif;font-size:10px;font-style:italic;margin-top:2px">${Pe(e.slogan.trim())}</div>`:"",J=(X=e.razonSocial)!=null&&X.trim()?`<div style="font-size:8px;letter-spacing:.04em;margin-top:3px">${Pe(e.razonSocial.trim())}</div>`:"",se=[(ue=e.rfc)!=null&&ue.trim()?`RFC: ${Pe(e.rfc.trim())}`:"",(Ae=e.regimen)!=null&&Ae.trim()?Pe(e.regimen.trim()):""].filter(Boolean).join("<br />"),H=se?`<div style="font-size:7px;line-height:1.35;margin-top:2px">${se}</div>`:"";return`<!doctype html><html lang="es"><head><meta charset="utf-8">
 <title>Ticket ${Pe(n.folio)}</title>
