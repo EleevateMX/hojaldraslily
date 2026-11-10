@@ -55,3 +55,21 @@ export async function rotarTokenTerminal(sb: ClienteLily, id: string): Promise<s
 export async function activarTerminal(sb: ClienteLily, id: string, activa: boolean): Promise<void> {
   await rpc(sb, 'fn_terminal_activar', { p_id: id, p_activa: activa })
 }
+
+/** Una operación reciente de la terminal (cobro o verificación), para elegir el
+ *  número de control a verificar en la matriz de certificación. */
+export interface OperacionTerminal {
+  cobro_id: string
+  operacion: 'cobro' | 'verificacion' | 'cancelacion'
+  estado: string
+  monto: number
+  control_number: string
+  folio: number | null
+  autorizacion: string | null
+  created_at: string
+}
+
+/** Los últimos cobros/operaciones de la terminal (para la «Verificación Banorte»). */
+export async function cobrosRecientesTerminal(sb: ClienteLily, limite = 10): Promise<OperacionTerminal[]> {
+  return (await rpc<OperacionTerminal[] | null>(sb, 'fn_terminal_cobros_recientes', { p_limite: limite })) ?? []
+}

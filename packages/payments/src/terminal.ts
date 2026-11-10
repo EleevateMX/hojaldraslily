@@ -298,3 +298,74 @@ export class BanorteDllTerminal implements TerminalDeCobro {
 export function obtenerTerminal(sb: ClienteLily, via: 'dll' | 'api' = 'dll'): TerminalDeCobro {
   return via === 'api' ? new BanorteTerminal(sb) : new BanorteDllTerminal(sb)
 }
+
+// --------------------------- Verificación (matriz) --------------------------
+// La VERIFICACIÓN de la matriz de certificación de Banorte: consulta el estado
+// de una transacción por su número de control, por la MISMA cola del agente
+// DLL (camino paralelo, no cobra ni registra venta). Gerencia la dispara desde
+// el panel «Verificación Banorte».
+
+export type EstadoVerificacion = 'aprobado' | 'rechazado' | 'sin_respuesta' | 'no_configurado' | 'error'
+
+export type ResultadoVerificacion =
+  | { ok: true; estado: 'aprobado'; controlNumber: string; voucher: VoucherTerminal | null; modo: string | null }
+  | { ok: false; estado: Exclude<EstadoVerificacion, 'aprobado'>; codigo: string; mensaje: string; voucher: VoucherTerminal | null }
+
+/**
+ * Encola una verificación de `controlNumber` y sondea hasta que el agente la
+ * reporta. Reusa `fn_terminal_cobro_estado` para el sondeo (lee la misma fila).
+ */
+export async function verificarEnTerminal(
+  sb: ClienteLily,
+  controlNumber: string,
+  idempotencyKey: string,
+  autorizadoPor?: string | null,
+): Promise<ResultadoVerificacion> {
+  const rpc = async <T>(fn: string, args: Record<string, unknown>): Promise<T[]> => {
+    const { data, error } = await (sb.rpc as unknown as (f: string, a: Record<string, unknown>) => Promise<{ data: unknown; error: unknown }>)(fn, args)
+    if (error) throw new Error((error as { message?: string }).message ?? 'Error de red con el servidor.')
+    return (data ?? []) as T[]
+  }
+
+  let pedido
+  try {
+    const filas = await rpc<{ cobro_id: string | null; estado: string; control_number: string; hay_terminal: boolean }>(
+      'fn_terminal_verificar_pedir',
+      { p_idempotency_key: idempotencyKey, p_control_number: controlNumber, p_autorizado_por: autorizadoPor ?? null },
+    )
+    pedido = filas[0]
+  } catch (e) {
+    return { ok: false, estado: 'error', codigo: 'rpc_error', mensaje: e instanceof Error ? e.message : 'No se pudo encolar la verificación.', voucher: null }
+  }
+  if (!pedido || pedido.hay_terminal === false) {
+    return { ok: false, estado: 'no_configurado', codigo: 'not_configured', mensaje: 'No hay terminal de Banorte conectada al sistema.', voucher: null }
+  }
+  const cobroId = pedido.cobro_id!
+
+  const maxEsperaMs = 120_000
+  const hasta = Date.now() + maxEsperaMs
+  while (Date.now() < hasta) {
+    await new Promise((r) => setTimeout(r, 1_500))
+    let est
+    try {
+      const filas = await rpc<{ estado: string; voucher: VoucherTerminal | null; codigo: string | null; texto: string | null; modo: string | null }>(
+        'fn_terminal_cobro_estado', { p_cobro_id: cobroId },
+      )
+      est = filas[0]
+    } catch {
+      continue
+    }
+    if (!est || est.estado === 'en_cola' || est.estado === 'reclamado') continue
+
+    if (est.estado === 'aprobado') {
+      return { ok: true, estado: 'aprobado', controlNumber, voucher: est.voucher ?? null, modo: est.modo ?? null }
+    }
+    const estado = (est.estado === 'sin_respuesta' ? 'sin_respuesta' : est.estado === 'error' ? 'error' : 'rechazado') as Exclude<EstadoVerificacion, 'aprobado'>
+    return {
+      ok: false, estado, codigo: est.codigo ?? estado,
+      mensaje: est.texto ?? (estado === 'sin_respuesta' ? 'La terminal no contestó.' : 'La verificación no fue aprobada.'),
+      voucher: est.voucher ?? null,
+    }
+  }
+  return { ok: false, estado: 'sin_respuesta', codigo: 'timeout', mensaje: 'La terminal no contestó a tiempo. Revisa que el agente de la PC esté corriendo.', voucher: null }
+}
