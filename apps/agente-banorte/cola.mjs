@@ -11,6 +11,14 @@
 // ya cobrada, el servidor responde `anular=true` y este agente la ANULA en la
 // pinpad (la anulación del DLL vive en la PC).
 //
+// ## El DLL va en un PROCESO HIJO (no en este)
+//
+// El DLL rompe la red (Winsock) del proceso que lo carga: tras un `PPSendTxn`,
+// todo `fetch` de ESE proceso falla para siempre. Por eso este proceso —el que
+// habla con Supabase— NUNCA carga el DLL: cada operación de la pinpad corre en
+// `pinpad-hijo.mjs` vía `ejecutarEnPinpad`, un hijo que se abre, cobra y muere.
+// Así la red del agente nunca se cae, y el latido sigue vivo durante un cobro.
+//
 // Config adicional en `.env` (además de la de la pinpad):
 //   SUPABASE_URL, SUPABASE_ANON_KEY  — el proyecto (la llave publicable, pública)
 //   TERMINAL_TOKEN                   — el token de la terminal (Admin → Terminal)
@@ -18,9 +26,32 @@
 //   COLA_POLL_SEGUNDOS (3), COLA_LATIDO_SEGUNDOS (30)
 
 import { createClient } from '@supabase/supabase-js'
-import { abrirPinpad, numeroDeControl, voucherDesde } from './pinpad.mjs'
+import { readFileSync, writeFileSync, existsSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+import { dirname, join } from 'node:path'
+import { voucherDesde, numeroDeControl } from './pinpad.mjs'
+import { ejecutarEnPinpad } from './pinpad-remoto.mjs'
 
-export const VERSION_COLA = '1.1.0'
+export const VERSION_COLA = '1.2.0'
+
+// Dónde se guardan los cobros APROBADOS que no se pudieron reportar, para
+// reenviarlos al arrancar. El dinero ya se cobró: esto evita que se pierda.
+const PENDIENTES = join(dirname(fileURLToPath(import.meta.url)), 'pendientes.json')
+// Cuántos fallos de RED seguidos (reclamar/latido) antes de reiniciar el
+// proceso, para que correr-cola.bat lo levante limpio y reenvíe pendientes.
+const MAX_FALLOS_RED = 10
+
+function leerPendientes() {
+  try { return existsSync(PENDIENTES) ? JSON.parse(readFileSync(PENDIENTES, 'utf8')) : [] } catch { return [] }
+}
+function escribirPendientes(lista) {
+  try { writeFileSync(PENDIENTES, JSON.stringify(lista, null, 2)) } catch { /* disco lleno: ni modo */ }
+}
+function guardarPendiente(p) {
+  const lista = leerPendientes()
+  if (!lista.some((x) => x.cobro_id === p.cobro_id)) lista.push(p)
+  escribirPendientes(lista)
+}
 
 export async function servirCola(cfg) {
   const url = process.env.SUPABASE_URL?.trim()
@@ -41,26 +72,32 @@ export async function servirCola(cfg) {
   const log = (m) => console.log(`[${hora()}] ${m}`)
   const err = (m) => console.error(`[${hora()}] ERROR  ${m}`)
 
-  // El DLL se carga UNA vez (el archivo siempre está; hablar con la pinpad es
-  // lo que puede fallar, y eso pasa dentro de cada venta). Si ni el DLL carga,
-  // no hay nada que hacer: se avisa y se sale.
-  let pinpad
-  try {
-    pinpad = abrirPinpad(cfg)
-  } catch (e) {
-    err('no se pudo cargar el DLL: ' + e.message)
-    process.exit(1)
-  }
-
+  // Ya NO se carga el DLL aquí: cada operación va en su proceso hijo.
   console.log('')
   console.log('  Hojaldras Lily — agente de Banorte (cola)')
   console.log(`  version ${VERSION_COLA} · modo ${cfg.mode} · pinpad ${cfg.com || `${cfg.ip}:${cfg.port}`}`)
   console.log('')
   if (cfg.mode !== 'PRD') log(`OJO: modo ${cfg.mode} — las ventas se APRUEBAN sin cobrar de verdad.`)
 
+  // La red del agente ya no se rompe sola (el DLL vive en el hijo), pero si
+  // internet se cae de verdad, se cuentan los fallos y se reinicia el proceso.
+  let fallosRed = 0
+  const exitoRed = () => { fallosRed = 0 }
+  const falloRed = () => {
+    if (++fallosRed >= MAX_FALLOS_RED) {
+      err(`${MAX_FALLOS_RED} fallos de red seguidos: reinicio el agente (correr-cola.bat lo levanta).`)
+      process.exit(1)
+    }
+  }
+
+  const ctx = { log, err }
+
+  // Al arrancar, reenvía cobros aprobados que quedaron sin reportar.
+  await reenviarPendientes(sb, token, ctx)
+
   const latir = async () => {
     const { error } = await sb.rpc('fn_terminal_latido', { p_token: token, p_version: VERSION_COLA, p_modo: cfg.mode })
-    if (error) err(`latido: ${error.message}`)
+    if (error) { err(`latido: ${error.message}`); falloRed() } else exitoRed()
   }
 
   let ocupado = false
@@ -68,18 +105,20 @@ export async function servirCola(cfg) {
     if (ocupado) return
     ocupado = true
     try {
-      // 1) Cobros de la caja (el camino del dinero, sin cambios).
+      // 1) Cobros de la caja (el camino del dinero).
       const { data, error } = await sb.rpc('fn_terminal_cola_reclamar', { p_token: token, p_agente: agente, p_limite: 1 })
-      if (error) err(`reclamando: ${error.message}`)
-      else for (const job of data ?? []) {
-        await cobrarUno(sb, pinpad, token, job, { log, err })
+      if (error) { err(`reclamando: ${error.message}`); falloRed() }
+      else {
+        exitoRed()
+        for (const job of data ?? []) await cobrarUno(sb, cfg, token, job, ctx)
       }
       // 2) Diagnósticos de la matriz (verificación), que NO cobran ni registran
       //    venta: solo consultan la pinpad y guardan el voucher.
       const { data: diag, error: e2 } = await sb.rpc('fn_terminal_diag_reclamar', { p_token: token, p_agente: agente, p_limite: 1 })
-      if (e2) err(`reclamando diagnóstico: ${e2.message}`)
-      else for (const job of diag ?? []) {
-        await diagUno(sb, pinpad, token, job, { log, err })
+      if (e2) { err(`reclamando diagnóstico: ${e2.message}`); falloRed() }
+      else {
+        exitoRed()
+        for (const job of diag ?? []) await diagUno(sb, cfg, token, job, ctx)
       }
     } finally {
       ocupado = false
@@ -93,15 +132,29 @@ export async function servirCola(cfg) {
   setInterval(() => void ciclo(), pollMs)
 }
 
-/** Cobra un trabajo en la pinpad y reporta el resultado al servidor. */
-async function cobrarUno(sb, pinpad, token, job, { log, err }) {
+/** Reenvía al servidor los cobros aprobados que quedaron sin reportar. */
+async function reenviarPendientes(sb, token, { log, err }) {
+  const lista = leerPendientes()
+  if (!lista.length) return
+  log(`reenviando ${lista.length} cobro(s) aprobado(s) pendiente(s) de registrar…`)
+  const quedan = []
+  for (const p of lista) {
+    const resp = await reportar(sb, token, p.cobro_id, p)
+    if (resp) log(`pendiente ${p.cobro_id}: ${resp.registrada ? 'registrada ✓' : (resp.mensaje || 'reportada')}`)
+    else { err(`pendiente ${p.cobro_id}: sigue sin poder reportarse`); quedan.push(p) }
+  }
+  escribirPendientes(quedan)
+}
+
+/** Cobra un trabajo en la pinpad (proceso hijo) y reporta el resultado. */
+async function cobrarUno(sb, cfg, token, job, { log, err }) {
   const { cobro_id, monto, control_number } = job
   log(`cobrando ${Number(monto).toFixed(2)} (control ${control_number})…`)
 
   let r
   try {
     // El importe en PESOS con centavos; el número de control lo puso el servidor.
-    r = pinpad.venta(control_number, String(monto))
+    r = await ejecutarEnPinpad({ op: 'venta', controlNumber: control_number, monto: String(monto) }, cfg)
   } catch (e) {
     // La pinpad no contestó. Se reporta como SIN RESPUESTA ('T'): la caja dirá
     // «revisa la pinpad», no «rechazada». Pudo cobrar o no; no se reintenta solo.
@@ -118,8 +171,11 @@ async function cobrarUno(sb, pinpad, token, job, { log, err }) {
     return
   }
 
-  // Aprobada: el servidor registra la venta en el mismo acto.
-  const resp = await reportar(sb, token, cobro_id, { aprobado: true, voucher, crudo: r.campos, codigo: r.resultado, texto: r.campos.text })
+  // APROBADA: la tarjeta YA se cobró, así que reportar es crítico. Se reintenta
+  // con espera creciente y, si aun así no entra, se guarda para reenviar al
+  // arrancar — nunca se pierde en silencio.
+  const payload = { aprobado: true, voucher, crudo: r.campos, codigo: r.resultado, texto: r.campos.text }
+  const resp = await reportarConReintento(sb, token, cobro_id, payload, { log, err })
   if (!resp) return
 
   if (resp.registrada) {
@@ -133,7 +189,10 @@ async function cobrarUno(sb, pinpad, token, job, { log, err }) {
     err(`la venta no se registró (${resp.mensaje}). Anulando el cobro en la pinpad…`)
     if (resp.referencia && resp.autorizacion) {
       try {
-        const a = pinpad.cancelar(numeroDeControl('V'), String(resp.monto ?? monto), resp.referencia, resp.autorizacion)
+        const a = await ejecutarEnPinpad({
+          op: 'cancelar', controlNumber: numeroDeControl('V'),
+          monto: String(resp.monto ?? monto), paywReference: resp.referencia, authCode: resp.autorizacion,
+        }, cfg)
         err(a.aprobado ? 'anulación APROBADA. Avísale a gerencia.' : `la anulación NO entró (${a.campos.text || a.resultado}). Avísale a gerencia URGENTE.`)
       } catch (e) {
         err(`la anulación falló: ${e.message}. Avísale a gerencia URGENTE: hay un cobro sin venta (control ${control_number}).`)
@@ -147,22 +206,23 @@ async function cobrarUno(sb, pinpad, token, job, { log, err }) {
 /**
  * Un DIAGNÓSTICO de la matriz (verificación de una transacción). No cobra ni
  * registra venta: consulta la pinpad por el número de control de una venta real
- * y guarda su voucher con `fn_terminal_diag_resultado`. La caja lo sondea con
- * `fn_terminal_cobro_estado` (la misma que el cobro) y saca el voucher por la
- * térmica.
+ * y guarda su voucher con `fn_terminal_diag_resultado`.
  */
-async function diagUno(sb, pinpad, token, job, { log, err }) {
+async function diagUno(sb, cfg, token, job, { log, err }) {
   const { cobro_id, operacion, monto, control_number } = job
   log(`${operacion} (control ${control_number})…`)
 
   let r
   try {
     if (operacion === 'verificacion') {
-      r = pinpad.verificar(control_number)
+      r = await ejecutarEnPinpad({ op: 'verificar', controlNumber: control_number }, cfg)
     } else if (operacion === 'cancelacion') {
       // La cancelación lleva la referencia y la autorización de la venta (van en
       // el voucher del trabajo); el control es uno nuevo, como en el rollback.
-      r = pinpad.cancelar(numeroDeControl('V'), String(monto), job.referencia, job.autorizacion)
+      r = await ejecutarEnPinpad({
+        op: 'cancelar', controlNumber: numeroDeControl('V'),
+        monto: String(monto), paywReference: job.referencia, authCode: job.autorizacion,
+      }, cfg)
     } else {
       err(`operación de diagnóstico no soportada: ${operacion}`)
       return
@@ -188,6 +248,25 @@ async function reportarDiag(sb, token, cobroId, { aprobado, voucher = null, crud
     p_voucher: voucher, p_crudo: crudo, p_codigo: codigo, p_texto: texto,
   })
   if (error) console.error(`reportando diagnóstico de ${cobroId}: ${error.message}`)
+}
+
+/**
+ * Reporta un cobro APROBADO con reintentos (espera creciente). Si tras todos no
+ * entra, lo guarda en pendientes para reenviarlo al arrancar. Idempotente: el
+ * servidor devuelve lo de la primera vez si ya se había registrado, así que
+ * reintentar nunca cobra dos veces.
+ */
+async function reportarConReintento(sb, token, cobroId, payload, { err }) {
+  const esperas = [0, 1000, 2000, 4000, 8000]
+  for (let i = 0; i < esperas.length; i++) {
+    if (esperas[i]) await new Promise((r) => setTimeout(r, esperas[i]))
+    const resp = await reportar(sb, token, cobroId, payload)
+    if (resp) return resp
+    err(`no se pudo reportar el cobro APROBADO ${cobroId} (intento ${i + 1}/${esperas.length})…`)
+  }
+  guardarPendiente({ cobro_id: cobroId, ...payload })
+  err(`cobro ${cobroId} APROBADO sin poder reportar: guardado en pendientes.json para reenviar al reiniciar.`)
+  return null
 }
 
 /** Reporta al servidor y devuelve su respuesta (o null si falló la llamada). */
