@@ -428,10 +428,12 @@ export function armarTicket(
     for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
     const validacion = validacionDeVoucher(data.tarjeta.pin)
     const leyenda = leyendaDeValidacion(validacion)
-    if (leyenda) {
+    // Una transacción DECLINADA no autoriza nada: sin leyenda ni raya de firma.
+    const aprobada = resultadoDeVoucher(data.tarjeta) === 'APROBADA'
+    if (aprobada && leyenda) {
       L.push('')
       L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
-    } else if (validacion === 'firma') {
+    } else if (aprobada && validacion === 'firma') {
       L.push('')
       L.push('')
       L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
@@ -525,10 +527,12 @@ export function armarVoucher(
   for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v))
   const validacion = validacionDeVoucher(data.tarjeta.pin)
   const leyenda = leyendaDeValidacion(validacion)
-  if (leyenda) {
+  // Una transacción DECLINADA no autoriza nada: sin leyenda ni raya de firma.
+  const aprobada = resultadoDeVoucher(data.tarjeta) === 'APROBADA'
+  if (aprobada && leyenda) {
     L.push('')
     L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
-  } else if (validacion === 'firma') {
+  } else if (aprobada && validacion === 'firma') {
     L.push('')
     L.push('')
     L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))

@@ -183,7 +183,9 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(cts).toContain('APROBADA')
     expect(cts.some((x) => x.includes('DECLINADA'))).toBe(false)
 
-    // Devolución declinada: los dos campos cambian, la leyenda CTS se queda.
+    // Devolución declinada: los dos campos cambian. Una transacción declinada
+    // NO autoriza nada, así que la leyenda «AUTORIZADO SIN FIRMA» NO sale (sería
+    // contradictoria con el rechazo); solo queda el resultado DECLINADA.
     const dev = texto(armarTicket(
       { ...base, tarjeta: { ...base.tarjeta!, operacion: 'Devolución', aprobada: false } },
       NEGOCIO_DEFAULT,
@@ -192,7 +194,7 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(dev).toContain('RESULTADO DE LA TRANSACCION')
     expect(dev).toContain('DECLINADA')
     expect(dev.some((x) => x.includes('APROBADA'))).toBe(false)
-    expect(dev).toContain('AUTORIZADO SIN FIRMA')
+    expect(dev.some((x) => x.includes('AUTORIZADO SIN FIRMA'))).toBe(false)
 
     // El HTML dice lo mismo, con el resultado rotulado.
     const html = ticketHTML(base, NEGOCIO_DEFAULT)
