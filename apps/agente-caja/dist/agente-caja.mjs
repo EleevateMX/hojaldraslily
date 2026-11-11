@@ -76,15 +76,10 @@ function parejasDeVoucher(t) {
   return p;
 }
 function validacionDeVoucher(pin) {
-  const v = (pin ?? "").trim();
-  if (v === "1") return "nip";
-  if (v === "2") return "nada";
-  return "firma";
+  return (pin ?? "").trim() === "2" ? "nada" : "firma";
 }
 function leyendaDeValidacion(v) {
-  if (v === "nip") return "AUTORIZADO SIN FIRMA (NIP)";
-  if (v === "nada") return "AUTORIZADO SIN FIRMA";
-  return null;
+  return v === "nada" ? "AUTORIZADO SIN FIRMA" : "AUTORIZADO CON FIRMA";
 }
 function operacionDeVoucher(t) {
   const v = (t.operacion ?? "").trim();
@@ -231,14 +226,16 @@ function armarTicket(data, negocio, ancho = COLUMNAS_80MM) {
     for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
     const validacion = validacionDeVoucher(data.tarjeta.pin);
     const leyenda = leyendaDeValidacion(validacion);
-    if (leyenda) {
+    const aprobada = resultadoDeVoucher(data.tarjeta) === "APROBADA";
+    if (aprobada) {
       L.push("");
       L.push(estilo(leyenda, { negrita: true, alinear: "centro" }));
-    } else if (validacion === "firma") {
-      L.push("");
-      L.push("");
-      L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
-      L.push(centrar("Firma"));
+      if (validacion === "firma") {
+        L.push("");
+        L.push("");
+        L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
+        L.push(centrar("Firma"));
+      }
     }
     L.push("");
     L.push(estilo("RESULTADO DE LA TRANSACCION", { alinear: "centro" }));
@@ -270,6 +267,10 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
   const chico = (t) => estilo(t, { alinear: "centro", fuente: "B" });
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l));
   if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l));
+  if (negocio.direccion?.trim()) {
+    for (const linea of negocio.direccion.split("\n"))
+      if (linea.trim()) for (const l of envolver(linea.trim(), 0, 63)) L.push(chico(l));
+  }
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`));
   const esDevolucion = operacionDeVoucher(data.tarjeta) === "DEVOLUCI\xD3N";
   L.push(regla());
@@ -293,14 +294,16 @@ function armarVoucher(data, negocio, ancho = COLUMNAS_80MM) {
   for (const [k, v] of parejasDeVoucher(data.tarjeta)) L.push(parear(k, v));
   const validacion = validacionDeVoucher(data.tarjeta.pin);
   const leyenda = leyendaDeValidacion(validacion);
-  if (leyenda) {
+  const aprobada = resultadoDeVoucher(data.tarjeta) === "APROBADA";
+  if (aprobada) {
     L.push("");
     L.push(estilo(leyenda, { negrita: true, alinear: "centro" }));
-  } else if (validacion === "firma") {
-    L.push("");
-    L.push("");
-    L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
-    L.push(centrar("Firma"));
+    if (validacion === "firma") {
+      L.push("");
+      L.push("");
+      L.push(centrar("_".repeat(Math.min(28, ancho - 4))));
+      L.push(centrar("Firma"));
+    }
   }
   L.push(regla());
   L.push(estilo("RESULTADO DE LA TRANSACCION", { alinear: "centro" }));
@@ -789,7 +792,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.9";
+var VERSION = "1.1.10";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {

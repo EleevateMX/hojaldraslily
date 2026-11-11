@@ -137,35 +137,31 @@ export function parejasDeVoucher(t: import('./ticketTipos').VoucherTarjeta): [st
 }
 
 /**
- * Cómo se validó la venta, según `pinRequested`: con NIP se imprime la
- * leyenda que exige el banco; con firma, la raya; QPS (contactless chico) no
- * lleva nada. Si no vino, se deja la raya: es lo que no deja a nadie sin
- * comprobante.
+ * Cómo se validó la venta, según `pinRequested`. Dos casos, por regla de
+ * certificación de Banorte (laboratorio, 11/11): la leyenda «SIN FIRMA» es
+ * EXCLUSIVA de QPS (contactless chico, sin CVM). Todo lo demás —chip, chip con
+ * NIP y banda— va «CON FIRMA», con su raya para firmar. Ojo: el chip con NIP
+ * también va con firma (Banorte lo observó explícitamente), aunque el
+ * tarjetahabiente ya metió el NIP: la leyenda es de reglas del adquirente, no
+ * de EMV.
+ *
+ *   - `nada`  — QPS / contactless (`pinRequested === '2'`): «AUTORIZADO SIN FIRMA».
+ *   - `firma` — chip, chip+NIP, banda (todo lo demás): «AUTORIZADO CON FIRMA» + raya.
  */
-export function validacionDeVoucher(pin: string | null | undefined): 'nip' | 'firma' | 'nada' {
-  const v = (pin ?? '').trim()
-  if (v === '1') return 'nip'
-  if (v === '2') return 'nada'
-  return 'firma'
+export function validacionDeVoucher(pin: string | null | undefined): 'firma' | 'nada' {
+  return (pin ?? '').trim() === '2' ? 'nada' : 'firma'
 }
 
 /**
- * La LEYENDA de validación que va en el papel, por caso:
- *
- *   - `nip`   — «AUTORIZADO SIN FIRMA» + la nota de que el NIP sustituye la
- *               firma: con chip y NIP el tarjetahabiente ya se identificó.
- *   - `nada`  — «AUTORIZADO SIN FIRMA»: es el caso contactless/QPS (CTS), y
- *               Banorte pide esa leyenda EXPRESA en el voucher de certificación
- *               (antes no salía nada, que fue justo lo que observaron).
- *   - `firma` — no hay leyenda: va la raya para firmar (banda / chip con firma).
+ * La LEYENDA de validación que va en el papel. Banorte la pide EXPRESA en el
+ * voucher de certificación: «AUTORIZADO SIN FIRMA» solo para QPS, «AUTORIZADO
+ * CON FIRMA» para el resto (que además lleva la raya para firmar).
  *
  * Se devuelve el texto, no se pinta aquí, porque el HTML y la térmica lo
  * maquetan distinto pero tienen que decir lo mismo.
  */
-export function leyendaDeValidacion(v: 'nip' | 'firma' | 'nada'): string | null {
-  if (v === 'nip') return 'AUTORIZADO SIN FIRMA (NIP)'
-  if (v === 'nada') return 'AUTORIZADO SIN FIRMA'
-  return null
+export function leyendaDeValidacion(v: 'firma' | 'nada'): string {
+  return v === 'nada' ? 'AUTORIZADO SIN FIRMA' : 'AUTORIZADO CON FIRMA'
 }
 
 /**
@@ -430,14 +426,17 @@ export function armarTicket(
     const leyenda = leyendaDeValidacion(validacion)
     // Una transacción DECLINADA no autoriza nada: sin leyenda ni raya de firma.
     const aprobada = resultadoDeVoucher(data.tarjeta) === 'APROBADA'
-    if (aprobada && leyenda) {
+    if (aprobada) {
       L.push('')
       L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
-    } else if (aprobada && validacion === 'firma') {
-      L.push('')
-      L.push('')
-      L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
-      L.push(centrar('Firma'))
+      // «CON FIRMA» (chip, chip+NIP, banda) lleva además la raya para firmar;
+      // «SIN FIRMA» (QPS/contactless) no.
+      if (validacion === 'firma') {
+        L.push('')
+        L.push('')
+        L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
+        L.push(centrar('Firma'))
+      }
     }
     // El resultado va ROTULADO, no como un sello suelto: el certificador de
     // Banorte lo busca como «resultado de la transacción», así que se nombra.
@@ -502,6 +501,10 @@ export function armarVoucher(
   // fiscal chico, como en la nota.
   if (negocio.slogan?.trim()) for (const l of envolver(negocio.slogan.trim())) L.push(centrar(l))
   if (negocio.razonSocial?.trim()) for (const l of envolver(negocio.razonSocial.trim(), 0, 63)) L.push(chico(l))
+  // La DIRECCIÓN del comercio: Banorte la pide en el voucher de certificación.
+  if (negocio.direccion?.trim())
+    for (const linea of negocio.direccion.split('\n'))
+      if (linea.trim()) for (const l of envolver(linea.trim(), 0, 63)) L.push(chico(l))
   if (negocio.rfc?.trim()) L.push(chico(`RFC: ${negocio.rfc.trim()}`))
 
   // El título dice qué operación fue (venta o devolución), que es lo primero
@@ -529,14 +532,17 @@ export function armarVoucher(
   const leyenda = leyendaDeValidacion(validacion)
   // Una transacción DECLINADA no autoriza nada: sin leyenda ni raya de firma.
   const aprobada = resultadoDeVoucher(data.tarjeta) === 'APROBADA'
-  if (aprobada && leyenda) {
+  if (aprobada) {
     L.push('')
     L.push(estilo(leyenda, { negrita: true, alinear: 'centro' }))
-  } else if (aprobada && validacion === 'firma') {
-    L.push('')
-    L.push('')
-    L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
-    L.push(centrar('Firma'))
+    // «CON FIRMA» (chip, chip+NIP, banda) lleva además la raya para firmar;
+    // «SIN FIRMA» (QPS/contactless) no.
+    if (validacion === 'firma') {
+      L.push('')
+      L.push('')
+      L.push(centrar('_'.repeat(Math.min(28, ancho - 4))))
+      L.push(centrar('Firma'))
+    }
   }
 
   L.push(regla())

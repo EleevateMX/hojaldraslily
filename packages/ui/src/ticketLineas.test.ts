@@ -141,8 +141,12 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.some((x) => x.startsWith('Tarjeta') && x.endsWith('VISA CREDITO **** 9876'))).toBe(true)
     expect(l.some((x) => x.startsWith('Autorización') && x.endsWith('123456'))).toBe(true)
     expect(l.some((x) => x.startsWith('AID') && x.endsWith('A0000000031010'))).toBe(true)
-    // Con chip + NIP el tarjetahabiente ya se identificó: AUTORIZADO SIN FIRMA.
-    expect(l).toContain('AUTORIZADO SIN FIRMA (NIP)')
+    // Chip + NIP va CON FIRMA (regla de certificación de Banorte, 11/11): la
+    // leyenda «SIN FIRMA» es exclusiva de QPS; el chip con NIP lleva leyenda
+    // «AUTORIZADO CON FIRMA» y su raya para firmar.
+    expect(l).toContain('AUTORIZADO CON FIRMA')
+    expect(l.some((x) => x.trim() === 'Firma')).toBe(true)
+    expect(l.some((x) => x.includes('SIN FIRMA'))).toBe(false)
     // El PAN completo no sale en ningún renglón, y la referencia manual no se
     // duplica cuando ya va en el voucher.
     expect(l.some((x) => x.includes('4152'))).toBe(false)
@@ -152,11 +156,13 @@ describe('armarTicket (líneas de la térmica)', () => {
     // Y el HTML dice lo mismo.
     const html = ticketHTML(conTarjeta, NEGOCIO_DEFAULT)
     expect(html).toContain('**** 9876')
-    expect(html).toContain('AUTORIZADO SIN FIRMA (NIP)')
+    expect(html).toContain('AUTORIZADO CON FIRMA')
     expect(html).not.toContain('4152')
-    // Con firma: la raya; con QPS/contactless: AUTORIZADO SIN FIRMA, sin raya.
+    // Chip con firma (pin 0): también CON FIRMA + raya. QPS/contactless (pin 2):
+    // AUTORIZADO SIN FIRMA, sin raya.
     const firma = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '0' } }, NEGOCIO_DEFAULT))
     expect(firma.some((x) => x.trim() === 'Firma')).toBe(true)
+    expect(firma).toContain('AUTORIZADO CON FIRMA')
     const qps = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '2' } }, NEGOCIO_DEFAULT))
     expect(qps.some((x) => x.trim() === 'Firma')).toBe(false)
     expect(qps).toContain('AUTORIZADO SIN FIRMA')
