@@ -18,10 +18,14 @@ if errorlevel 1 (
 )
 
 echo Descargando la ultima version del agente...
-curl -fsSL "%BASE%/index.mjs"     -o index.mjs     || goto error
-curl -fsSL "%BASE%/pinpad.mjs"    -o pinpad.mjs    || goto error
-curl -fsSL "%BASE%/package.json"  -o package.json  || goto error
-curl -fsSL "%BASE%/.env.example"  -o .env.example  || goto error
+curl -fsSL "%BASE%/index.mjs"          -o index.mjs          || goto error
+curl -fsSL "%BASE%/cola.mjs"           -o cola.mjs           || goto error
+curl -fsSL "%BASE%/config.mjs"         -o config.mjs         || goto error
+curl -fsSL "%BASE%/pinpad.mjs"         -o pinpad.mjs         || goto error
+curl -fsSL "%BASE%/pinpad-remoto.mjs"  -o pinpad-remoto.mjs  || goto error
+curl -fsSL "%BASE%/pinpad-hijo.mjs"    -o pinpad-hijo.mjs    || goto error
+curl -fsSL "%BASE%/package.json"       -o package.json       || goto error
+curl -fsSL "%BASE%/.env.example"       -o .env.example       || goto error
 
 if not exist node_modules (
   echo Instalando dependencias, un momento...

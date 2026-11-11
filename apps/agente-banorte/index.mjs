@@ -24,33 +24,8 @@ import 'dotenv/config'
 import { createServer } from 'node:http'
 import { abrirPinpad, numeroDeControl, voucherDesde } from './pinpad.mjs'
 import { servirCola } from './cola.mjs'
-
-function cfgDesdeEnv() {
-  const falta = []
-  const req = (k) => { const v = process.env[k]?.trim(); if (!v) falta.push(k); return v }
-  const cfg = {
-    dllPath: process.env.DLL_PATH?.trim() || './Pinpad.dll',
-    ip: process.env.PINPAD_IP?.trim() || null,
-    port: process.env.PINPAD_PORT?.trim() || '1818',
-    com: process.env.PINPAD_COM?.trim() || null,
-    user: req('PAYWORKS_USER'),
-    password: req('PAYWORKS_PASSWORD'),
-    // El group es HOTELERO: una panadería no lo necesita (ni en llave ni en
-    // venta). Opcional; si algún día se requiere, se pone en el .env.
-    group: process.env.PAYWORKS_GROUP?.trim() || '',
-    mode: (process.env.PAYWORKS_MODE?.trim() || 'AUT').toUpperCase(),
-    getterStyle: (process.env.GETTER_STYLE?.trim() || 'return').toLowerCase(),
-    timeout: process.env.TIMEOUT?.trim() || '90',
-    puertoHttp: Number(process.env.PUERTO_HTTP?.trim() || '8099'),
-  }
-  if (!cfg.com && !cfg.ip) falta.push('PINPAD_IP (o PINPAD_COM)')
-  if (!['PRD', 'AUT', 'DEC', 'RND'].includes(cfg.mode)) falta.push('PAYWORKS_MODE (PRD|AUT|DEC|RND)')
-  if (falta.length) {
-    console.error('Faltan datos en .env: ' + falta.join(', '))
-    process.exit(1)
-  }
-  return cfg
-}
+import { cfgDesdeEnv } from './config.mjs'
+import { ejecutarEnPinpad } from './pinpad-remoto.mjs'
 
 function resumen(cfg, op, r) {
   const c = r.campos
@@ -162,19 +137,20 @@ function servir(cfg) {
     if (req.method !== 'POST') return responder(405, { ok: false, error: 'usa POST' })
     let cuerpo = ''
     req.on('data', (c) => { cuerpo += c; if (cuerpo.length > 1e5) req.destroy() })
-    req.on('end', () => {
+    req.on('end', async () => {
       let body = {}
       try { body = cuerpo ? JSON.parse(cuerpo) : {} } catch { return responder(400, { ok: false, error: 'JSON inválido' }) }
-      let pinpad
-      try { pinpad = abrirPinpad(cfg) } catch (e) { return responder(500, { ok: false, error: 'no se pudo cargar el DLL: ' + e.message }) }
+      const ruta = req.url?.replace(/\/+$/, '')
+      let op
+      if (ruta === '/llave') op = { op: 'llave' }
+      else if (ruta === '/venta') op = { op: 'venta', monto: body.monto }
+      else if (ruta === '/verificar') op = { op: 'verificar', controlNumber: body.controlNumber }
+      else if (ruta === '/cancelar') op = { op: 'cancelar', monto: body.monto, paywReference: body.paywReference, authCode: body.authCode }
+      else return responder(404, { ok: false, error: 'ruta desconocida' })
+      // El DLL va en un PROCESO HIJO: así este servidor (que podría hablar con
+      // la red) nunca carga el DLL y su Winsock no se rompe.
       try {
-        const ruta = req.url?.replace(/\/+$/, '')
-        let r
-        if (ruta === '/llave') r = pinpad.cargarLlave(numeroDeControl('LLAVE'))
-        else if (ruta === '/venta') r = pinpad.venta(numeroDeControl('L'), body.monto)
-        else if (ruta === '/verificar') r = pinpad.verificar(body.controlNumber)
-        else if (ruta === '/cancelar') r = pinpad.cancelar(numeroDeControl('V'), body.monto, body.paywReference, body.authCode)
-        else return responder(404, { ok: false, error: 'ruta desconocida' })
+        const r = await ejecutarEnPinpad(op, cfg)
         responder(200, { ok: r.aprobado, estado: r.resultado, modo: cfg.mode, voucher: voucherDesde(r.campos), campos: r.campos })
       } catch (e) {
         responder(500, { ok: false, error: e.message })
