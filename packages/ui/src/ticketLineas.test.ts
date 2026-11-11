@@ -141,11 +141,11 @@ describe('armarTicket (líneas de la térmica)', () => {
     expect(l.some((x) => x.startsWith('Tarjeta') && x.endsWith('VISA CREDITO **** 9876'))).toBe(true)
     expect(l.some((x) => x.startsWith('Autorización') && x.endsWith('123456'))).toBe(true)
     expect(l.some((x) => x.startsWith('AID') && x.endsWith('A0000000031010'))).toBe(true)
-    // Chip + NIP va CON FIRMA (regla de certificación de Banorte, 11/11): la
-    // leyenda «SIN FIRMA» es exclusiva de QPS; el chip con NIP lleva leyenda
-    // «AUTORIZADO CON FIRMA» y su raya para firmar.
-    expect(l).toContain('AUTORIZADO CON FIRMA')
-    expect(l.some((x) => x.trim() === 'Firma')).toBe(true)
+    // Chip + NIP: el tarjetahabiente ya se identificó con el NIP, así que va
+    // «AUTORIZADO CON FIRMA (NIP)» pero SIN raya (el NIP sustituye la firma).
+    // La leyenda «SIN FIRMA» es exclusiva de QPS.
+    expect(l).toContain('AUTORIZADO CON FIRMA (NIP)')
+    expect(l.some((x) => x.trim() === 'Firma')).toBe(false)
     expect(l.some((x) => x.includes('SIN FIRMA'))).toBe(false)
     // El PAN completo no sale en ningún renglón, y la referencia manual no se
     // duplica cuando ya va en el voucher.
@@ -156,13 +156,14 @@ describe('armarTicket (líneas de la térmica)', () => {
     // Y el HTML dice lo mismo.
     const html = ticketHTML(conTarjeta, NEGOCIO_DEFAULT)
     expect(html).toContain('**** 9876')
-    expect(html).toContain('AUTORIZADO CON FIRMA')
+    expect(html).toContain('AUTORIZADO CON FIRMA (NIP)')
     expect(html).not.toContain('4152')
-    // Chip con firma (pin 0): también CON FIRMA + raya. QPS/contactless (pin 2):
-    // AUTORIZADO SIN FIRMA, sin raya.
+    // Chip con firma (pin 0): CON FIRMA + raya (la tarjeta verifica por firma).
+    // QPS/contactless (pin 2): AUTORIZADO SIN FIRMA, sin raya.
     const firma = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '0' } }, NEGOCIO_DEFAULT))
     expect(firma.some((x) => x.trim() === 'Firma')).toBe(true)
     expect(firma).toContain('AUTORIZADO CON FIRMA')
+    expect(firma.some((x) => x.includes('(NIP)'))).toBe(false)
     const qps = texto(armarTicket({ ...conTarjeta, tarjeta: { ...conTarjeta.tarjeta, pin: '2' } }, NEGOCIO_DEFAULT))
     expect(qps.some((x) => x.trim() === 'Firma')).toBe(false)
     expect(qps).toContain('AUTORIZADO SIN FIRMA')

@@ -76,10 +76,15 @@ function parejasDeVoucher(t) {
   return p;
 }
 function validacionDeVoucher(pin) {
-  return (pin ?? "").trim() === "2" ? "nada" : "firma";
+  const v = (pin ?? "").trim();
+  if (v === "2") return "nada";
+  if (v === "1") return "nip";
+  return "firma";
 }
 function leyendaDeValidacion(v) {
-  return v === "nada" ? "AUTORIZADO SIN FIRMA" : "AUTORIZADO CON FIRMA";
+  if (v === "nada") return "AUTORIZADO SIN FIRMA";
+  if (v === "nip") return "AUTORIZADO CON FIRMA (NIP)";
+  return "AUTORIZADO CON FIRMA";
 }
 function operacionDeVoucher(t) {
   const v = (t.operacion ?? "").trim();
@@ -792,7 +797,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.10";
+var VERSION = "1.1.11";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {

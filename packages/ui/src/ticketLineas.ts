@@ -137,31 +137,38 @@ export function parejasDeVoucher(t: import('./ticketTipos').VoucherTarjeta): [st
 }
 
 /**
- * Cómo se validó la venta, según `pinRequested`. Dos casos, por regla de
- * certificación de Banorte (laboratorio, 11/11): la leyenda «SIN FIRMA» es
- * EXCLUSIVA de QPS (contactless chico, sin CVM). Todo lo demás —chip, chip con
- * NIP y banda— va «CON FIRMA», con su raya para firmar. Ojo: el chip con NIP
- * también va con firma (Banorte lo observó explícitamente), aunque el
- * tarjetahabiente ya metió el NIP: la leyenda es de reglas del adquirente, no
- * de EMV.
+ * Cómo se validó la venta, según `pinRequested` (el CVM que usó la tarjeta).
+ * Tres casos, por reglas del adquirente (Banorte, laboratorio 11/11) y de EMV:
  *
- *   - `nada`  — QPS / contactless (`pinRequested === '2'`): «AUTORIZADO SIN FIRMA».
- *   - `firma` — chip, chip+NIP, banda (todo lo demás): «AUTORIZADO CON FIRMA» + raya.
+ *   - `nada`  — QPS / contactless chico sin CVM (`pinRequested === '2'`):
+ *               «AUTORIZADO SIN FIRMA», sin raya. La leyenda «SIN FIRMA» es
+ *               EXCLUSIVA de este caso.
+ *   - `nip`   — chip con NIP (`pinRequested === '1'`): el tarjetahabiente ya se
+ *               identificó con el NIP, así que va «AUTORIZADO CON FIRMA (NIP)»
+ *               pero **sin raya** (el NIP sustituye la firma).
+ *   - `firma` — la tarjeta pide FIRMA como verificación (chip sin NIP, banda):
+ *               «AUTORIZADO CON FIRMA» + la raya para firmar. La raya física
+ *               solo va aquí, cuando el tipo de tarjeta lo requiere.
  */
-export function validacionDeVoucher(pin: string | null | undefined): 'firma' | 'nada' {
-  return (pin ?? '').trim() === '2' ? 'nada' : 'firma'
+export function validacionDeVoucher(pin: string | null | undefined): 'nip' | 'firma' | 'nada' {
+  const v = (pin ?? '').trim()
+  if (v === '2') return 'nada'
+  if (v === '1') return 'nip'
+  return 'firma'
 }
 
 /**
  * La LEYENDA de validación que va en el papel. Banorte la pide EXPRESA en el
- * voucher de certificación: «AUTORIZADO SIN FIRMA» solo para QPS, «AUTORIZADO
- * CON FIRMA» para el resto (que además lleva la raya para firmar).
+ * voucher de certificación: «SIN FIRMA» solo para QPS; con NIP «CON FIRMA
+ * (NIP)»; y «CON FIRMA» (con raya) cuando la tarjeta verifica por firma.
  *
  * Se devuelve el texto, no se pinta aquí, porque el HTML y la térmica lo
  * maquetan distinto pero tienen que decir lo mismo.
  */
-export function leyendaDeValidacion(v: 'firma' | 'nada'): string {
-  return v === 'nada' ? 'AUTORIZADO SIN FIRMA' : 'AUTORIZADO CON FIRMA'
+export function leyendaDeValidacion(v: 'nip' | 'firma' | 'nada'): string {
+  if (v === 'nada') return 'AUTORIZADO SIN FIRMA'
+  if (v === 'nip') return 'AUTORIZADO CON FIRMA (NIP)'
+  return 'AUTORIZADO CON FIRMA'
 }
 
 /**
