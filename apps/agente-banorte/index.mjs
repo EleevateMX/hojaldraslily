@@ -60,7 +60,13 @@ async function main() {
   // cobra en la pinpad. No expone ningún puerto. Es el que corre en la tienda.
   if (comando === 'cola') return servirCola(cfg)
 
-  console.log(`DLL: ${cfg.dllPath} · pinpad: ${cfg.com || `${cfg.ip}:${cfg.port}`} · getters: ${cfg.getterStyle}`)
+  // Se imprime el usuario y el modo (NO la contraseña) para poder cotejarlos
+  // contra la certificación de un vistazo: el usuario debe ir EXACTO como lo
+  // creó Banorte (sensible a mayúsculas, "TERMINAL") y la tienda va en PRD. Si
+  // la llave "no coincide", casi siempre es que aquí dice otro usuario u otro
+  // modo que con el que se cargó.
+  console.log(`usuario: ${cfg.user} · modo: ${cfg.mode} · pinpad: ${cfg.com || `${cfg.ip}:${cfg.port}`}`)
+  console.log(`DLL: ${cfg.dllPath} · getters: ${cfg.getterStyle}`)
   let pinpad
   try {
     pinpad = abrirPinpad(cfg)
@@ -125,8 +131,15 @@ function pista(cfg, r) {
   } else if (r.resultado === 'R' || r.resultado === 'D') {
     console.log(
       '\nLa pinpad SÍ contestó, pero la operación no se aprobó.\n' +
-      '  Mira el "Motivo" de arriba. Suele ser credenciales de Payworks (usuario/grupo),\n' +
-      '  o que la afiliación aún no está lista en producción. Eso lo confirma Banorte/TPV Solutions.',
+      '  Mira el "Motivo" de arriba. Si dice que la LLAVE no coincide o falla la\n' +
+      '  autenticación, revisa en el .env:\n' +
+      `  - PAYWORKS_USER (ahora: "${cfg.user}"): debe ir EXACTO como lo creó Banorte,\n` +
+      '    con las mismas mayúsculas. En la certificación aparece como "TERMINAL".\n' +
+      '  - PAYWORKS_PASSWORD: la contraseña de ese usuario.\n' +
+      `  - PAYWORKS_MODE (ahora: "${cfg.mode}"): la tienda va en PRD. La llave se carga\n` +
+      '    atada al modo; si cargaste la llave en AUT y cobras en PRD (o al revés), no\n' +
+      '    coincide. Pon PRD y vuelve a cargar la llave: node index.mjs llave\n' +
+      '  Si aun así falla, pide a Banorte una nueva llave para la afiliación y cárgala.',
     )
   }
 }
