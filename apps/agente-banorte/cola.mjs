@@ -32,7 +32,7 @@ import { dirname, join } from 'node:path'
 import { voucherDesde, numeroDeControl } from './pinpad.mjs'
 import { ejecutarEnPinpad } from './pinpad-remoto.mjs'
 
-export const VERSION_COLA = '1.2.0'
+export const VERSION_COLA = '1.3.0'
 
 // Dónde se guardan los cobros APROBADOS que no se pudieron reportar, para
 // reenviarlos al arrancar. El dinero ya se cobró: esto evita que se pierda.
@@ -94,6 +94,27 @@ export async function servirCola(cfg) {
 
   // Al arrancar, reenvía cobros aprobados que quedaron sin reportar.
   await reenviarPendientes(sb, token, ctx)
+
+  // Carga la LLAVE en la pinpad al arrancar. En Interredes hay que inyectar la
+  // llave (OBTENER_LLAVE) ANTES de cobrar, y queda atada al modo; si falta, el
+  // cobro truena con «Error de llaves». Antes había que correr `node index.mjs
+  // llave` a mano y era fácil olvidarlo. OBTENER_LLAVE NO cobra, así que es
+  // seguro hacerlo en cada arranque. Si falla (pinpad apagada, credenciales),
+  // se avisa y se sigue: la llave podría ya estar cargada, y si no, el cobro
+  // lo dirá.
+  log(`cargando llave en la pinpad (usuario ${cfg.user} · modo ${cfg.mode})…`)
+  try {
+    const rllave = await ejecutarEnPinpad({ op: 'llave', controlNumber: numeroDeControl('LLAVE') }, cfg)
+    if (rllave.aprobado) {
+      log('✓ llave cargada')
+    } else {
+      err(`no se pudo cargar la llave (${rllave.resultado}): ${rllave.campos?.text || 'sin detalle'}`)
+      err('  Revisa en el .env: PAYWORKS_USER debe ser TERMINAL (exacto) y PAYWORKS_MODE=PRD.')
+      err('  Si persiste, pide a Banorte una nueva llave para la afiliación y reinicia el agente.')
+    }
+  } catch (e) {
+    err(`no se pudo cargar la llave: ${e.message}. Sigo; si falta, el cobro lo dirá.`)
+  }
 
   const latir = async () => {
     const { error } = await sb.rpc('fn_terminal_latido', { p_token: token, p_version: VERSION_COLA, p_modo: cfg.mode })
