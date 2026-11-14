@@ -126,6 +126,11 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
         const parejas = parejasDeVoucher(data.tarjeta)
         const validacion = validacionDeVoucher(data.tarjeta.pin)
         const leyenda = leyendaDeValidacion(validacion)
+        const resultado = resultadoDeVoucher(data.tarjeta)
+        // Una transacción DECLINADA no autoriza nada: no lleva leyenda de
+        // «AUTORIZADO SIN FIRMA» ni raya de firma (sería contradictorio con el
+        // rechazo, y Banorte lo observaría).
+        const aprobada = resultado === 'APROBADA'
         // La matriz de certificación de Banorte pide tres cosas explícitas en
         // el voucher: el tipo de operación (VENTA), la leyenda de validación y
         // el resultado (APROBADA / DECLINADA).
@@ -135,14 +140,9 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
     <div class="cuentas" style="margin-top:3px">
       ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right">${esc(v)}</div>`).join('')}
     </div>
-    ${
-      leyenda
-        ? `<div style="text-align:center;margin-top:6px;font-weight:600">${esc(leyenda)}</div>`
-        : validacion === 'firma'
-          ? `<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>`
-          : ''
-    }
-    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.06em">RESULTADO: ${esc(resultadoDeVoucher(data.tarjeta))}</div>
+    ${aprobada ? `<div style="text-align:center;margin-top:6px;font-weight:600">${esc(leyenda)}</div>` : ''}
+    ${aprobada && validacion === 'firma' ? `<div style="margin-top:18px;border-top:1px solid #000;text-align:center;padding-top:2px">Firma</div>` : ''}
+    <div style="text-align:center;margin-top:6px;font-weight:600;letter-spacing:.06em">RESULTADO: ${esc(resultado)}</div>
   </div>`
       })()
     : ''
@@ -355,6 +355,7 @@ export function voucherTicketHTML(
   const leyenda = leyendaDeValidacion(validacion)
   const operacion = operacionDeVoucher(voucher)
   const resultado = resultadoDeVoucher(voucher)
+  const aprobada = resultado === 'APROBADA'
   const esDevolucion = operacion === 'DEVOLUCIÓN'
 
   const logo =
@@ -363,6 +364,10 @@ export function voucherTicketHTML(
       : `<img src="${negocio.logo || LOGO_TICKET}" alt="${esc(negocio.nombre)}" style="width:140px;max-width:60%;height:auto;display:block;margin:0 auto" />`
   const razonSocialHtml = negocio.razonSocial?.trim()
     ? `<div style="font-size:8px;letter-spacing:.04em;margin-top:3px">${esc(negocio.razonSocial.trim())}</div>`
+    : ''
+  // La DIRECCIÓN del comercio: Banorte la pide en el voucher de certificación.
+  const direccionHtml = negocio.direccion?.trim()
+    ? `<div style="font-size:7.5px;margin-top:2px;line-height:1.3">${negocio.direccion.split('\n').map((l) => esc(l.trim())).filter(Boolean).join('<br>')}</div>`
     : ''
   const rfcHtml = negocio.rfc?.trim()
     ? `<div style="font-size:7px;margin-top:2px">RFC: ${esc(negocio.rfc.trim())}</div>`
@@ -393,6 +398,7 @@ export function voucherTicketHTML(
       ${logo}
       ${negocio.slogan?.trim() ? `<div style="font-family:Jost,sans-serif;font-size:10px;font-style:italic;margin-top:2px">${esc(negocio.slogan.trim())}</div>` : ''}
       ${razonSocialHtml}
+      ${direccionHtml}
       ${rfcHtml}
     </div>
 
@@ -411,13 +417,8 @@ export function voucherTicketHTML(
     <div class="cuentas" style="margin-top:4px">
       ${parejas.map(([k, v]) => `<div>${esc(k)}</div><div style="text-align:right;font-weight:500">${esc(v)}</div>`).join('')}
     </div>
-    ${
-      leyenda
-        ? `<div class="center" style="margin-top:10px;font-weight:600">${esc(leyenda)}</div>`
-        : validacion === 'firma'
-          ? `<div style="margin-top:22px;border-top:1px solid #000;width:60%;margin-left:auto;margin-right:auto"></div><div class="center" style="font-size:9px">Firma</div>`
-          : ''
-    }
+    ${aprobada ? `<div class="center" style="margin-top:10px;font-weight:600">${esc(leyenda)}</div>` : ''}
+    ${aprobada && validacion === 'firma' ? `<div style="margin-top:22px;border-top:1px solid #000;width:60%;margin-left:auto;margin-right:auto"></div><div class="center" style="font-size:9px">Firma</div>` : ''}
 
     <div class="regla"></div>
     <div class="center mini" style="font-weight:600;letter-spacing:.14em">Resultado de la transacción</div>
