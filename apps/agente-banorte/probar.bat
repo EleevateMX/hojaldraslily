@@ -38,10 +38,14 @@ echo === Prueba de la terminal Banorte ===
 echo Carga de llave: NO cobra. Confirma que la pinpad conecta y responde.
 echo.
 
+echo *** OJO: esta prueba carga la llave en modo AUT (PRUEBA). Para COBRAR en
+echo *** produccion hay que cargar la llave de PRD con cargar-llave.bat, o si no
+echo *** el cobro dira "Error de llaves". Usa esto solo para probar que conecta.
+echo.
 set "PINPAD_IP="
 set /p PINPAD_IP=IP de la pinpad (la que dio success en el nc):
-set "PAYWORKS_USER=Terminal"
-set /p PAYWORKS_USER=Usuario de Payworks [Terminal]:
+set "PAYWORKS_USER=TERMINAL"
+set /p PAYWORKS_USER=Usuario de Payworks [TERMINAL]:
 set "PAYWORKS_PASSWORD="
 set /p PAYWORKS_PASSWORD=Contrasena de Payworks:
 set "PAYWORKS_GROUP="
@@ -55,7 +59,8 @@ echo.
 echo Usando DLL: %DLL_PATH%
 node index.mjs llave
 echo.
-echo (Si salio APROBADA, la pinpad conecto y cargo la llave.)
+echo (Si salio APROBADA, la pinpad conecto y cargo la llave DE PRUEBA, modo AUT.)
+echo (Para cobrar de verdad: corre cargar-llave.bat, que carga la llave de PRD.)
 echo (Si dice "No se pudo cargar el DLL", falta el Visual C++ Redistributable:
 echo  https://aka.ms/vs/17/release/vc_redist.x64.exe )
 pause
