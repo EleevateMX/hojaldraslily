@@ -106,6 +106,31 @@ if not errorlevel 1 (
 )
 
 REM ---------------------------------------------------------------------------
+REM 2c. Agente de BANORTE - cobra las tarjetas que la caja encola
+REM ---------------------------------------------------------------------------
+REM  Es el tercer programa de la PC. Sin el, la caja NO puede mandar el cobro a
+REM  la pinpad: se cobra a mano en la terminal. Con el, la caja encola y este
+REM  agente cobra y carga la llave al arrancar. La carpeta puede estar en
+REM  "C:\Hojaldras Lily\agente-banorte" o en el Escritorio; se busca en ambos.
+tasklist /v /fi "imagename eq cmd.exe" 2>nul | find /i "Hojaldras Lily - agente de Banorte" >nul
+if not errorlevel 1 (
+  echo   [OK] El agente de Banorte ya estaba corriendo.
+) else (
+  set "BANORTE="
+  if exist "%BASE%\agente-banorte\correr-cola.bat" set "BANORTE=%BASE%\agente-banorte\correr-cola.bat"
+  if not defined BANORTE if exist "%USERPROFILE%\Desktop\agente-banorte\correr-cola.bat" set "BANORTE=%USERPROFILE%\Desktop\agente-banorte\correr-cola.bat"
+  if not defined BANORTE if exist "%USERPROFILE%\OneDrive\Desktop\agente-banorte\correr-cola.bat" set "BANORTE=%USERPROFILE%\OneDrive\Desktop\agente-banorte\correr-cola.bat"
+  if defined BANORTE (
+    echo   Arrancando el agente de Banorte...
+    start "" "!BANORTE!"
+    echo   [OK] Agente de Banorte arrancado.
+  ) else (
+    echo   [i] El agente de Banorte no esta instalado en esta PC. Las tarjetas
+    echo       se cobran a mano en la pinpad hasta que se instale.
+  )
+)
+
+REM ---------------------------------------------------------------------------
 REM 3. Las pantallas
 REM ---------------------------------------------------------------------------
 REM  El acomodo por monitor vive en pantallas.ps1, no aqui: un .bat no puede
