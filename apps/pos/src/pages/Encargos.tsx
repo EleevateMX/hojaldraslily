@@ -9,6 +9,7 @@ import {
   cobrarEncargo,
   registrarAnticipo,
   marcarEncargoDeViaje,
+  marcarEncargoEntregado,
   clientePorTelefono,
   cancelarEncargo,
   listarProductosDelDia,
@@ -461,6 +462,24 @@ export function Encargos() {
     }
   }
 
+  /**
+   * El cliente ya pagó y pasa a recoger su encargo: se marca entregado. No
+   * cobra ni mueve inventario (eso ya se hizo al pagar); solo lo saca de la
+   * cola de pendientes y lo manda al historial.
+   */
+  async function entregar(e: Encargo) {
+    setOcupado(e.id)
+    try {
+      await marcarEncargoEntregado(sb, e.id)
+      setAviso(`Encargo de ${e.cliente} entregado.`)
+      await cargar(false)
+    } catch (err) {
+      setError(mensajeDeError(err))
+    } finally {
+      setOcupado(null)
+    }
+  }
+
   const piezasApartadas = encargos.reduce((s, e) => s + e.piezas, 0)
   const dinero = encargos.reduce((s, e) => s + e.total, 0)
 
@@ -817,18 +836,29 @@ export function Encargos() {
                           e={e}
                           acciones={
                             <>
-                              <button
-                                onClick={() => void cancelar(e)}
-                                disabled={ocupado === e.id}
-                                className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
-                              >
-                                Cancelar
-                              </button>
-                              {/* Ya pagado = no hay nada que cobrar: solo falta
-                                  entregarlo. No se muestran Anticipo ni Cobrar
-                                  para que nadie cobre de más por error. */}
-                              {e.estado !== 'pagado' && (
+                              {e.estado === 'pagado' ? (
+                                /* Ya pagado al 100%: lo único que falta es
+                                   entregarlo. NO va Cancelar —un encargo cobrado
+                                   no se cancela, se devuelve desde el Historial
+                                   de la caja (con PIN de gerencia)—, solo
+                                   Entregar, que lo saca de pendientes. */
+                                <button
+                                  onClick={() => void entregar(e)}
+                                  disabled={ocupado === e.id}
+                                  className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-4 py-2 rounded-full font-mono text-xs uppercase tracking-wide disabled:opacity-40 transition-colors"
+                                  title="El cliente ya pagó y pasa por su encargo: marcarlo entregado lo saca de pendientes"
+                                >
+                                  {ocupado === e.id ? '…' : 'Entregar'}
+                                </button>
+                              ) : (
                                 <>
+                                  <button
+                                    onClick={() => void cancelar(e)}
+                                    disabled={ocupado === e.id}
+                                    className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                                  >
+                                    Cancelar
+                                  </button>
                                   {/* Anticipo en gris: abonar es parcial y NO da
                                       nota. Se esconde cuando ya está cubierto. */}
                                   {e.anticipo < e.total && (
