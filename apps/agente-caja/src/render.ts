@@ -154,11 +154,22 @@ function construirPrueba(p: PayloadPrueba, ancho: number): Buffer {
   return b.cortar().construir()
 }
 
+/**
+ * El sello de COPIA, arriba del todo. La nota sale en dos papeles —el original
+ * para el cliente y una copia para la casa (lo pidió la tienda, 27/10)— y la
+ * copia tiene que distinguirse: va un «COPIA» invertido (blanco sobre negro) y
+ * centrado antes del logo, igual que lo marca la nota del navegador.
+ */
+function selloCopia(b: ConstructorEscPos): void {
+  b.alinear(1).negrita(true).invertir(true).linea('  COPIA  ').invertir(false).negrita(false).alinear(0).linea()
+}
+
 export function construirDocumento(
   trabajo: TrabajoCaja,
   negocio: TicketNegocio,
   logo: LogoRaster | null,
   ancho: number = COLUMNAS_80MM,
+  copia = false,
 ): Buffer {
   if (esPayloadDePrueba(trabajo.payload)) return construirPrueba(trabajo.payload, ancho)
 
@@ -191,6 +202,8 @@ export function construirDocumento(
   // en los datos del negocio, ya rasterizado y viajando dentro del trabajo.
   const img = logo ?? logoDelNegocio(neg)
   const b = new ConstructorEscPos().inicializar()
+  // La COPIA se marca arriba del todo, antes del logo.
+  if (copia) selloCopia(b)
   // El logo pegado al slogan, sin línea en blanco de por medio: la casa lo
   // quiere como un conjunto. El slogan ya es la primera línea de armarTicket.
   if (img) b.alinear(1).logo(img)

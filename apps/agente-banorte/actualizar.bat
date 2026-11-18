@@ -27,6 +27,7 @@ curl -fsSL "%BASE%/pinpad-hijo.mjs"    -o pinpad-hijo.mjs    || goto error
 curl -fsSL "%BASE%/package.json"       -o package.json       || goto error
 curl -fsSL "%BASE%/.env.example"       -o .env.example       || goto error
 curl -fsSL "%BASE%/cargar-llave.bat"   -o cargar-llave.bat   || goto error
+curl -fsSL "%BASE%/correr-cola.bat"    -o correr-cola.bat    || goto error
 
 if not exist node_modules (
   echo Instalando dependencias, un momento...

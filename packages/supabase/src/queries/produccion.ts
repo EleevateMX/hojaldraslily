@@ -381,7 +381,11 @@ export async function listarEncargos(
     .order('created_at', { ascending: true })
     .limit(200)
 
-  if (!incluirCerrados) q = q.eq('estado', 'apartado')
+  // Pendientes = lo que todavia no se entrega: 'apartado' (sin pagar o con
+  // anticipo) Y 'pagado' (pagado al 100% pero aun por recoger). Un encargo
+  // pagado sigue mostrandose como "pendiente de entrega" hasta que se marca
+  // entregado (fn_encargo_marcar_entregado); recien ahi pasa al historial.
+  if (!incluirCerrados) q = q.in('estado', ['apartado', 'pagado'])
 
   const { data, error } = await q
   if (error) throw error
@@ -898,6 +902,21 @@ export async function cancelarEncargo(
   if (error) throw error
 }
 
+/**
+ * Marca un encargo YA PAGADO como entregado (recogido por el cliente). No toca
+ * dinero ni inventario —eso se hizo al cobrar—: solo lo saca de la cola de
+ * pendientes y lo manda al historial.
+ */
+export async function marcarEncargoEntregado(
+  sb: ClienteLily,
+  encargoId: string,
+): Promise<void> {
+  const { error } = await sb.rpc('fn_encargo_marcar_entregado', {
+    p_encargo_id: encargoId,
+  })
+  if (error) throw error
+}
+
 // ------------------- el reloj del horno -------------------
 
 export interface OrdenConTiempo {
@@ -1283,7 +1302,10 @@ export async function historialDeEncargos(
         ' encargo_items(id, producto_id, cantidad, precio_unitario,' +
         ' productos(nombre, imagen_url))',
     )
-    .neq('estado', 'apartado')
+    // El historial son los encargos CERRADOS: entregados o cancelados. Un
+    // 'pagado' sin entregar NO va aqui —sigue en pendientes— para que no
+    // aparezca en las dos listas a la vez.
+    .in('estado', ['entregado', 'cancelado'])
     .order('created_at', { ascending: false })
     .limit(limite)
   if (error) throw error

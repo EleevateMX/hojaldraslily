@@ -4109,6 +4109,10 @@ export type Database = {
         Args: { p_encargo_id: string; p_metodo?: string }
         Returns: number
       }
+      fn_encargo_marcar_entregado: {
+        Args: { p_encargo_id: string }
+        Returns: undefined
+      }
       fn_encargo_marcar_viaje: {
         Args: { p_encargo_id: string; p_para_viaje?: boolean }
         Returns: boolean
