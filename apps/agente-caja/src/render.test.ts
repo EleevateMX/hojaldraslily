@@ -49,6 +49,16 @@ describe('construirDocumento', () => {
     expect(b.toString('latin1')).toContain('$280.00')
   })
 
+  it('la COPIA lleva el sello «COPIA»; el original no', () => {
+    const original = construirDocumento(trabajo(venta), NEGOCIO_DEFAULT, null)
+    const copia = construirDocumento(trabajo(venta), NEGOCIO_DEFAULT, null, undefined, true)
+    expect(original.toString('latin1')).not.toContain('COPIA')
+    expect(copia.toString('latin1')).toContain('COPIA')
+    // El sello va INVERTIDO (GS B 1 … GS B 0): es lo que lo hace saltar a la
+    // vista. Sin eso, «COPIA» se perdería entre el resto del texto.
+    expect(hex(copia)).toContain('1d4201') // GS B 1 (invertir on)
+  })
+
   // Un payload roto tiene que fallar RUIDOSAMENTE: el trabajo se marca
   // fallido y se ve en Admin. Sacar papel en blanco es el modo de fallo que
   // este agente viene a cerrar.

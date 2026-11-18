@@ -31,7 +31,7 @@ import { enviar, estaViva } from './socket.js'
 import { imprimirWindows } from './windows.js'
 import { revisarActualizacion } from './autoactualizar.js'
 
-const VERSION = '1.1.12'
+const VERSION = '1.1.13'
 
 function requerido(clave: string): string {
   const v = process.env[clave]?.trim()
@@ -97,13 +97,20 @@ async function cicloDeImpresion(): Promise<void> {
     const trabajos = (data ?? []) as TrabajoCaja[]
     for (const t of trabajos) {
       try {
-        const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO)
         // Ticket de venta: original + copia (cada copia trae su propio corte
         // ESC/POS, así que salen dos papeles cortados). Corte, prueba y voucher
         // suelto: una. (El voucher viaja como tipo 'ticket' pero con la marca
         // `comprobante:'voucher'`, así que se distingue por el payload.)
         const copias = t.tipo_documento === 'ticket' && !esPayloadDeVoucher(t.payload) ? COPIAS_TICKET : 1
-        const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno
+        const original = construirDocumento(t, datosDelNegocio(), null, ANCHO)
+        // La primera es el ORIGINAL (para el cliente); las demás salen marcadas
+        // «COPIA» arriba, para que la copia de la casa se distinga a simple vista.
+        const bytes = copias > 1
+          ? Buffer.concat([
+              original,
+              ...Array.from({ length: copias - 1 }, () => construirDocumento(t, datosDelNegocio(), null, ANCHO, true)),
+            ])
+          : original
         if (WINDOWS) await imprimirWindows(bytes, WINDOWS)
         else await enviar(bytes, HOST, PUERTO)
         const { error: e } = await sb.rpc('fn_imprimir_confirmar', {

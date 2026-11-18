@@ -559,7 +559,10 @@ function construirPrueba(p, ancho) {
   b.linea(centrar("Acentos: \xE1\xE9\xED\xF3\xFA \xF1\xD1 \xBF? \xA1! \xB0"));
   return b.cortar().construir();
 }
-function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
+function selloCopia(b) {
+  b.alinear(1).negrita(true).invertir(true).linea("  COPIA  ").invertir(false).negrita(false).alinear(0).linea();
+}
+function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM, copia = false) {
   if (esPayloadDePrueba(trabajo.payload)) return construirPrueba(trabajo.payload, ancho);
   const neg = negocioDelTrabajo(trabajo.payload, negocio);
   if (esPayloadDeCorte(trabajo.payload)) {
@@ -582,6 +585,7 @@ function construirDocumento(trabajo, negocio, logo, ancho = COLUMNAS_80MM) {
   }
   const img = logo ?? logoDelNegocio(neg);
   const b = new ConstructorEscPos().inicializar();
+  if (copia) selloCopia(b);
   if (img) b.alinear(1).logo(img);
   b.alinear(0);
   for (const l of armarTicket(trabajo.payload, neg, ancho)) dibujar(b, l);
@@ -792,7 +796,7 @@ async function revisarActualizacion(versionActual) {
 }
 
 // src/index.ts
-var VERSION = "1.1.12";
+var VERSION = "1.1.13";
 function requerido(clave) {
   const v = process.env[clave]?.trim();
   if (!v) {
@@ -838,9 +842,12 @@ async function cicloDeImpresion() {
     const trabajos = data ?? [];
     for (const t of trabajos) {
       try {
-        const uno = construirDocumento(t, datosDelNegocio(), null, ANCHO);
         const copias = t.tipo_documento === "ticket" && !esPayloadDeVoucher(t.payload) ? COPIAS_TICKET : 1;
-        const bytes = copias > 1 ? Buffer.concat(Array.from({ length: copias }, () => uno)) : uno;
+        const original = construirDocumento(t, datosDelNegocio(), null, ANCHO);
+        const bytes = copias > 1 ? Buffer.concat([
+          original,
+          ...Array.from({ length: copias - 1 }, () => construirDocumento(t, datosDelNegocio(), null, ANCHO, true))
+        ]) : original;
         if (WINDOWS) await imprimirWindows(bytes, WINDOWS);
         else await enviar(bytes, HOST, PUERTO);
         const { error: e } = await sb.rpc("fn_imprimir_confirmar", {
