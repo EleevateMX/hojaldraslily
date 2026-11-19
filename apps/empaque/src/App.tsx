@@ -238,7 +238,8 @@ function Tarjeta({
         <div className="min-w-0">
           <p className="font-display text-3xl text-sa-green-ink leading-tight">{e.cliente}</p>
           <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            Encargo #{e.folio}
+            {/* El folio llega al cobrar; antes de eso, «pendiente». */}
+            {e.folio != null ? `Encargo #${e.folio}` : 'Encargo · folio pendiente'}
             {e.telefono ? ` · ${e.telefono}` : ''}
           </p>
           {/* VA DE VIAJE cambia cómo se arma la caja, así que se grita antes

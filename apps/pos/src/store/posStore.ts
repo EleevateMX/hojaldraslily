@@ -44,7 +44,8 @@ function nuevaLineaId(): string {
  */
 export interface EncargoEnCarrito {
   id: string
-  folio: number
+  // Null hasta que se cobra: el encargo toma folio al pagarse, no al apartarse.
+  folio: number | null
   cliente: string
   anticipo: number
 }

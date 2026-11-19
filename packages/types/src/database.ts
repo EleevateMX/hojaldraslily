@@ -4109,6 +4109,18 @@ export type Database = {
         Args: { p_encargo_id: string; p_metodo?: string }
         Returns: number
       }
+      fn_encargo_editar: {
+        Args: {
+          p_encargo_id: string
+          p_cliente: string
+          p_items: Json
+          p_telefono?: string
+          p_fecha_entrega?: string
+          p_hora_entrega?: string
+          p_nota?: string
+        }
+        Returns: undefined
+      }
       fn_encargo_marcar_entregado: {
         Args: { p_encargo_id: string }
         Returns: undefined

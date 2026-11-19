@@ -6,6 +6,7 @@ import {
   encargosPorDia,
   diasHasta,
   crearEncargo,
+  editarEncargo,
   cobrarEncargo,
   registrarAnticipo,
   marcarEncargoDeViaje,
@@ -84,7 +85,10 @@ function Tarjeta({
             {e.cliente}
           </p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-0.5">
-            #{e.folio}
+            {/* El folio se asigna AL COBRAR, no al apartar: un encargo que se
+                cancela nunca se come un folio. Hasta entonces dice «Pendiente»
+                en vez de un «#null» que no significa nada. */}
+            {e.folio != null ? `#${e.folio}` : 'Folio pendiente'}
             {e.telefono ? ` · ${e.telefono}` : ''}
           </p>
           {/* Lo que Empaque le contesta a la caja: si ya esta en
@@ -192,8 +196,11 @@ export function Encargos() {
   // terminal) y la nota sale por el navegador. Guarda a cuál encargo aplica.
   const [cobroDirecto, setCobroDirecto] = useState<string | null>(null)
 
-  // Formulario de apartar
+  // Formulario de apartar / editar. `editando` guarda el id del encargo que se
+  // está editando (null = se está apartando uno nuevo): el mismo formulario
+  // sirve para las dos cosas.
   const [nuevo, setNuevo] = useState(false)
+  const [editando, setEditando] = useState<string | null>(null)
   const [cliente, setCliente] = useState('')
   const [telefono, setTelefono] = useState('')
   const [paraViaje, setParaViaje] = useState(false)
@@ -336,8 +343,17 @@ export function Encargos() {
     setOcupado(e.id)
     try {
       const saldo = await cobrarEncargo(sb, e.id, metodo)
+      // El folio se asignó recién al cobrar (antes era null). Se relee para
+      // ponerlo en la nota; si por lo que sea no llega, el papel sale sin él
+      // en vez de con un «#null».
+      const { data: row } = await sb
+        .from('encargos')
+        .select('folio')
+        .eq('id', e.id)
+        .single()
+      const folioAsignado = (row?.folio as number | null) ?? '—'
       const ticket: TicketData = {
-        folio: e.folio,
+        folio: folioAsignado,
         fecha: new Date(),
         cajero: empleado?.nombre,
         canal: 'Caja',
@@ -347,7 +363,8 @@ export function Encargos() {
           precioUnitario: i.precio_unitario,
         })),
         anticipo: e.anticipo || undefined,
-        clienteNombre: `${e.cliente} (encargo #${e.folio})`,
+        clienteNombre:
+          row?.folio != null ? `${e.cliente} (encargo #${row.folio})` : e.cliente,
         metodoPago: metodo === 'efectivo' ? 'Efectivo' : 'Terminal 1',
       }
       // Sin id de orden: la nota sale por el navegador (cobrarEncargo no
@@ -372,7 +389,34 @@ export function Encargos() {
   function limpiar() {
     setCliente(''); setTelefono(''); setFecha(''); setHora(''); setNota('')
     setParaViaje(false); setConocido(null)
-    setPiezas({}); setBusca(''); setNuevo(false)
+    setPiezas({}); setBusca(''); setNuevo(false); setEditando(null)
+  }
+
+  /**
+   * Abre el formulario YA LLENO para corregir un encargo que todavía no se
+   * cobra: el cliente cambió el nombre, la hora, o quiere una pieza más. Carga
+   * lo que tiene el encargo y deja el mismo formulario de apartar en modo
+   * edición. Solo para 'apartado': uno pagado ya tiene venta e inventario.
+   */
+  function abrirEdicion(e: Encargo) {
+    setEditando(e.id)
+    setCliente(e.cliente)
+    setTelefono(e.telefono ?? '')
+    setFecha(e.fecha_entrega ?? '')
+    setHora(e.hora_entrega ?? '')
+    setNota(e.nota ?? '')
+    setParaViaje(e.para_viaje)
+    setConocido(null)
+    setBusca('')
+    // Los renglones del encargo, por producto, para que el selector ya traiga
+    // las cantidades puestas y se puedan subir o bajar.
+    setPiezas(
+      Object.fromEntries(e.items.map((i) => [i.producto_id, i.cantidad])),
+    )
+    setNuevo(true)
+    setAviso(null)
+    setError(null)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function buscarCliente() {
@@ -395,21 +439,38 @@ export function Encargos() {
     if (items.length === 0 || cliente.trim().length < 2) return
     setGuardando(true)
     try {
-      const id = await crearEncargo(sb, {
-        cliente: cliente.trim(),
-        items,
-        telefono: telefono.trim() || undefined,
-        fecha_entrega: fecha || undefined,
-        hora_entrega: hora.trim() || undefined,
-        nota: nota.trim() || undefined,
-      })
-      // El viaje va aparte y no como parámetro de crearEncargo: así se puede
-      // marcar después, que es lo que pasa cuando el cliente lo dice al final.
-      if (paraViaje) await marcarEncargoDeViaje(sb, id, true)
-      setAviso(
-        `Apartado para ${cliente.trim()}: ${cuantas} pieza${cuantas === 1 ? '' : 's'}` +
-          (paraViaje ? ' · va de viaje, empaque ya lo sabe.' : '.'),
-      )
+      if (editando) {
+        // Corregir uno que ya existe: mismo camino, pero sin tocar el folio
+        // (sigue pendiente) ni el anticipo.
+        await editarEncargo(sb, editando, {
+          cliente: cliente.trim(),
+          items,
+          telefono: telefono.trim() || undefined,
+          fecha_entrega: fecha || undefined,
+          hora_entrega: hora.trim() || undefined,
+          nota: nota.trim() || undefined,
+        })
+        // El viaje no es parte de `fn_encargo_editar`; se sincroniza aparte,
+        // igual que al apartar.
+        await marcarEncargoDeViaje(sb, editando, paraViaje)
+        setAviso(`Encargo de ${cliente.trim()} actualizado.`)
+      } else {
+        const id = await crearEncargo(sb, {
+          cliente: cliente.trim(),
+          items,
+          telefono: telefono.trim() || undefined,
+          fecha_entrega: fecha || undefined,
+          hora_entrega: hora.trim() || undefined,
+          nota: nota.trim() || undefined,
+        })
+        // El viaje va aparte y no como parámetro de crearEncargo: así se puede
+        // marcar después, que es lo que pasa cuando el cliente lo dice al final.
+        if (paraViaje) await marcarEncargoDeViaje(sb, id, true)
+        setAviso(
+          `Apartado para ${cliente.trim()}: ${cuantas} pieza${cuantas === 1 ? '' : 's'}` +
+            (paraViaje ? ' · va de viaje, empaque ya lo sabe.' : '.'),
+        )
+      }
       limpiar()
       await cargar(false)
       setError(null)
@@ -494,7 +555,7 @@ export function Encargos() {
         </div>
         <div className="flex items-center gap-2 md:gap-3 shrink-0">
           <button
-            onClick={() => setNuevo((v) => !v)}
+            onClick={() => (nuevo ? limpiar() : setNuevo(true))}
             className={`${btn} bg-sa-cream text-sa-green-deep`}
           >
             {nuevo ? 'Cerrar' : 'Apartar uno nuevo'}
@@ -552,10 +613,13 @@ export function Encargos() {
 
         {nuevo && (
           <section className="bg-white rounded-sa shadow-sa-sm p-5 space-y-4">
-            <p className="font-display text-xl text-sa-green-ink">Apartar un encargo</p>
+            <p className="font-display text-xl text-sa-green-ink">
+              {editando ? 'Editar el encargo' : 'Apartar un encargo'}
+            </p>
             <p className="font-body text-sm text-sa-green-ink/60 -mt-2">
-              Se separa en almacén. No se descuenta del inventario hasta que se
-              cobre.
+              {editando
+                ? 'Se corrige lo apartado: nombre, fecha, hora, piezas o nota. El folio se sigue asignando hasta que se cobre.'
+                : 'Se separa en almacén. No se descuenta del inventario hasta que se cobre.'}
             </p>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -727,7 +791,13 @@ export function Encargos() {
                   disabled={cuantas === 0 || cliente.trim().length < 2 || guardando}
                   className="bg-sa-green hover:bg-sa-green-deep text-sa-cream px-6 py-2.5 rounded-sa font-medium text-sm disabled:opacity-40 transition-colors"
                 >
-                  {guardando ? 'Apartando…' : 'Apartar'}
+                  {guardando
+                    ? editando
+                      ? 'Guardando…'
+                      : 'Apartando…'
+                    : editando
+                      ? 'Guardar cambios'
+                      : 'Apartar'}
                 </button>
               </div>
             </div>
@@ -858,6 +928,16 @@ export function Encargos() {
                                     className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
                                   >
                                     Cancelar
+                                  </button>
+                                  {/* Editar: abre el formulario de arriba ya
+                                      lleno para corregir nombre, hora, piezas o
+                                      nota. Solo mientras no se cobra. */}
+                                  <button
+                                    onClick={() => abrirEdicion(e)}
+                                    disabled={ocupado === e.id}
+                                    className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
+                                  >
+                                    Editar
                                   </button>
                                   {/* Anticipo en gris: abonar es parcial y NO da
                                       nota. Se esconde cuando ya está cubierto. */}

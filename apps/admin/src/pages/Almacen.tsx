@@ -156,7 +156,9 @@ function TarjetaEncargo({
         <div className="min-w-0">
           <p className="font-display text-xl text-sa-green-ink leading-tight">{e.cliente}</p>
           <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/50 mt-1">
-            Encargo #{e.folio}
+            {/* El folio se asigna al cobrar: un encargo sin pagar dice
+                «pendiente» en vez de un «#» vacío. */}
+            {e.folio != null ? `Encargo #${e.folio}` : 'Encargo · folio pendiente'}
             {e.telefono ? ` · ${e.telefono}` : ''}
           </p>
           {/* Lo que Empaque le contesta a gerencia. */}

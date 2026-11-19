@@ -308,7 +308,8 @@ export interface ItemDeEncargo {
 
 export interface Encargo {
   id: string
-  folio: number
+  /** Null = "Pendiente": el folio se asigna hasta que el encargo se cobra. */
+  folio: number | null
   cliente: string
   telefono: string | null
   fecha_entrega: string | null
@@ -336,7 +337,7 @@ export interface Encargo {
 
 interface FilaEncargo {
   id: string
-  folio: number
+  folio: number | null
   cliente: string
   telefono: string | null
   fecha_entrega: string | null
@@ -455,6 +456,29 @@ export async function crearEncargo(sb: ClienteLily, e: NuevoEncargo): Promise<st
   })
   if (error) throw error
   return data as unknown as string
+}
+
+/**
+ * Edita un encargo que TODAVIA no se cobra: nombre, telefono, fecha, hora, nota
+ * y productos. No toca el anticipo ni el folio (sigue "Pendiente" hasta el
+ * cobro). Reemplaza los renglones por los nuevos. Un encargo ya pagado no se
+ * edita; ahi se usa devolucion.
+ */
+export async function editarEncargo(
+  sb: ClienteLily,
+  encargoId: string,
+  e: NuevoEncargo,
+): Promise<void> {
+  const { error } = await sb.rpc('fn_encargo_editar', {
+    p_encargo_id: encargoId,
+    p_cliente: e.cliente,
+    p_items: e.items,
+    p_telefono: e.telefono ?? undefined,
+    p_fecha_entrega: e.fecha_entrega ?? undefined,
+    p_hora_entrega: e.hora_entrega ?? undefined,
+    p_nota: e.nota ?? undefined,
+  })
+  if (error) throw error
 }
 
 /**
@@ -1380,7 +1404,13 @@ export function encargosPorHora(encargos: Encargo[]): HoraDeEncargos[] {
       encargos: [...lista].sort((x, y) => {
         const hx = minutosDeHora(x.hora_entrega)
         const hy = minutosDeHora(y.hora_entrega)
-        if (hx === hy) return x.folio - y.folio
+        if (hx === hy) {
+          // Desempate por folio, pero un encargo sin cobrar todavía no tiene
+          // folio (null): va después de los que ya lo tienen.
+          const fx = x.folio ?? Number.MAX_SAFE_INTEGER
+          const fy = y.folio ?? Number.MAX_SAFE_INTEGER
+          return fx - fy
+        }
         if (hx === null) return 1
         if (hy === null) return -1
         return hx - hy

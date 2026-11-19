@@ -246,7 +246,9 @@ export function Cobro() {
       // lo que se lee a un metro en el mostrador es a quién se le entrega.
       // El folio va detrás, que es con lo que se concilia después.
       clienteNombre: encargo
-        ? `${encargo.cliente} (encargo #${encargo.folio})`
+        ? encargo.folio != null
+          ? `${encargo.cliente} (encargo #${encargo.folio})`
+          : encargo.cliente
         : undefined,
       metodoPago: mixto
         ? `Efectivo ${mxn(efectivoMixto)} + Terminal 1 ${mxn(tarjetaMixto)}`
@@ -753,7 +755,9 @@ export function Cobro() {
           </button>
           <div>
             <p className="font-mono text-xs uppercase tracking-widest text-sa-cream/50">
-              {encargo ? `Encargo #${encargo.folio} · ${encargo.cliente}` : 'Cobrar orden'}
+              {encargo
+                ? `Encargo${encargo.folio != null ? ` #${encargo.folio}` : ''} · ${encargo.cliente}`
+                : 'Cobrar orden'}
             </p>
             <p className="font-display text-lg text-sa-cream">
               {items.length} {items.length === 1 ? 'producto' : 'productos'}
