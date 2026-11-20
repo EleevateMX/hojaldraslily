@@ -38,6 +38,14 @@ const VENTAS_PERIODO: VentaDelPeriodo[] = [
 
 const FACTURAS: FacturaGlobal[] = [
   {
+    id: '0', fecha: ayer, folio_original: `GLOBAL-${ayer.replaceAll('-', '')}-PRE`, ambiente: 'pro',
+    id_empresa: 2256, uuid: null, serie: 'FACTURA', folio_cfdi: 88,
+    estatus: 'pendiente', num_folios: 24, subtotal: 8545, iva: 0, total: 8545,
+    pdf_link: 'https://ejemplo/pdf', xml_link: null, mensaje: 'Pre-factura guardada correctamente',
+    created_at: new Date().toISOString(),
+    tipo: 'diaria', periodo_desde: ayer, periodo_hasta: ayer, comentario: null,
+  },
+  {
     id: '1', fecha: ayer, folio_original: `GLOBAL-${ayer.replaceAll('-', '')}`, ambiente: 'pro',
     id_empresa: 2256, uuid: 'A1B2C3D4-5E6F-7788-99AA-BBCCDDEEFF00', serie: 'FACTURA', folio_cfdi: 1204,
     estatus: 'timbrada', num_folios: 73, subtotal: 8120.5, iva: 0, total: 8120.5,
