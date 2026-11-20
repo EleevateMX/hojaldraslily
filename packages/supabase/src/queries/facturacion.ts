@@ -66,6 +66,41 @@ export async function facturasListar(sb: ClienteLily, desde: string, hasta: stri
   return (await rpc<FacturaGlobal[] | null>(sb, 'fn_facturas_listar', { p_desde: desde, p_hasta: hasta })) ?? []
 }
 
+/** Un renglón de una factura/prefactura: su concepto (con el folio) y su importe. */
+export interface RenglonFactura {
+  concepto: string
+  importe: number
+}
+
+/**
+ * El detalle completo de una factura/prefactura para verla sin pierde: sus
+ * renglones (qué folios la componen) y los identificadores con que vive en
+ * ContaDigital (Id interno, serie/folio, estatus, UUID, FolioOriginal).
+ */
+export interface DetalleFactura {
+  id_contadigital: string | null
+  serie: string | null
+  folio_cfdi: number | null
+  estatus_cd: string | null
+  uuid: string | null
+  folio_original: string | null
+  tipo: 'diaria' | 'periodo' | 'manual' | null
+  periodo_desde: string | null
+  periodo_hasta: string | null
+  total: number
+  num_folios: number
+  comentario: string | null
+  pdf_link: string | null
+  xml_link: string | null
+  mensaje: string | null
+  renglones: RenglonFactura[]
+}
+
+/** El detalle de una factura/prefactura por su id (renglones + datos de ContaDigital). */
+export async function detalleDeFactura(sb: ClienteLily, id: string): Promise<DetalleFactura> {
+  return await rpc<DetalleFactura>(sb, 'fn_factura_detalle', { p_id: id })
+}
+
 export interface ResultadoTimbrado {
   ok: boolean
   yaExistia?: boolean

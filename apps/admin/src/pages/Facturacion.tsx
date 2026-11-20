@@ -1,10 +1,10 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { sb } from '../lib/sb'
 import {
-  ventasDelDia, ventasDelPeriodo, facturasListar,
+  ventasDelDia, ventasDelPeriodo, facturasListar, detalleDeFactura,
   timbrarGlobal, timbrarPeriodo, timbrarManual, timbrarPrefactura,
   type VentaDelDia, type VentaDelPeriodo, type FacturaGlobal,
-  type ResultadoTimbrado, type PeriodicidadGlobal,
+  type ResultadoTimbrado, type PeriodicidadGlobal, type DetalleFactura,
 } from '@lily/supabase'
 import { mxn, mensajeDeError } from '@lily/utils'
 import { PageHeader, Loading, ErrorMsg, OkMsg, Panel, Field, Chip, cx } from '../ui'
@@ -48,12 +48,27 @@ type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string }
  * desplegable, pero la contadora también puede escribir la suya. Vacío = la
  * leyenda por omisión del servidor («Venta de pan y productos de panadería»).
  */
+const LEYENDA_PANADERIA = 'Venta de pan y productos de panadería'
+
 const LEYENDAS_SUGERIDAS = [
-  'Venta de pan y productos de panadería',
+  LEYENDA_PANADERIA,
   'Venta de pan, galletas y pastelitos',
   'Pan, galletas y pastelitos dulces',
   'Venta de productos de panadería al público en general',
 ]
+
+/**
+ * El concepto que irá al CFDI, igual que lo arma el servidor: por folio
+ * «<descripción o leyenda> · Folio N»; en manual, el texto solo. Vacío = la
+ * leyenda de panadería por omisión. Sirve para el preview de «cómo quedaría».
+ */
+function conceptoCFDI(descripcion: string, folio: number | null, desde: string, hasta: string): string {
+  const base = descripcion.trim()
+  if (folio == null) {
+    return base || `${LEYENDA_PANADERIA} al público en general del ${desde} al ${hasta}`
+  }
+  return `${base || LEYENDA_PANADERIA} · Folio ${folio}`
+}
 
 /** El FolioOriginal con el que la Edge Function identifica cada global. */
 function folioEsperado(sub: SubModo, fecha: string, desde: string, hasta: string): string {
@@ -66,7 +81,71 @@ function EstatusChip({ e }: { e: FacturaGlobal['estatus'] }) {
   if (e === 'timbrada') return <Chip tone="si">Timbrada</Chip>
   if (e === 'error') return <Chip tone="no">Error</Chip>
   if (e === 'cancelada') return <Chip tone="neutral">Cancelada</Chip>
-  return <Chip tone="neutral">Pendiente</Chip>
+  return <Chip tone="neutral">Prefactura (sin timbrar)</Chip>
+}
+
+/** Un dato con su etiqueta, para el panel de detalle. */
+function Dato({ k, v }: { k: string; v: ReactNode }) {
+  if (v == null || v === '') return null
+  return (
+    <div>
+      <p className={cx.label}>{k}</p>
+      <p className="text-sm text-sa-green-ink font-mono break-all">{v}</p>
+    </div>
+  )
+}
+
+/**
+ * El detalle de una factura/prefactura: sus renglones (qué folios la componen,
+ * con el concepto tal como va al CFDI) y los identificadores con que vive en
+ * ContaDigital. Para no perderle la pista a nada.
+ */
+function DetallePanel({ d, cargando }: { d: DetalleFactura | null; cargando: boolean }) {
+  if (cargando || !d) {
+    return <p className={`text-sm ${cx.muted} py-2`}>{cargando ? 'Cargando detalle…' : 'Sin detalle.'}</p>
+  }
+  return (
+    <div className="space-y-3 py-2">
+      <div className="flex flex-wrap gap-x-8 gap-y-2">
+        <Dato k="En ContaDigital" v={d.serie && d.folio_cfdi ? `Serie ${d.serie} · Folio ${d.folio_cfdi}` : null} />
+        <Dato k="Estatus en ContaDigital" v={d.estatus_cd} />
+        <Dato k="Id interno (ContaDigital)" v={d.id_contadigital} />
+        <Dato k="Folio del sistema" v={d.folio_original} />
+        <Dato k="UUID (al timbrar)" v={d.uuid} />
+      </div>
+      {(d.pdf_link || d.xml_link) && (
+        <div className="flex gap-3">
+          {d.pdf_link && <a className="text-sa-green underline" href={d.pdf_link} target="_blank" rel="noreferrer">Ver PDF</a>}
+          {d.xml_link && <a className="text-sa-green underline" href={d.xml_link} target="_blank" rel="noreferrer">Ver XML</a>}
+        </div>
+      )}
+      <div>
+        <p className={`${cx.label} mb-1`}>Renglones ({d.renglones.length}) — así va cada folio en el CFDI</p>
+        <div className={cx.tableWrap}>
+          <table className={cx.table}>
+            <thead className={cx.thead}>
+              <tr>
+                <th className={cx.th}>Concepto (como va en el CFDI)</th>
+                <th className={cx.thNum}>Importe</th>
+              </tr>
+            </thead>
+            <tbody className={cx.tbody}>
+              {d.renglones.map((r, i) => (
+                <tr key={i} className={cx.tr}>
+                  <td className={cx.td}>{r.concepto}</td>
+                  <td className={cx.tdNum}>{mxn(r.importe)}</td>
+                </tr>
+              ))}
+              <tr className="bg-sa-cream-soft font-semibold">
+                <td className={cx.td}>Total</td>
+                <td className={cx.tdNum}>{mxn(d.total)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export default function Facturacion({
@@ -77,10 +156,12 @@ export default function Facturacion({
   alTimbrarPeriodo = (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarPeriodo(sb, a),
   alTimbrarManual = (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarManual(sb, a),
   alTimbrarPrefactura = (id: string) => timbrarPrefactura(sb, id),
+  fuenteDetalle = (id: string) => detalleDeFactura(sb, id),
 }: {
   fuenteVentas?: (fecha: string) => Promise<VentaDelDia[]>
   fuenteVentasPeriodo?: (desde: string, hasta: string) => Promise<VentaDelPeriodo[]>
   fuenteFacturas?: (desde: string, hasta: string) => Promise<FacturaGlobal[]>
+  fuenteDetalle?: (id: string) => Promise<DetalleFactura>
   alTimbrar?: (fecha: string, o?: OpcionesTimbrado) => Promise<ResultadoTimbrado>
   alTimbrarPeriodo?: (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
   alTimbrarManual?: (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
@@ -201,6 +282,24 @@ export default function Facturacion({
   // las ya timbradas / con error.
   const prefacturas = useMemo(() => facturas.filter((f) => f.estatus === 'pendiente'), [facturas])
   const timbradas = useMemo(() => facturas.filter((f) => f.estatus !== 'pendiente'), [facturas])
+
+  // Detalle expandible de una factura/prefactura (sus renglones + datos de
+  // ContaDigital). Se carga al pedirlo y se muestra bajo su fila.
+  const [detalleId, setDetalleId] = useState<string | null>(null)
+  const [detalle, setDetalle] = useState<DetalleFactura | null>(null)
+  const [cargandoDetalle, setCargandoDetalle] = useState(false)
+  async function verDetalle(id: string) {
+    if (detalleId === id) { setDetalleId(null); setDetalle(null); return }
+    setDetalleId(id); setDetalle(null); setCargandoDetalle(true)
+    try {
+      setDetalle(await fuenteDetalle(id))
+    } catch (e) {
+      setError(mensajeDeError(e))
+      setDetalleId(null)
+    } finally {
+      setCargandoDetalle(false)
+    }
+  }
 
   const periodoLabel = ([['04', 'Mensual'], ['03', 'Quincenal'], ['02', 'Semanal']] as const)
 
@@ -365,11 +464,17 @@ export default function Facturacion({
         </div>
       </Panel>
 
-      {/* Lo que va en la factura (día o periodo; en manual no hay folios) */}
+      {/* Preview: cómo quedaría la prefactura (día o periodo; en manual es un
+          solo renglón, abajo). Un renglón por folio, con el concepto que irá
+          al CFDI — así se ve antes de guardar/timbrar y no hay pierde. */}
       {sub !== 'manual' && (
         <div>
-          <p className={`${cx.h3} mb-2`}>
-            {sub === 'dia' ? `Lo que va en la factura del ${fecha}` : `Lo que va en la factura del ${desde} al ${hasta}`}
+          <p className={`${cx.h3} mb-1`}>
+            Así quedaría la {sub === 'dia' ? `factura del ${fecha}` : `factura del ${desde} al ${hasta}`}
+          </p>
+          <p className={`text-xs ${cx.muted} mb-2`}>
+            Un renglón por folio cobrado con tarjeta, con el concepto tal como irá al CFDI. Es el ejemplo de cómo
+            quedaría la prefactura: cambia la <b>Descripción</b> de arriba y aquí se actualiza.
           </p>
           {cargando ? (
             <Loading>Cargando…</Loading>
@@ -382,9 +487,9 @@ export default function Facturacion({
                   <tr>
                     <th className={cx.th}>Folio</th>
                     {sub === 'periodo' && <th className={cx.th}>Día</th>}
-                    <th className={cx.th}>Hora</th>
                     <th className={cx.th}>Canal</th>
-                    <th className={cx.thNum}>Total</th>
+                    <th className={cx.th}>Concepto (como irá en el CFDI)</th>
+                    <th className={cx.thNum}>Importe</th>
                   </tr>
                 </thead>
                 <tbody className={cx.tbody}>
@@ -392,19 +497,43 @@ export default function Facturacion({
                     <tr key={v.folio} className={cx.tr}>
                       <td className={cx.td}>Folio {v.folio}</td>
                       {sub === 'periodo' && <td className={cx.td}>{(v as VentaDelPeriodo).fecha}</td>}
-                      <td className={cx.td}>{v.hora}</td>
                       <td className={cx.td}>{v.canal}</td>
+                      <td className={cx.td}>{conceptoCFDI(descripcion, v.folio, desde, hasta)}</td>
                       <td className={cx.tdNum}>{mxn(v.total)}</td>
                     </tr>
                   ))}
                   <tr className="bg-sa-cream-soft font-semibold">
-                    <td className={cx.td} colSpan={sub === 'periodo' ? 4 : 3}>Total del periodo</td>
+                    <td className={cx.td} colSpan={sub === 'periodo' ? 4 : 3}>Total de la factura</td>
                     <td className={cx.tdNum}>{mxn(totalMostrado)}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Preview del monto manual: un solo renglón, su concepto tal cual irá. */}
+      {sub === 'manual' && montoNum > 0 && (
+        <div>
+          <p className={`${cx.h3} mb-1`}>Así quedaría la factura</p>
+          <p className={`text-xs ${cx.muted} mb-2`}>Un solo renglón con el importe que tecleaste.</p>
+          <div className={cx.tableWrap}>
+            <table className={cx.table}>
+              <thead className={cx.thead}>
+                <tr>
+                  <th className={cx.th}>Concepto (como irá en el CFDI)</th>
+                  <th className={cx.thNum}>Importe</th>
+                </tr>
+              </thead>
+              <tbody className={cx.tbody}>
+                <tr className={cx.tr}>
+                  <td className={cx.td}>{conceptoCFDI(descripcion, null, desde, hasta)}</td>
+                  <td className={cx.tdNum}>{mxn(montoNum)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -424,32 +553,46 @@ export default function Facturacion({
                   <th className={cx.th}>Descripción</th>
                   <th className={cx.th}>Folios</th>
                   <th className={cx.thNum}>Total</th>
-                  <th className={cx.th}>Revisar</th>
+                  <th className={cx.th}>En ContaDigital</th>
                   <th className={cx.th} />
                 </tr>
               </thead>
               <tbody className={cx.tbody}>
                 {prefacturas.map((f) => (
-                  <tr key={f.id} className={cx.tr}>
-                    <td className={cx.td}>
-                      {!f.periodo_hasta || f.periodo_desde === f.periodo_hasta
-                        ? (f.periodo_desde ?? f.fecha)
-                        : `${f.periodo_desde} a ${f.periodo_hasta}`}
-                    </td>
-                    <td className={cx.td}>{f.comentario ?? <span className={cx.muted}>Panadería (por omisión)</span>}</td>
-                    <td className={cx.td}>{f.num_folios}</td>
-                    <td className={cx.tdNum}>{mxn(f.total)}</td>
-                    <td className={cx.td}>
-                      {f.pdf_link
-                        ? <a className="text-sa-green underline" href={f.pdf_link} target="_blank" rel="noreferrer">PDF</a>
-                        : <span className={cx.muted}>—</span>}
-                    </td>
-                    <td className={cx.td}>
-                      <button className={cx.btnPrimary} disabled={timbrando} onClick={() => void timbrarPre(f.id)}>
-                        {timbrando ? 'Timbrando…' : 'Timbrar'}
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={f.id}>
+                    <tr className={cx.tr}>
+                      <td className={cx.td}>
+                        {!f.periodo_hasta || f.periodo_desde === f.periodo_hasta
+                          ? (f.periodo_desde ?? f.fecha)
+                          : `${f.periodo_desde} a ${f.periodo_hasta}`}
+                      </td>
+                      <td className={cx.td}>{f.comentario ?? <span className={cx.muted}>Panadería (por omisión)</span>}</td>
+                      <td className={cx.td}>{f.num_folios}</td>
+                      <td className={cx.tdNum}>{mxn(f.total)}</td>
+                      <td className={`${cx.td} font-mono text-xs`}>
+                        {f.serie && f.folio_cfdi ? `Serie ${f.serie} · Folio ${f.folio_cfdi}` : <span className={cx.muted}>—</span>}
+                      </td>
+                      <td className={cx.td}>
+                        <div className="flex flex-wrap gap-2 justify-end">
+                          <button className={cx.btnSec} onClick={() => void verDetalle(f.id)}>
+                            {detalleId === f.id ? 'Ocultar' : 'Ver detalle'}
+                          </button>
+                          <button className={cx.btnPrimary} disabled={timbrando} onClick={() => void timbrarPre(f.id)}>
+                            {timbrando ? 'Timbrando…' : 'Timbrar'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {detalleId === f.id && (
+                      <tr>
+                        <td className="p-0" colSpan={6}>
+                          <div className="px-4 bg-sa-cream-soft/40">
+                            <DetallePanel d={detalle} cargando={cargandoDetalle} />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -472,24 +615,41 @@ export default function Facturacion({
                   <th className={cx.thNum}>Total</th>
                   <th className={cx.th}>UUID</th>
                   <th className={cx.th}>Comprobante</th>
+                  <th className={cx.th} />
                 </tr>
               </thead>
               <tbody className={cx.tbody}>
                 {timbradas.map((f) => (
-                  <tr key={f.id} className={cx.tr}>
-                    <td className={cx.td}>{f.fecha}</td>
-                    <td className={cx.td}><EstatusChip e={f.estatus} /></td>
-                    <td className={cx.td}>{f.num_folios}</td>
-                    <td className={cx.tdNum}>{mxn(f.total)}</td>
-                    <td className={`${cx.td} font-mono text-xs`}>{f.uuid ?? (f.mensaje ? `— ${f.mensaje}` : '—')}</td>
-                    <td className={cx.td}>
-                      <div className="flex gap-3">
-                        {f.pdf_link && <a className="text-sa-green underline" href={f.pdf_link} target="_blank" rel="noreferrer">PDF</a>}
-                        {f.xml_link && <a className="text-sa-green underline" href={f.xml_link} target="_blank" rel="noreferrer">XML</a>}
-                        {!f.pdf_link && !f.xml_link && <span className={cx.muted}>—</span>}
-                      </div>
-                    </td>
-                  </tr>
+                  <Fragment key={f.id}>
+                    <tr className={cx.tr}>
+                      <td className={cx.td}>{f.fecha}</td>
+                      <td className={cx.td}><EstatusChip e={f.estatus} /></td>
+                      <td className={cx.td}>{f.num_folios}</td>
+                      <td className={cx.tdNum}>{mxn(f.total)}</td>
+                      <td className={`${cx.td} font-mono text-xs`}>{f.uuid ?? (f.mensaje ? `— ${f.mensaje}` : '—')}</td>
+                      <td className={cx.td}>
+                        <div className="flex gap-3">
+                          {f.pdf_link && <a className="text-sa-green underline" href={f.pdf_link} target="_blank" rel="noreferrer">PDF</a>}
+                          {f.xml_link && <a className="text-sa-green underline" href={f.xml_link} target="_blank" rel="noreferrer">XML</a>}
+                          {!f.pdf_link && !f.xml_link && <span className={cx.muted}>—</span>}
+                        </div>
+                      </td>
+                      <td className={cx.td}>
+                        <button className={cx.btnSec} onClick={() => void verDetalle(f.id)}>
+                          {detalleId === f.id ? 'Ocultar' : 'Ver detalle'}
+                        </button>
+                      </td>
+                    </tr>
+                    {detalleId === f.id && (
+                      <tr>
+                        <td className="p-0" colSpan={7}>
+                          <div className="px-4 bg-sa-cream-soft/40">
+                            <DetallePanel d={detalle} cargando={cargandoDetalle} />
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
