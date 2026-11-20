@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     fecha?: string; desde?: string; hasta?: string
     total?: number; periodicidad?: string
     ambiente?: string; solo_guardar?: boolean; comentario?: string
-    prefactura_id?: string
+    prefactura_id?: string; renglon_unico?: boolean
   }
   try { body = await req.json() } catch { return falla(400, 'cuerpo', 'JSON inválido') }
 
@@ -99,10 +99,13 @@ Deno.serve(async (req) => {
     body.total = Number(pf.total)
     body.periodicidad = pf.periodicidad
     body.comentario = pf.comentario ?? undefined
+    body.renglon_unico = pf.renglon_unico
     body.solo_guardar = false
   }
 
   const modo = body.modo ?? 'dia'
+  // Un solo renglón con el total (lo común/limpio) o un renglón por folio.
+  const renglonUnico = body.renglon_unico === true
   // Descripción opcional que la contadora puede mover. Vacía = leyenda de
   // panadería por omisión. Con texto, se antepone al folio en el CFDI.
   const comentario = (body.comentario ?? '').trim().slice(0, 900)
@@ -243,7 +246,9 @@ Deno.serve(async (req) => {
     // va la leyenda de panadería por omisión (no un «Folio N» pelón).
     const productos = tipo === 'manual'
       ? [renglon(total, comentario || comentarioManual)]
-      : lineas.map((l) => renglon(l.total, `${comentario || LEYENDA_PANADERIA} · Folio ${l.folio}`))
+      : renglonUnico
+        ? [renglon(total, comentario || LEYENDA_PANADERIA)]
+        : lineas.map((l) => renglon(l.total, `${comentario || LEYENDA_PANADERIA} · Folio ${l.folio}`))
 
     const factura: Record<string, unknown> = {
       Id: 0,
@@ -302,7 +307,7 @@ Deno.serve(async (req) => {
       folio_cfdi: res.Resultado?.Folio ?? null,
       estatus: timbrada ? 'timbrada' : preGuardada ? 'pendiente' : 'error',
       num_folios: lineas.length, subtotal: total, iva: 0, total,
-      comentario: comentario || null,
+      comentario: comentario || null, renglon_unico: renglonUnico,
       pdf_link: res.PdfLink ?? null, xml_link: res.XmlLink ?? null,
       mensaje: res.Mensaje ?? null, respuesta: res as unknown,
       creado_por: user?.id ?? null, updated_at: new Date().toISOString(),

@@ -44,6 +44,8 @@ export interface FacturaGlobal {
   periodo_desde?: string | null
   periodo_hasta?: string | null
   comentario?: string | null
+  /** true = el CFDI lleva un solo renglón con el total; false = uno por folio. */
+  renglon_unico?: boolean
 }
 
 /** Qué se factura ese día: las ventas pagadas, una por folio. */
@@ -120,11 +122,11 @@ export interface ResultadoTimbrado {
 export async function timbrarGlobal(
   sb: ClienteLily,
   fecha: string,
-  opts: { ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string } = {},
+  opts: { ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string; renglonUnico?: boolean } = {},
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'dia', fecha, ambiente: opts.ambiente, solo_guardar: opts.soloGuardar,
-    comentario: opts.comentario,
+    comentario: opts.comentario, renglon_unico: opts.renglonUnico,
   })
 }
 
@@ -147,12 +149,12 @@ export type PeriodicidadGlobal = '02' | '03' | '04' // semanal | quincenal | men
  */
 export async function timbrarPeriodo(
   sb: ClienteLily,
-  args: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string },
+  args: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string; renglonUnico?: boolean },
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'periodo', desde: args.desde, hasta: args.hasta,
     periodicidad: args.periodicidad, ambiente: args.ambiente, solo_guardar: args.soloGuardar,
-    comentario: args.comentario,
+    comentario: args.comentario, renglon_unico: args.renglonUnico,
   })
 }
 
@@ -163,7 +165,7 @@ export async function timbrarPeriodo(
  */
 export async function timbrarManual(
   sb: ClienteLily,
-  args: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string },
+  args: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string; renglonUnico?: boolean },
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'manual', desde: args.desde, hasta: args.hasta, total: args.total,
