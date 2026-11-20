@@ -353,12 +353,6 @@ export interface DatosDelTicket {
   mostrarLogo?: boolean
   /** Qué hacer con el voucher de la terminal: `'siempre'` | `'preguntar'` | `'nota'`. */
   voucherImpresion?: 'siempre' | 'preguntar' | 'nota'
-  /**
-   * Muestra en la caja el panel «Verificación Banorte» (gerencia), para correr
-   * la verificación de la matriz de certificación. Es opcional: se apaga aquí
-   * cuando ya no se ocupa. Por omisión, apagado.
-   */
-  verificacionBanorte?: boolean
 }
 
 export async function datosDelTicket(sb: ClienteLily): Promise<DatosDelTicket | null> {
