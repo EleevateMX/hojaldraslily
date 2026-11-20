@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   listarEncargos,
@@ -166,7 +166,10 @@ function Tarjeta({
             </p>
           )}
         </div>
-        <div className="flex items-center gap-1.5">{acciones}</div>
+        {/* Envuelve en vez de desbordarse: en una tableta caben Cancelar,
+            Editar, Anticipo y Cobrar, y si no caben en una fila bajan a la
+            siguiente en lugar de empujar «Editar» fuera de la tarjeta. */}
+        <div className="flex flex-wrap items-center justify-end gap-1.5">{acciones}</div>
       </div>
     </div>
   )
@@ -225,6 +228,11 @@ export function Encargos() {
   const empleado = usePosStore((x) => x.empleado)
 
   const base = import.meta.env.BASE_URL
+
+  // El scroll no lo tiene la ventana, lo tiene este div: por eso al abrir el
+  // formulario de edición hay que subir ESTE, no `window`, o el formulario se
+  // abre arriba y la pantalla no se mueve (parecía que «Editar» no hacía nada).
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   const cargar = useCallback(async (conSpinner = true) => {
     if (conSpinner) setCargando(true)
@@ -416,7 +424,9 @@ export function Encargos() {
     setNuevo(true)
     setAviso(null)
     setError(null)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // Sube el contenedor que de verdad scrollea, para que el formulario ya
+    // lleno quede a la vista; `window.scrollTo` aquí no hacía nada.
+    scrollRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   async function buscarCliente() {
@@ -569,7 +579,7 @@ export function Encargos() {
         </div>
       </header>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4">
         {error && (
           <p className="font-body bg-sa-strawberry/15 border-l-4 border-sa-strawberry rounded-sa px-4 py-3 text-sa-green-ink">
             {error}
