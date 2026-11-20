@@ -76,6 +76,17 @@ createRoot(document.getElementById('root')!).render(
         fuenteVentas={async (f) => (f === hoy ? VENTAS : [])}
         fuenteVentasPeriodo={async () => VENTAS_PERIODO}
         fuenteFacturas={async () => FACTURAS}
+        fuenteDetalle={async (id) => ({
+          id_contadigital: '442382', serie: 'F', folio_cfdi: 88,
+          estatus_cd: id === '0' ? 'PENDIENTE' : 'TIMBRADA', uuid: id === '0' ? null : 'A1B2C3D4-5E6F',
+          folio_original: 'GLOBAL-20261119', tipo: 'diaria', periodo_desde: ayer, periodo_hasta: ayer,
+          total: 8545, num_folios: 3, comentario: null, pdf_link: null, xml_link: null, mensaje: null,
+          renglones: [
+            { concepto: 'Venta de pan y productos de panadería · Folio 1352', importe: 310 },
+            { concepto: 'Venta de pan y productos de panadería · Folio 1355', importe: 540 },
+            { concepto: 'Venta de pan y productos de panadería · Folio 1356', importe: 7695 },
+          ],
+        })}
         alTimbrar={async (): Promise<ResultadoTimbrado> => avisoSecretos}
         alTimbrarPeriodo={async (): Promise<ResultadoTimbrado> => avisoSecretos}
         alTimbrarManual={async (): Promise<ResultadoTimbrado> => avisoSecretos}
