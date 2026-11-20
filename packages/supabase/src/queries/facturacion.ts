@@ -64,6 +64,8 @@ export async function facturasListar(sb: ClienteLily, desde: string, hasta: stri
 export interface ResultadoTimbrado {
   ok: boolean
   yaExistia?: boolean
+  /** true cuando se guardó una PREFACTURA (SoloGuardar): queda sin timbrar. */
+  prefactura?: boolean
   factura?: FacturaGlobal
   error?: { codigo: string; mensaje: string }
   faltan?: string[]
@@ -78,10 +80,11 @@ export interface ResultadoTimbrado {
 export async function timbrarGlobal(
   sb: ClienteLily,
   fecha: string,
-  opts: { ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean } = {},
+  opts: { ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string } = {},
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'dia', fecha, ambiente: opts.ambiente, solo_guardar: opts.soloGuardar,
+    comentario: opts.comentario,
   })
 }
 
@@ -94,11 +97,12 @@ export type PeriodicidadGlobal = '02' | '03' | '04' // semanal | quincenal | men
  */
 export async function timbrarPeriodo(
   sb: ClienteLily,
-  args: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean },
+  args: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string },
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'periodo', desde: args.desde, hasta: args.hasta,
     periodicidad: args.periodicidad, ambiente: args.ambiente, solo_guardar: args.soloGuardar,
+    comentario: args.comentario,
   })
 }
 
@@ -109,11 +113,12 @@ export async function timbrarPeriodo(
  */
 export async function timbrarManual(
   sb: ClienteLily,
-  args: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean },
+  args: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal; ambiente?: 'pro' | 'pruebas'; soloGuardar?: boolean; comentario?: string },
 ): Promise<ResultadoTimbrado> {
   return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', {
     modo: 'manual', desde: args.desde, hasta: args.hasta, total: args.total,
     periodicidad: args.periodicidad, ambiente: args.ambiente, solo_guardar: args.soloGuardar,
+    comentario: args.comentario,
   })
 }
 
