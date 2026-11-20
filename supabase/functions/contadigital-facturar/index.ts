@@ -70,10 +70,14 @@ Deno.serve(async (req) => {
     modo?: 'dia' | 'periodo' | 'manual'
     fecha?: string; desde?: string; hasta?: string
     total?: number; periodicidad?: string
-    ambiente?: string; solo_guardar?: boolean
+    ambiente?: string; solo_guardar?: boolean; comentario?: string
   }
   try { body = await req.json() } catch { return falla(400, 'cuerpo', 'JSON inválido') }
   const modo = body.modo ?? 'dia'
+  // Descripción opcional que la contadora puede mover. Vacía = concepto de
+  // siempre ('Folio N' por renglón, o el texto por omisión en manual). Con
+  // texto, se antepone al folio para no perder la referencia en el CFDI.
+  const comentario = (body.comentario ?? '').trim().slice(0, 900)
   const esFecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
   const soloDigitos = (s: string) => s.replaceAll('-', '')
 
@@ -209,8 +213,8 @@ Deno.serve(async (req) => {
       ClaveIdentificacion: '01010101',
     })
     const productos = tipo === 'manual'
-      ? [renglon(total, comentarioManual)]
-      : lineas.map((l) => renglon(l.total, `Folio ${l.folio}`))
+      ? [renglon(total, comentario || comentarioManual)]
+      : lineas.map((l) => renglon(l.total, comentario ? `${comentario} · Folio ${l.folio}` : `Folio ${l.folio}`))
 
     const factura: Record<string, unknown> = {
       Id: 0,
@@ -253,14 +257,21 @@ Deno.serve(async (req) => {
     }
 
     const res = await timbrar(cfg, token, factura)
+    const esPrefactura = body.solo_guardar === true
     const timbrada = res.Codigo === 0 && !!res.Resultado?.UUID
+    // En SoloGuardar, ContaDigital NO timbra ni da UUID: guarda una PREFACTURA y
+    // contesta Codigo 2 («Pre-factura guardada correctamente»). Eso es éxito, no
+    // error: queda como 'pendiente' (sin UUID) para revisarla/moverla y timbrar
+    // después. Un error real da otro código y sí cae a 'error'.
+    const preGuardada = esPrefactura && (res.Codigo === 2 || res.Codigo === 0)
+    const exito = timbrada || preGuardada
     const fila = {
       fecha: fechaFila, folio_original: folioOriginal, ambiente: cfg.ambiente, id_empresa: empresa.Id,
       tipo, periodo_desde: periodoDesde, periodo_hasta: periodoHasta, periodicidad: periodicidadGlobal,
       uuid: res.Resultado?.UUID ?? null,
       serie: res.Resultado?.Serie ?? serie.Descripcion,
       folio_cfdi: res.Resultado?.Folio ?? null,
-      estatus: timbrada ? 'timbrada' : 'error',
+      estatus: timbrada ? 'timbrada' : preGuardada ? 'pendiente' : 'error',
       num_folios: lineas.length, subtotal: total, iva: 0, total,
       pdf_link: res.PdfLink ?? null, xml_link: res.XmlLink ?? null,
       mensaje: res.Mensaje ?? null, respuesta: res as unknown,
@@ -272,18 +283,19 @@ Deno.serve(async (req) => {
       .select()
       .single()
 
-    if (!timbrada) {
+    if (!exito) {
       return falla(502, 'no_timbrada', res.Mensaje || 'ContaDigital no timbró la factura', { factura: guardada })
     }
 
     // Deja registro de qué folios quedaron amparados, para que no entren en otra
-    // global. 'manual' no ampara folios (es un importe, no una lista).
-    if (guardada && lineas.length > 0 && !(body.solo_guardar === true)) {
+    // global. Una PREFACTURA no ampara folios (todavía no es la factura real), y
+    // 'manual' tampoco (es un importe, no una lista).
+    if (guardada && lineas.length > 0 && !esPrefactura) {
       await sb.from('facturas_globales_folios').insert(
         lineas.map((l) => ({ factura_id: (guardada as { id: string }).id, folio_venta: l.folio })),
       )
     }
-    return json(200, { ok: true, factura: guardada })
+    return json(200, { ok: true, prefactura: preGuardada, factura: guardada })
   } catch (e) {
     if (e instanceof ContaDigitalError) {
       return falla(502, 'contadigital', e.message, { codigo: e.codigo, detalle: e.crudo })

@@ -40,6 +40,9 @@ const soloDigitos = (s: string) => s.replaceAll('-', '')
 
 type SubModo = 'dia' | 'periodo' | 'manual'
 
+/** Opciones comunes de los tres timbrados: prefactura y descripción editable. */
+type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string }
+
 /** El FolioOriginal con el que la Edge Function identifica cada global. */
 function folioEsperado(sub: SubModo, fecha: string, desde: string, hasta: string): string {
   if (sub === 'dia') return `GLOBAL-${soloDigitos(fecha)}`
@@ -58,16 +61,16 @@ export default function Facturacion({
   fuenteVentas = (f: string) => ventasDelDia(sb, f),
   fuenteVentasPeriodo = (d: string, h: string) => ventasDelPeriodo(sb, d, h),
   fuenteFacturas = (d: string, h: string) => facturasListar(sb, d, h),
-  alTimbrar = (f: string) => timbrarGlobal(sb, f),
-  alTimbrarPeriodo = (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal }) => timbrarPeriodo(sb, a),
-  alTimbrarManual = (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal }) => timbrarManual(sb, a),
+  alTimbrar = (f: string, o?: OpcionesTimbrado) => timbrarGlobal(sb, f, o),
+  alTimbrarPeriodo = (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarPeriodo(sb, a),
+  alTimbrarManual = (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarManual(sb, a),
 }: {
   fuenteVentas?: (fecha: string) => Promise<VentaDelDia[]>
   fuenteVentasPeriodo?: (desde: string, hasta: string) => Promise<VentaDelPeriodo[]>
   fuenteFacturas?: (desde: string, hasta: string) => Promise<FacturaGlobal[]>
-  alTimbrar?: (fecha: string) => Promise<ResultadoTimbrado>
-  alTimbrarPeriodo?: (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal }) => Promise<ResultadoTimbrado>
-  alTimbrarManual?: (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal }) => Promise<ResultadoTimbrado>
+  alTimbrar?: (fecha: string, o?: OpcionesTimbrado) => Promise<ResultadoTimbrado>
+  alTimbrarPeriodo?: (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
+  alTimbrarManual?: (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
 } = {}) {
   // Global (a público en general) o nominativa (a un cliente).
   const [modo, setModo] = useState<'global' | 'cliente'>('global')
@@ -78,6 +81,9 @@ export default function Facturacion({
   const [hasta, setHasta] = useState(hoyMerida)
   const [periodicidad, setPeriodicidad] = useState<PeriodicidadGlobal>('04')
   const [montoManual, setMontoManual] = useState('')
+  // Descripción opcional que la contadora puede mover. Vacía = concepto de
+  // siempre ('Folio N'). Con texto, se antepone al folio en el CFDI.
+  const [descripcion, setDescripcion] = useState('')
 
   const [ventas, setVentas] = useState<VentaDelDia[]>([])
   const [ventasPeriodo, setVentasPeriodo] = useState<VentaDelPeriodo[]>([])
@@ -126,18 +132,22 @@ export default function Facturacion({
     : sub === 'periodo' ? ventasPeriodo.length > 0
     : ventas.length > 0
 
-  async function timbrar() {
+  async function timbrar(soloGuardar = false) {
     setTimbrando(true); setError(null); setOk(null); setAviso(null)
     try {
+      const comentario = descripcion.trim() || undefined
+      const o: OpcionesTimbrado = { soloGuardar, comentario }
       let r: ResultadoTimbrado
-      if (sub === 'dia') r = await alTimbrar(fecha)
-      else if (sub === 'periodo') r = await alTimbrarPeriodo({ desde, hasta, periodicidad })
-      else r = await alTimbrarManual({ desde, hasta, total: montoNum, periodicidad })
+      if (sub === 'dia') r = await alTimbrar(fecha, o)
+      else if (sub === 'periodo') r = await alTimbrarPeriodo({ desde, hasta, periodicidad, ...o })
+      else r = await alTimbrarManual({ desde, hasta, total: montoNum, periodicidad, ...o })
 
       if (r.ok && r.factura) {
         setOk(r.yaExistia
           ? `Ese periodo ya estaba facturado (UUID ${r.factura.uuid ?? '—'}).`
-          : `Factura timbrada. UUID ${r.factura.uuid ?? '—'}.`)
+          : r.prefactura
+            ? `Prefactura guardada en ContaDigital (sin timbrar, no gasta timbre). Revísala o muévele lo que haga falta, y luego timbra.`
+            : `Factura timbrada. UUID ${r.factura.uuid ?? '—'}.`)
         await cargar()
       } else {
         // Errores de negocio con mensaje claro (empresa no dada de alta, sin
@@ -189,11 +199,16 @@ export default function Facturacion({
         ))}
       </div>
 
-      {sub === 'manual' && (
+      {sub === 'manual' ? (
         <div className="rounded-sa border border-sa-banana/50 bg-sa-banana/15 px-4 py-3 text-sm text-sa-green-ink">
           <b>Monto manual (transición).</b> Aquí el importe lo escribe la contadora; no sale de las ventas
           registradas. Úsalo mientras el sistema entra en operación. Queda marcado como «manual» en el historial.
         </div>
+      ) : (
+        <p className={`text-xs ${cx.muted}`}>
+          La factura global ampara <b>solo lo cobrado con tarjeta</b> (Banorte e Inbursa); el efectivo no se declara aquí.
+          En un pago mixto cuenta solo la parte de tarjeta, y un folio pagado todo en efectivo no entra.
+        </p>
       )}
 
       {error && <ErrorMsg>{error}</ErrorMsg>}
@@ -242,6 +257,22 @@ export default function Facturacion({
           )}
         </div>
 
+        {/* Descripción editable: la contadora puede moverla. Vacía = 'Folio N'
+            de siempre; con texto, se antepone al folio en el CFDI. */}
+        <div className="mt-4">
+          <Field label="Descripción (opcional)">
+            <input
+              type="text"
+              value={descripcion}
+              onChange={(e) => setDescripcion(e.target.value)}
+              placeholder={sub === 'manual' ? 'Ej. Ventas al público en general de noviembre' : 'Se antepone a cada folio. Vacío = «Folio N»'}
+              maxLength={900}
+              className={cx.input}
+              style={{ minWidth: '22rem' }}
+            />
+          </Field>
+        </div>
+
         <div className="mt-5 flex flex-wrap items-center gap-6">
           {numFolios !== null && (
             <div>
@@ -260,13 +291,25 @@ export default function Facturacion({
                 <p className={`mt-1 text-xs ${cx.muted}`}>Este periodo ya está facturado</p>
               </div>
             ) : (
-              <button
-                className={cx.btnPrimary}
-                disabled={timbrando || !puedeTimbrar}
-                onClick={() => void timbrar()}
-              >
-                {timbrando ? 'Timbrando…' : sub === 'manual' ? 'Timbrar monto manual' : 'Timbrar factura global'}
-              </button>
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Prefactura: guarda en ContaDigital SIN timbrar (no gasta
+                    timbre). Sirve para revisar/mover antes de la factura real. */}
+                <button
+                  className={cx.btnSec}
+                  disabled={timbrando || !puedeTimbrar}
+                  onClick={() => void timbrar(true)}
+                  title="Guarda la prefactura en ContaDigital sin timbrar: no gasta timbre y se puede revisar o ajustar antes de la factura real"
+                >
+                  {timbrando ? 'Guardando…' : 'Guardar prefactura'}
+                </button>
+                <button
+                  className={cx.btnPrimary}
+                  disabled={timbrando || !puedeTimbrar}
+                  onClick={() => void timbrar(false)}
+                >
+                  {timbrando ? 'Timbrando…' : sub === 'manual' ? 'Timbrar monto manual' : 'Timbrar factura global'}
+                </button>
+              </div>
             )}
           </div>
         </div>
