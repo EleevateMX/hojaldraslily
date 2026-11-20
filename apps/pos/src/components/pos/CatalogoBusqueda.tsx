@@ -262,17 +262,30 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                     <p className="font-display text-base text-sa-green-ink text-center leading-tight w-full">
                       {sabor}
                     </p>
-                    <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
-                      {unico
-                        ? [medidaDeVenta(tamanos[0]).texto, mxn(precioDe(tamanos[0]))]
-                            .filter(Boolean)
-                            .join(' · ')
-                        : abierto
+                    {unico ? (
+                      // Los cuadros y el precio SEPARADOS: antes iban juntos en
+                      // una linea gris tenue y el precio se perdia. La medida
+                      // (los cuadros) queda en gris; el precio va en una
+                      // pastilla con fondo para que se lea de un vistazo.
+                      <div className="flex items-center justify-center gap-1.5 mt-1 flex-wrap">
+                        {medidaDeVenta(tamanos[0]).texto && (
+                          <span className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45">
+                            {medidaDeVenta(tamanos[0]).texto}
+                          </span>
+                        )}
+                        <span className="font-mono text-xs font-semibold text-sa-green-deep bg-sa-green/10 rounded-full px-2 py-0.5">
+                          {mxn(precioDe(tamanos[0]))}
+                        </span>
+                      </div>
+                    ) : (
+                      <p className="font-mono text-[10px] uppercase tracking-wide text-sa-green-ink/45 mt-1">
+                        {abierto
                           ? conMedida ? '¿de qué tamaño?' : '¿cuál?'
                           : tamanos.length === 1 && suelta
                             ? 'paquete o piezas'
                             : `${tamanos.length} ${conMedida ? 'tamaños' : 'opciones'}`}
-                    </p>
+                      </p>
+                    )}
                   </button>
 
                   {abierto && !unico && (
@@ -316,7 +329,10 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                                   {variante}
                                 </p>
                               )}
-                              <p className="font-mono text-sm font-medium text-sa-green mt-1.5">
+                              {/* Precio con fondo: separa el precio del numero
+                                  de cuadros de arriba, para que no se confundan
+                                  ni se pierda. */}
+                              <p className="inline-block font-mono text-sm font-semibold text-sa-green-deep bg-sa-green/10 rounded-full px-2 py-0.5 mt-1.5">
                                 {mxn(precioDe(p))}
                               </p>
                             </button>
