@@ -43,6 +43,18 @@ type SubModo = 'dia' | 'periodo' | 'manual'
 /** Opciones comunes de los tres timbrados: prefactura y descripción editable. */
 type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string }
 
+/**
+ * Descripciones preescritas para el concepto del CFDI (panadería). Salen en un
+ * desplegable, pero la contadora también puede escribir la suya. Vacío = la
+ * leyenda por omisión del servidor («Venta de pan y productos de panadería»).
+ */
+const LEYENDAS_SUGERIDAS = [
+  'Venta de pan y productos de panadería',
+  'Venta de pan, galletas y pastelitos',
+  'Pan, galletas y pastelitos dulces',
+  'Venta de productos de panadería al público en general',
+]
+
 /** El FolioOriginal con el que la Edge Function identifica cada global. */
 function folioEsperado(sub: SubModo, fecha: string, desde: string, hasta: string): string {
   if (sub === 'dia') return `GLOBAL-${soloDigitos(fecha)}`
@@ -261,9 +273,13 @@ export default function Facturacion({
         {/* Descripción editable: la contadora puede moverla. Vacía = 'Folio N'
             de siempre; con texto, se antepone al folio en el CFDI. */}
         <div className="mt-4">
-          <Field label="Descripción (opcional)">
+          <Field label="Descripción (elige una o escribe la tuya)">
+            {/* Combo: desplegable con sugerencias de panadería, pero también se
+                puede teclear una descripción propia. Vacío = leyenda por
+                omisión del servidor. */}
             <input
               type="text"
+              list="leyendas-factura"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder={sub === 'manual'
@@ -271,8 +287,11 @@ export default function Facturacion({
                 : 'Vacío = «Venta de pan y productos de panadería · Folio N»'}
               maxLength={900}
               className={cx.input}
-              style={{ minWidth: '22rem' }}
+              style={{ minWidth: '28rem' }}
             />
+            <datalist id="leyendas-factura">
+              {LEYENDAS_SUGERIDAS.map((l) => <option key={l} value={l} />)}
+            </datalist>
           </Field>
         </div>
 
