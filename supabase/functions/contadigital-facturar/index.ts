@@ -43,6 +43,12 @@ import {
 
 const RFC_PUBLICO = 'XAXX010101000'
 
+// La leyenda por omisión del CFDI: lo que vende una panadería (clave SAT
+// 50181900, «Pan, galletas y pastelitos dulces»). Se usa cuando la contadora no
+// teclea una descripción propia, para que el concepto describa el producto y no
+// solo un «Folio N» pelón.
+const LEYENDA_PANADERIA = 'Venta de pan y productos de panadería'
+
 const json = (status: number, cuerpo: unknown) =>
   new Response(JSON.stringify(cuerpo), { status, headers: { ...corsHeaders, 'content-type': 'application/json' } })
 
@@ -127,7 +133,7 @@ Deno.serve(async (req) => {
     if (!(total > 0)) return falla(400, 'total', 'Falta el importe a facturar (mayor que 0)')
     folioOriginal = `GLOBAL-MANUAL-${soloDigitos(desde)}-${soloDigitos(hasta)}`
     tipo = 'manual'; periodoDesde = desde; periodoHasta = hasta; fechaFila = hasta; periodicidadGlobal = periodicidadPedida
-    comentarioManual = `Ventas al público en general del ${desde} al ${hasta}`
+    comentarioManual = `${LEYENDA_PANADERIA} al público en general del ${desde} al ${hasta}`
   } else {
     return falla(400, 'modo', 'Modo no reconocido (dia | periodo | manual)')
   }
@@ -212,9 +218,12 @@ Deno.serve(async (req) => {
       Comentarios: comentario,
       ClaveIdentificacion: '01010101',
     })
+    // Cada renglón describe el producto de panadería y referencia su folio:
+    // «<descripción> · Folio N». Si la contadora no tecleó descripción propia,
+    // va la leyenda de panadería por omisión (no un «Folio N» pelón).
     const productos = tipo === 'manual'
       ? [renglon(total, comentario || comentarioManual)]
-      : lineas.map((l) => renglon(l.total, comentario ? `${comentario} · Folio ${l.folio}` : `Folio ${l.folio}`))
+      : lineas.map((l) => renglon(l.total, `${comentario || LEYENDA_PANADERIA} · Folio ${l.folio}`))
 
     const factura: Record<string, unknown> = {
       Id: 0,

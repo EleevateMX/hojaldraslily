@@ -81,8 +81,9 @@ export default function Facturacion({
   const [hasta, setHasta] = useState(hoyMerida)
   const [periodicidad, setPeriodicidad] = useState<PeriodicidadGlobal>('04')
   const [montoManual, setMontoManual] = useState('')
-  // Descripción opcional que la contadora puede mover. Vacía = concepto de
-  // siempre ('Folio N'). Con texto, se antepone al folio en el CFDI.
+  // Descripción opcional que la contadora puede mover. Vacía = leyenda de
+  // panadería por omisión ('Venta de pan y productos de panadería', más el
+  // folio en día/periodo). Con texto, se antepone al folio en el CFDI.
   const [descripcion, setDescripcion] = useState('')
 
   const [ventas, setVentas] = useState<VentaDelDia[]>([])
@@ -265,7 +266,9 @@ export default function Facturacion({
               type="text"
               value={descripcion}
               onChange={(e) => setDescripcion(e.target.value)}
-              placeholder={sub === 'manual' ? 'Ej. Ventas al público en general de noviembre' : 'Se antepone a cada folio. Vacío = «Folio N»'}
+              placeholder={sub === 'manual'
+                ? 'Vacío = «Venta de pan y productos de panadería al público en general»'
+                : 'Vacío = «Venta de pan y productos de panadería · Folio N»'}
               maxLength={900}
               className={cx.input}
               style={{ minWidth: '22rem' }}
