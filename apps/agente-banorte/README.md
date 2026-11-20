@@ -122,8 +122,10 @@ para que la matriz lo imprima con estos campos la tienda tiene que estar en el
 agente de caja **1.1.9** (se auto-actualiza desde `main`). El resultado va
 ROTULADO —«RESULTADO DE LA TRANSACCIÓN: APROBADA / DECLINADA»—, no como sello
 suelto: el laboratorio marcó faltante el sello de 1.1.8 porque no leía como el
-campo de resultado. El formato se revisa sin pinpad en
-`apps/pos/mirar/voucher-cert.html`.
+campo de resultado. (El harness de vista previa del voucher de certificación
+—`mirar/voucher-cert`— y el panel «Verificación Banorte» de la caja se
+quitaron una vez cerrada la certificación; el voucher del día a día sale por
+la térmica como cualquier otro.)
 
 ### La VERIFICACIÓN va sobre una transacción VÁLIDA, no sobre un control vacío
 
