@@ -39,6 +39,11 @@ export interface FacturaGlobal {
   xml_link: string | null
   mensaje: string | null
   created_at: string
+  // Para re-timbrar una prefactura y para mostrarla con su periodo/descripción.
+  tipo?: 'diaria' | 'periodo' | 'manual'
+  periodo_desde?: string | null
+  periodo_hasta?: string | null
+  comentario?: string | null
 }
 
 /** Qué se factura ese día: las ventas pagadas, una por folio. */
@@ -86,6 +91,16 @@ export async function timbrarGlobal(
     modo: 'dia', fecha, ambiente: opts.ambiente, solo_guardar: opts.soloGuardar,
     comentario: opts.comentario,
   })
+}
+
+/**
+ * Timbra una PREFACTURA ya guardada (estatus 'pendiente'), por su id. El
+ * servidor la reconstruye desde su propia fila —mismo periodo, total,
+ * periodicidad y descripción— y la timbra EN SU LUGAR. Si falla, la prefactura
+ * se queda pendiente para reintentar.
+ */
+export async function timbrarPrefactura(sb: ClienteLily, id: string): Promise<ResultadoTimbrado> {
+  return invocarFn<ResultadoTimbrado>(sb, 'contadigital-facturar', { prefactura_id: id })
 }
 
 /** La periodicidad del complemento global del SAT. */

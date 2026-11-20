@@ -77,17 +77,37 @@ Deno.serve(async (req) => {
     fecha?: string; desde?: string; hasta?: string
     total?: number; periodicidad?: string
     ambiente?: string; solo_guardar?: boolean; comentario?: string
+    prefactura_id?: string
   }
   try { body = await req.json() } catch { return falla(400, 'cuerpo', 'JSON inválido') }
+
+  const sb = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
+
+  // Timbrar una PREFACTURA ya guardada: se reconstruye desde su fila (mismo
+  // periodo, total, periodicidad y descripción) y se timbra EN SU LUGAR, para
+  // que no quede una prefactura 'pendiente' y una timbrada aparte.
+  let reTimbrarId: string | null = null
+  if (body.prefactura_id) {
+    const { data: pf } = await sb.from('facturas_globales').select('*').eq('id', body.prefactura_id).maybeSingle()
+    if (!pf) return falla(404, 'no_existe', 'Esa prefactura ya no existe')
+    if (pf.estatus !== 'pendiente') return falla(409, 'no_pendiente', `Esa factura ya está ${pf.estatus}; solo se timbran las prefacturas pendientes`)
+    reTimbrarId = pf.id as string
+    body.modo = (pf.tipo === 'diaria' ? 'dia' : pf.tipo) as 'dia' | 'periodo' | 'manual'
+    body.fecha = pf.periodo_desde
+    body.desde = pf.periodo_desde
+    body.hasta = pf.periodo_hasta
+    body.total = Number(pf.total)
+    body.periodicidad = pf.periodicidad
+    body.comentario = pf.comentario ?? undefined
+    body.solo_guardar = false
+  }
+
   const modo = body.modo ?? 'dia'
-  // Descripción opcional que la contadora puede mover. Vacía = concepto de
-  // siempre ('Folio N' por renglón, o el texto por omisión en manual). Con
-  // texto, se antepone al folio para no perder la referencia en el CFDI.
+  // Descripción opcional que la contadora puede mover. Vacía = leyenda de
+  // panadería por omisión. Con texto, se antepone al folio en el CFDI.
   const comentario = (body.comentario ?? '').trim().slice(0, 900)
   const esFecha = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s)
   const soloDigitos = (s: string) => s.replaceAll('-', '')
-
-  const sb = createClient(supabaseUrl, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!)
 
   // Qué se factura, según el modo. `lineas` son los folios reales (vacío en
   // 'manual'); el mes/año del complemento global salen de `periodoDesde`.
@@ -282,18 +302,27 @@ Deno.serve(async (req) => {
       folio_cfdi: res.Resultado?.Folio ?? null,
       estatus: timbrada ? 'timbrada' : preGuardada ? 'pendiente' : 'error',
       num_folios: lineas.length, subtotal: total, iva: 0, total,
+      comentario: comentario || null,
       pdf_link: res.PdfLink ?? null, xml_link: res.XmlLink ?? null,
       mensaje: res.Mensaje ?? null, respuesta: res as unknown,
       creado_por: user?.id ?? null, updated_at: new Date().toISOString(),
     }
-    const { data: guardada } = await sb
-      .from('facturas_globales')
-      .insert(fila)
-      .select()
-      .single()
-
-    if (!exito) {
-      return falla(502, 'no_timbrada', res.Mensaje || 'ContaDigital no timbró la factura', { factura: guardada })
+    // Timbrar una prefactura ACTUALIZA su fila (de 'pendiente' a 'timbrada');
+    // una global nueva INSERTA. Si el re-timbrado de una prefactura FALLA, se
+    // deja 'pendiente' tal cual para reintentar (no se degrada a 'error').
+    let guardada: { id: string } | null = null
+    if (reTimbrarId) {
+      if (!exito) {
+        return falla(502, 'no_timbrada', res.Mensaje || 'ContaDigital no timbró la prefactura')
+      }
+      const up = await sb.from('facturas_globales').update(fila).eq('id', reTimbrarId).select().single()
+      guardada = up.data as { id: string } | null
+    } else {
+      const ins = await sb.from('facturas_globales').insert(fila).select().single()
+      guardada = ins.data as { id: string } | null
+      if (!exito) {
+        return falla(502, 'no_timbrada', res.Mensaje || 'ContaDigital no timbró la factura', { factura: guardada })
+      }
     }
 
     // Deja registro de qué folios quedaron amparados, para que no entren en otra

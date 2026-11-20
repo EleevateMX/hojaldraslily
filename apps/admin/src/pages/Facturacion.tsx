@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   ventasDelDia, ventasDelPeriodo, facturasListar,
-  timbrarGlobal, timbrarPeriodo, timbrarManual,
+  timbrarGlobal, timbrarPeriodo, timbrarManual, timbrarPrefactura,
   type VentaDelDia, type VentaDelPeriodo, type FacturaGlobal,
   type ResultadoTimbrado, type PeriodicidadGlobal,
 } from '@lily/supabase'
@@ -76,6 +76,7 @@ export default function Facturacion({
   alTimbrar = (f: string, o?: OpcionesTimbrado) => timbrarGlobal(sb, f, o),
   alTimbrarPeriodo = (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarPeriodo(sb, a),
   alTimbrarManual = (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => timbrarManual(sb, a),
+  alTimbrarPrefactura = (id: string) => timbrarPrefactura(sb, id),
 }: {
   fuenteVentas?: (fecha: string) => Promise<VentaDelDia[]>
   fuenteVentasPeriodo?: (desde: string, hasta: string) => Promise<VentaDelPeriodo[]>
@@ -83,6 +84,7 @@ export default function Facturacion({
   alTimbrar?: (fecha: string, o?: OpcionesTimbrado) => Promise<ResultadoTimbrado>
   alTimbrarPeriodo?: (a: { desde: string; hasta: string; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
   alTimbrarManual?: (a: { desde: string; hasta: string; total: number; periodicidad?: PeriodicidadGlobal } & OpcionesTimbrado) => Promise<ResultadoTimbrado>
+  alTimbrarPrefactura?: (id: string) => Promise<ResultadoTimbrado>
 } = {}) {
   // Global (a público en general) o nominativa (a un cliente).
   const [modo, setModo] = useState<'global' | 'cliente'>('global')
@@ -173,6 +175,32 @@ export default function Facturacion({
       setTimbrando(false)
     }
   }
+
+  // Timbra una prefactura ya guardada (estatus 'pendiente'), por su id.
+  async function timbrarPre(id: string) {
+    setTimbrando(true); setError(null); setOk(null); setAviso(null)
+    try {
+      const r = await alTimbrarPrefactura(id)
+      if (r.ok && r.factura && r.factura.estatus === 'timbrada') {
+        setOk(`Prefactura timbrada. UUID ${r.factura.uuid ?? '—'}.`)
+        await cargar()
+      } else if (r.ok && r.factura) {
+        setAviso('Se volvió a guardar, pero ContaDigital no la timbró. Revísala e intenta de nuevo.')
+        await cargar()
+      } else {
+        setAviso(r.error?.mensaje ?? 'No se pudo timbrar la prefactura.')
+      }
+    } catch (e) {
+      setError(mensajeDeError(e))
+    } finally {
+      setTimbrando(false)
+    }
+  }
+
+  // Las prefacturas (guardadas sin timbrar) van en su propia lista, aparte de
+  // las ya timbradas / con error.
+  const prefacturas = useMemo(() => facturas.filter((f) => f.estatus === 'pendiente'), [facturas])
+  const timbradas = useMemo(() => facturas.filter((f) => f.estatus !== 'pendiente'), [facturas])
 
   const periodoLabel = ([['04', 'Mensual'], ['03', 'Quincenal'], ['02', 'Semanal']] as const)
 
@@ -380,9 +408,58 @@ export default function Facturacion({
         </div>
       )}
 
+      {/* Prefacturas: guardadas sin timbrar. Se revisan y se timbran de aquí. */}
+      {prefacturas.length > 0 && (
+        <div>
+          <p className={`${cx.h3} mb-2`}>Prefacturas (sin timbrar)</p>
+          <p className={`text-xs ${cx.muted} mb-2`}>
+            Guardadas en ContaDigital para revisar antes de timbrar. Mira el PDF y, cuando esté bien,
+            dale <b>Timbrar</b>: se convierte en la factura real (consume un timbre).
+          </p>
+          <div className={cx.tableWrap}>
+            <table className={cx.table}>
+              <thead className={cx.thead}>
+                <tr>
+                  <th className={cx.th}>Periodo</th>
+                  <th className={cx.th}>Descripción</th>
+                  <th className={cx.th}>Folios</th>
+                  <th className={cx.thNum}>Total</th>
+                  <th className={cx.th}>Revisar</th>
+                  <th className={cx.th} />
+                </tr>
+              </thead>
+              <tbody className={cx.tbody}>
+                {prefacturas.map((f) => (
+                  <tr key={f.id} className={cx.tr}>
+                    <td className={cx.td}>
+                      {!f.periodo_hasta || f.periodo_desde === f.periodo_hasta
+                        ? (f.periodo_desde ?? f.fecha)
+                        : `${f.periodo_desde} a ${f.periodo_hasta}`}
+                    </td>
+                    <td className={cx.td}>{f.comentario ?? <span className={cx.muted}>Panadería (por omisión)</span>}</td>
+                    <td className={cx.td}>{f.num_folios}</td>
+                    <td className={cx.tdNum}>{mxn(f.total)}</td>
+                    <td className={cx.td}>
+                      {f.pdf_link
+                        ? <a className="text-sa-green underline" href={f.pdf_link} target="_blank" rel="noreferrer">PDF</a>
+                        : <span className={cx.muted}>—</span>}
+                    </td>
+                    <td className={cx.td}>
+                      <button className={cx.btnPrimary} disabled={timbrando} onClick={() => void timbrarPre(f.id)}>
+                        {timbrando ? 'Timbrando…' : 'Timbrar'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div>
         <p className={`${cx.h3} mb-2`}>Facturas timbradas</p>
-        {facturas.length === 0 ? (
+        {timbradas.length === 0 ? (
           <Panel><p className={`text-sm ${cx.muted}`}>Todavía no hay facturas.</p></Panel>
         ) : (
           <div className={cx.tableWrap}>
@@ -398,7 +475,7 @@ export default function Facturacion({
                 </tr>
               </thead>
               <tbody className={cx.tbody}>
-                {facturas.map((f) => (
+                {timbradas.map((f) => (
                   <tr key={f.id} className={cx.tr}>
                     <td className={cx.td}>{f.fecha}</td>
                     <td className={cx.td}><EstatusChip e={f.estatus} /></td>
