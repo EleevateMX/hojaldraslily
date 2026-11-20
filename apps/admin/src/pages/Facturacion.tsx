@@ -40,8 +40,8 @@ const soloDigitos = (s: string) => s.replaceAll('-', '')
 
 type SubModo = 'dia' | 'periodo' | 'manual'
 
-/** Opciones comunes de los tres timbrados: prefactura y descripción editable. */
-type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string }
+/** Opciones comunes de los tres timbrados: prefactura, descripción y detalle. */
+type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string; renglonUnico?: boolean }
 
 /**
  * Descripciones preescritas para el concepto del CFDI (panadería). Salen en un
@@ -49,6 +49,24 @@ type OpcionesTimbrado = { soloGuardar?: boolean; comentario?: string }
  * leyenda por omisión del servidor («Venta de pan y productos de panadería»).
  */
 const LEYENDA_PANADERIA = 'Venta de pan y productos de panadería'
+
+// Datos fiscales FIJOS del emisor y del receptor de la global. Son para la
+// vista previa (aproximada); el CFDI real lo arma ContaDigital con su empresa.
+const EMISOR_FISCAL = {
+  nombre: 'KALALEV HOLDING',
+  rfc: 'KHO2506056F0',
+  regimen: '601 · General de Ley Personas Morales',
+  domicilio: '29 A 183, Miguel Alemán, Mérida, Yucatán, C.P. 97148',
+}
+const RECEPTOR_FISCAL = {
+  nombre: 'PUBLICO EN GENERAL',
+  rfc: 'XAXX010101000',
+  regimen: '616 · Sin obligaciones fiscales',
+  uso: 'S01 · Sin efectos fiscales',
+}
+const PERIODICIDAD_TXT: Record<string, string> = {
+  '01': 'Diaria', '02': 'Semanal', '03': 'Quincenal', '04': 'Mensual', '05': 'Bimestral',
+}
 
 const LEYENDAS_SUGERIDAS = [
   LEYENDA_PANADERIA,
@@ -148,6 +166,97 @@ function DetallePanel({ d, cargando }: { d: DetalleFactura | null; cargando: boo
   )
 }
 
+/**
+ * Vista previa con FORMA DE FACTURA (emisor, receptor, complemento global,
+ * renglones y totales), para ver «cómo quedaría» antes de guardar/timbrar. Es
+ * aproximada: el CFDI real lo arma y timbra ContaDigital.
+ */
+function VistaFactura({
+  renglones, total, periodicidadTxt, mes, anio, esManual,
+}: {
+  renglones: { concepto: string; importe: number }[]
+  total: number
+  periodicidadTxt: string
+  mes: string
+  anio: string
+  esManual: boolean
+}) {
+  const bloque = 'rounded-sa border border-sa-green-ink/10 bg-white p-3'
+  return (
+    <div className="rounded-sa-lg border border-sa-green-ink/15 bg-white p-4 md:p-6 space-y-4 shadow-sa-sm">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <p className="font-display text-xl text-sa-green-ink">Hojaldras Lily</p>
+          <p className={`text-xs ${cx.muted}`}>Vista previa — así se vería la factura</p>
+        </div>
+        <div className="text-right">
+          <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/60">Factura global · Público en general</p>
+          <p className="text-sm text-sa-green-ink">IVA tasa 0% · Uso {RECEPTOR_FISCAL.uso}</p>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-3">
+        <div className={bloque}>
+          <p className={cx.label}>Emisor</p>
+          <p className="text-sm font-semibold text-sa-green-ink">{EMISOR_FISCAL.nombre}</p>
+          <p className="font-mono text-xs text-sa-green-ink/80">{EMISOR_FISCAL.rfc}</p>
+          <p className="text-xs text-sa-green-ink/70">{EMISOR_FISCAL.regimen}</p>
+          <p className="text-xs text-sa-green-ink/70">{EMISOR_FISCAL.domicilio}</p>
+        </div>
+        <div className={bloque}>
+          <p className={cx.label}>Receptor</p>
+          <p className="text-sm font-semibold text-sa-green-ink">{RECEPTOR_FISCAL.nombre}</p>
+          <p className="font-mono text-xs text-sa-green-ink/80">{RECEPTOR_FISCAL.rfc}</p>
+          <p className="text-xs text-sa-green-ink/70">{RECEPTOR_FISCAL.regimen}</p>
+          <p className="text-xs text-sa-green-ink/70">Uso CFDI: {RECEPTOR_FISCAL.uso}</p>
+        </div>
+      </div>
+
+      {!esManual && (
+        <div className={`${bloque} inline-block`}>
+          <p className={cx.label}>Información global (complemento)</p>
+          <p className="text-sm text-sa-green-ink">Periodicidad <b>{periodicidadTxt}</b> · Mes <b>{mes}</b> · Año <b>{anio}</b></p>
+        </div>
+      )}
+
+      <div className={cx.tableWrap}>
+        <table className={cx.table}>
+          <thead className={cx.thead}>
+            <tr>
+              <th className={cx.th}>Cant.</th>
+              <th className={cx.th}>Unidad</th>
+              <th className={cx.th}>Clave SAT</th>
+              <th className={cx.th}>Descripción</th>
+              <th className={cx.th}>Impuesto</th>
+              <th className={cx.thNum}>Importe</th>
+            </tr>
+          </thead>
+          <tbody className={cx.tbody}>
+            {renglones.map((r, i) => (
+              <tr key={i} className={cx.tr}>
+                <td className={cx.td}>1</td>
+                <td className={cx.td}>H87 · Pieza</td>
+                <td className={cx.td}>50181900</td>
+                <td className={cx.td}>{r.concepto}</td>
+                <td className={cx.td}>IVA 0%</td>
+                <td className={cx.tdNum}>{mxn(r.importe)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-end">
+        <div className="w-full max-w-xs space-y-1">
+          <div className="flex justify-between text-sm text-sa-green-ink"><span>Subtotal</span><span>{mxn(total)}</span></div>
+          <div className="flex justify-between text-sm text-sa-green-ink"><span>IVA (0%)</span><span>{mxn(0)}</span></div>
+          <div className="flex justify-between font-display text-lg text-sa-green-ink border-t border-sa-green-ink/10 pt-1"><span>Total</span><span>{mxn(total)}</span></div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Facturacion({
   fuenteVentas = (f: string) => ventasDelDia(sb, f),
   fuenteVentasPeriodo = (d: string, h: string) => ventasDelPeriodo(sb, d, h),
@@ -180,6 +289,9 @@ export default function Facturacion({
   // panadería por omisión ('Venta de pan y productos de panadería', más el
   // folio en día/periodo). Con texto, se antepone al folio en el CFDI.
   const [descripcion, setDescripcion] = useState('')
+  // Cómo va el detalle en el CFDI: un solo renglón con el total (recomendado,
+  // lo común) o un renglón por folio.
+  const [renglonUnico, setRenglonUnico] = useState(true)
 
   const [ventas, setVentas] = useState<VentaDelDia[]>([])
   const [ventasPeriodo, setVentasPeriodo] = useState<VentaDelPeriodo[]>([])
@@ -232,7 +344,7 @@ export default function Facturacion({
     setTimbrando(true); setError(null); setOk(null); setAviso(null)
     try {
       const comentario = descripcion.trim() || undefined
-      const o: OpcionesTimbrado = { soloGuardar, comentario }
+      const o: OpcionesTimbrado = { soloGuardar, comentario, renglonUnico }
       let r: ResultadoTimbrado
       if (sub === 'dia') r = await alTimbrar(fecha, o)
       else if (sub === 'periodo') r = await alTimbrarPeriodo({ desde, hasta, periodicidad, ...o })
@@ -282,6 +394,18 @@ export default function Facturacion({
   // las ya timbradas / con error.
   const prefacturas = useMemo(() => facturas.filter((f) => f.estatus === 'pendiente'), [facturas])
   const timbradas = useMemo(() => facturas.filter((f) => f.estatus !== 'pendiente'), [facturas])
+
+  // Vista previa con forma de factura («cómo quedaría»), y los renglones tal
+  // como irían al CFDI según el modo elegido.
+  const [verVista, setVerVista] = useState(false)
+  const renglonesPreview = useMemo(() => {
+    if (sub === 'manual') {
+      return montoNum > 0 ? [{ concepto: conceptoCFDI(descripcion, null, desde, hasta), importe: montoNum }] : []
+    }
+    const vs = sub === 'dia' ? ventas : ventasPeriodo
+    if (renglonUnico) return [{ concepto: descripcion.trim() || LEYENDA_PANADERIA, importe: totalMostrado }]
+    return vs.map((v) => ({ concepto: conceptoCFDI(descripcion, v.folio, desde, hasta), importe: Number(v.total) }))
+  }, [sub, ventas, ventasPeriodo, renglonUnico, descripcion, desde, hasta, montoNum, totalMostrado])
 
   // Detalle expandible de una factura/prefactura (sus renglones + datos de
   // ContaDigital). Se carga al pedirlo y se muestra bajo su fila.
@@ -411,7 +535,9 @@ export default function Facturacion({
               onChange={(e) => setDescripcion(e.target.value)}
               placeholder={sub === 'manual'
                 ? 'Vacío = «Venta de pan y productos de panadería al público en general»'
-                : 'Vacío = «Venta de pan y productos de panadería · Folio N»'}
+                : renglonUnico
+                  ? 'Vacío = «Venta de pan y productos de panadería»'
+                  : 'Vacío = «Venta de pan y productos de panadería · Folio N»'}
               maxLength={900}
               className={cx.input}
               style={{ minWidth: '28rem' }}
@@ -420,6 +546,31 @@ export default function Facturacion({
               {LEYENDAS_SUGERIDAS.map((l) => <option key={l} value={l} />)}
             </datalist>
           </Field>
+
+          {/* Detalle del CFDI: un solo renglón (lo común) o uno por folio. En
+              manual siempre es un solo renglón, así que no aplica. */}
+          {sub !== 'manual' && (
+            <div className="mt-3">
+              <p className={cx.label}>Detalle en el CFDI</p>
+              <div className="flex flex-wrap gap-2 mt-1">
+                {([
+                  [true, 'Un solo renglón', 'Un concepto y el total. Es lo común y más limpio.'],
+                  [false, 'Un renglón por folio', 'Una línea por cada folio, con su concepto. Más detalle.'],
+                ] as const).map(([v, label, ayuda]) => (
+                  <button
+                    key={String(v)}
+                    type="button"
+                    onClick={() => setRenglonUnico(v)}
+                    aria-pressed={renglonUnico === v}
+                    title={ayuda}
+                    className={`rounded-sa px-3 py-1.5 text-sm ${renglonUnico === v ? 'bg-sa-green text-sa-cream-paper' : 'bg-sa-cream-soft text-sa-green-ink'}`}
+                  >
+                    {label}{v ? ' (recomendado)' : ''}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-6">
@@ -464,6 +615,31 @@ export default function Facturacion({
         </div>
       </Panel>
 
+      {/* Vista «cómo quedaría» con forma de factura. */}
+      {renglonesPreview.length > 0 && (
+        <div>
+          <button
+            className={cx.btnSec}
+            onClick={() => setVerVista((v) => !v)}
+            aria-pressed={verVista}
+          >
+            {verVista ? 'Ocultar vista de factura' : 'Ver cómo quedaría (vista de factura)'}
+          </button>
+          {verVista && (
+            <div className="mt-3">
+              <VistaFactura
+                renglones={renglonesPreview}
+                total={totalMostrado}
+                esManual={sub === 'manual'}
+                periodicidadTxt={sub === 'dia' ? 'Diaria' : (PERIODICIDAD_TXT[periodicidad] ?? 'Mensual')}
+                mes={(sub === 'dia' ? fecha : desde).split('-')[1] ?? ''}
+                anio={(sub === 'dia' ? fecha : desde).split('-')[0] ?? ''}
+              />
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Preview: cómo quedaría la prefactura (día o periodo; en manual es un
           solo renglón, abajo). Un renglón por folio, con el concepto que irá
           al CFDI — así se ve antes de guardar/timbrar y no hay pierde. */}
@@ -473,13 +649,62 @@ export default function Facturacion({
             Así quedaría la {sub === 'dia' ? `factura del ${fecha}` : `factura del ${desde} al ${hasta}`}
           </p>
           <p className={`text-xs ${cx.muted} mb-2`}>
-            Un renglón por folio cobrado con tarjeta, con el concepto tal como irá al CFDI. Es el ejemplo de cómo
-            quedaría la prefactura: cambia la <b>Descripción</b> de arriba y aquí se actualiza.
+            {renglonUnico
+              ? <>En el CFDI va <b>un solo renglón</b> con el total; abajo, los folios que ampara. Cambia la <b>Descripción</b> o el <b>Detalle</b> de arriba y aquí se actualiza.</>
+              : <>Un renglón por folio, con el concepto tal como irá al CFDI. Cambia la <b>Descripción</b> o el <b>Detalle</b> de arriba y aquí se actualiza.</>}
           </p>
           {cargando ? (
             <Loading>Cargando…</Loading>
           ) : (sub === 'dia' ? ventas.length === 0 : ventasPeriodo.length === 0) ? (
             <Panel><p className={`text-sm ${cx.muted}`}>No hay ventas por facturar en ese periodo.</p></Panel>
+          ) : renglonUnico ? (
+            <div className="space-y-3">
+              {/* El único renglón, tal como va en el CFDI. */}
+              <div className={cx.tableWrap}>
+                <table className={cx.table}>
+                  <thead className={cx.thead}>
+                    <tr>
+                      <th className={cx.th}>Concepto (como irá en el CFDI)</th>
+                      <th className={cx.thNum}>Importe</th>
+                    </tr>
+                  </thead>
+                  <tbody className={cx.tbody}>
+                    <tr className={cx.tr}>
+                      <td className={cx.td}>{descripcion.trim() || LEYENDA_PANADERIA}</td>
+                      <td className={cx.tdNum}>{mxn(totalMostrado)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {/* Los folios que ampara (cobrados con tarjeta). */}
+              <details>
+                <summary className={`${cx.label} cursor-pointer`}>
+                  Ampara {sub === 'dia' ? ventas.length : ventasPeriodo.length} folios cobrados con tarjeta (ver)
+                </summary>
+                <div className={`${cx.tableWrap} mt-2`}>
+                  <table className={cx.table}>
+                    <thead className={cx.thead}>
+                      <tr>
+                        <th className={cx.th}>Folio</th>
+                        {sub === 'periodo' && <th className={cx.th}>Día</th>}
+                        <th className={cx.th}>Canal</th>
+                        <th className={cx.thNum}>Importe</th>
+                      </tr>
+                    </thead>
+                    <tbody className={cx.tbody}>
+                      {(sub === 'dia' ? ventas : ventasPeriodo).map((v) => (
+                        <tr key={v.folio} className={cx.tr}>
+                          <td className={cx.td}>Folio {v.folio}</td>
+                          {sub === 'periodo' && <td className={cx.td}>{(v as VentaDelPeriodo).fecha}</td>}
+                          <td className={cx.td}>{v.canal}</td>
+                          <td className={cx.tdNum}>{mxn(v.total)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
           ) : (
             <div className={cx.tableWrap}>
               <table className={cx.table}>
