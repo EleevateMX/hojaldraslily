@@ -1,25 +1,45 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { ventasDiarias, productosMasVendidos, stockPorAlmacen } from '@lily/supabase'
+import { ventasDiarias, productosMasVendidos, stockPorAlmacen, hornoEnVivo, type HornoEnVivo } from '@lily/supabase'
 import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@lily/types'
-import { mxn, mensajeDeError } from '@lily/utils'
-import { Panel, PageHeader, Loading, ErrorMsg, cx } from '../ui'
+import { mensajeDeError } from '@lily/utils'
+import { Loading, ErrorMsg } from '../ui'
+import DashboardVista, { type DashboardData, type HornoItem } from './DashboardVista'
+import type { Callout } from './dashboardUi'
 
-const HOY = new Date().toISOString().slice(0, 10)
+/**
+ * Dashboard del día: KPIs con cambio vs ayer, el riel «qué hay que atender»,
+ * ventas de 7 días con comparación semanal, cómo se cobró, lo más vendido, el
+ * horno en vivo y el stock bajo mínimo.
+ *
+ * Solo arma los datos; la forma vive en `DashboardVista`. La fecha se decide en
+ * Mérida (igual que las vistas de la base), no en la hora del aparato.
+ */
+
+const ZONA = 'America/Merida'
+/** La fecha de Mérida hace `off` días (hoy = 0), como 'YYYY-MM-DD'. */
+function fechaMerida(off = 0): string {
+  return new Date(Date.now() - off * 86400000).toLocaleDateString('en-CA', { timeZone: ZONA })
+}
+function diaCorto(dia: string): string {
+  // Mediodía UTC para que el nombre del día no se corra por zona horaria.
+  return new Date(dia + 'T12:00:00Z').toLocaleDateString('es-MX', { weekday: 'short', timeZone: ZONA })
+}
 
 export default function Dashboard() {
-  const [dias, setDias] = useState<VentaDiaria[]>([])
-  const [top, setTop] = useState<ProductoVendido[]>([])
-  const [stock, setStock] = useState<StockAlmacen[]>([])
+  const [data, setData] = useState<DashboardData | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([ventasDiarias(sb, 7), productosMasVendidos(sb, 6), stockPorAlmacen(sb)])
-      .then(([d, t, s]) => {
-        setDias(d)
-        setTop(t)
-        setStock(s)
+    Promise.all([
+      ventasDiarias(sb, 14),
+      productosMasVendidos(sb, 6),
+      stockPorAlmacen(sb),
+      hornoEnVivo(sb),
+    ])
+      .then(([dias, top, stock, horno]) => {
+        setData(armar(dias, top, stock, horno))
         setError(null)
       })
       .catch((e) => setError(mensajeDeError(e)))
@@ -27,150 +47,115 @@ export default function Dashboard() {
   }, [])
 
   if (cargando) return <Loading>Cargando panel…</Loading>
+  if (error) return <ErrorMsg>{error}</ErrorMsg>
+  if (!data) return <ErrorMsg>No se pudo cargar el panel.</ErrorMsg>
+  return <DashboardVista data={data} />
+}
 
-  const hoy = dias.find((d) => d.dia === HOY)
-  const totalHoy = hoy?.total_ventas ?? 0
-  const ordHoy = hoy?.num_ordenes ?? 0
-  const ticket = hoy?.ticket_promedio ?? 0
-  const semana = dias.reduce((a, d) => a + (d.total_ventas ?? 0), 0)
-  const maxDia = Math.max(1, ...dias.map((d) => d.total_ventas ?? 0))
+/** Convierte las cuatro consultas en lo que pinta la vista. */
+function armar(
+  dias: VentaDiaria[],
+  top: ProductoVendido[],
+  stock: StockAlmacen[],
+  horno: HornoEnVivo,
+): DashboardData {
+  const HOY = fechaMerida(0)
+  const AYER = fechaMerida(1)
+  const porDia = new Map(dias.filter((d) => d.dia).map((d) => [d.dia as string, d]))
+  const totalDe = (dia: string) => Number(porDia.get(dia)?.total_ventas ?? 0)
+
+  // 14 días de calendario ascendentes (el último es hoy), para no perder los
+  // días sin ventas, que no vienen en la vista.
+  const dias14 = Array.from({ length: 14 }, (_, i) => fechaMerida(13 - i))
+  const previos = dias14.slice(0, 7)
+  const ultimos = dias14.slice(7)
+  const total7 = ultimos.reduce((a, d) => a + totalDe(d), 0)
+  const prev7 = previos.reduce((a, d) => a + totalDe(d), 0)
+  const deltaSemana = prev7 > 0 ? ((total7 - prev7) / prev7) * 100 : 0
+
+  const hoyRow = porDia.get(HOY)
+  const ayerRow = porDia.get(AYER)
+  const ventasHoy = Number(hoyRow?.total_ventas ?? 0)
+  const ventasAyer = Number(ayerRow?.total_ventas ?? 0)
+  const ordHoy = Number(hoyRow?.num_ordenes ?? 0)
+  const ticket = Number(hoyRow?.ticket_promedio ?? 0)
+  const ticketAyer = Number(ayerRow?.ticket_promedio ?? 0)
+  const pct = (a: number, b: number) => (b > 0 ? ((a - b) / b) * 100 : 0)
+
   const bajos = stock.filter((s) => s.bajo_minimo)
 
-  const kpis = [
-    { lbl: 'Ventas de hoy', val: mxn(totalHoy), sub: `${ordHoy} ${ordHoy === 1 ? 'orden' : 'órdenes'}`, accent: 'text-sa-banana' },
-    { lbl: 'Ticket promedio', val: mxn(ticket), sub: 'hoy', accent: 'text-sa-blueberry' },
-    { lbl: 'Ventas 7 días', val: mxn(semana), sub: 'acumulado', accent: 'text-sa-green' },
-    { lbl: 'Alertas de stock', val: String(bajos.length), sub: 'bajo mínimo', accent: bajos.length ? 'text-sa-strawberry' : 'text-sa-mint' },
-  ]
+  // Riel «qué hay que atender»: lo urgente primero (horno pasado de hora,
+  // stock bajo), luego lo informativo.
+  const pendientes: Callout[] = []
+  const tarde = horno.resumen?.tarde ?? 0
+  const enHorno = horno.resumen?.en_horno ?? 0
+  if (tarde > 0) {
+    pendientes.push({
+      tono: 'urgente',
+      titulo: `${tarde} ${tarde === 1 ? 'tanda pasada' : 'tandas pasadas'} de su hora`,
+      detalle: 'Llevan tiempo fuera en el horno. Revisa Producción.',
+    })
+  }
+  if (bajos.length > 0) {
+    const nombres = bajos.slice(0, 3).map((b) => b.insumo).filter(Boolean).join(', ')
+    pendientes.push({
+      tono: 'urgente',
+      titulo: `${bajos.length} ${bajos.length === 1 ? 'insumo' : 'insumos'} bajo mínimo`,
+      detalle: `${nombres}${bajos.length > 3 ? '…' : ''}. Revisa la lista de compra.`,
+    })
+  }
+  if (enHorno > 0) {
+    pendientes.push({
+      tono: 'aviso',
+      titulo: `${enHorno} ${enHorno === 1 ? 'tanda' : 'tandas'} en el horno`,
+      detalle: 'Saldrán pronto; ten listo el mostrador.',
+    })
+  }
+  if (pendientes.length === 0) {
+    pendientes.push({ tono: 'ok', titulo: 'Todo en orden', detalle: 'Sin pendientes urgentes ahora mismo.' })
+  }
 
-  return (
-    <div>
-      <PageHeader
-        title="Dashboard"
-        subtitle={<>Resumen del día · <span className="font-mono text-sa-green-ink/80">{HOY}</span></>}
-        action={
-          <div className="flex items-center gap-2 bg-white border border-sa-green-ink/10 rounded-full px-4 py-2 shadow-sa-sm">
-            <span className="w-2 h-2 rounded-full bg-sa-mint" />
-            <span className="text-sm font-medium text-sa-green-ink">Sucursal: Principal</span>
-          </div>
-        }
-      />
+  const unidadTxt = (u: string, n: number) => (u === 'molde' ? (n === 1 ? 'molde' : 'moldes') : 'pz')
+  const hornoItems: HornoItem[] = [
+    ...horno.adentro.map((h) => ({ sabor: h.sabor, estado: 'horno' as const, detalle: `${h.moldes} ${unidadTxt(h.unidad, h.moldes)}` })),
+    ...horno.esperando.map((h) => ({ sabor: h.sabor, estado: 'espera' as const, detalle: `${h.moldes} ${unidadTxt(h.unidad, h.moldes)} · esperando turno` })),
+  ].slice(0, 6)
 
-      {error && <ErrorMsg>{error}</ErrorMsg>}
+  return {
+    fecha: HOY,
+    sucursal: 'Principal',
+    kpis: [
+      { lbl: 'Ventas de hoy', val: money(ventasHoy), sub: `${ordHoy} ${ordHoy === 1 ? 'orden' : 'órdenes'}`, delta: ayerRow ? { pct: pct(ventasHoy, ventasAyer), buenoSiSube: true } : undefined },
+      { lbl: 'Ticket promedio', val: money(ticket), sub: 'hoy', delta: ticketAyer > 0 ? { pct: pct(ticket, ticketAyer), buenoSiSube: true } : undefined },
+      { lbl: 'Ventas 7 días', val: money(total7), sub: 'acumulado', delta: prev7 > 0 ? { pct: deltaSemana, buenoSiSube: true } : undefined },
+      { lbl: 'Alertas de stock', val: String(bajos.length), sub: 'bajo mínimo' },
+    ],
+    pendientes,
+    semana: ultimos.map((dia) => ({
+      etiqueta: dia === HOY ? 'hoy' : diaCorto(dia),
+      total: totalDe(dia),
+      esHoy: dia === HOY,
+    })),
+    totalSemana: total7,
+    deltaSemana,
+    pagos: [
+      { lbl: 'Efectivo', val: Number(hoyRow?.efectivo ?? 0) },
+      { lbl: 'Tarjeta', val: Number(hoyRow?.tarjeta ?? 0), nota: 'terminal' },
+      { lbl: 'Otro', val: Number(hoyRow?.otro ?? 0) + Number(hoyRow?.clip ?? 0) + Number(hoyRow?.cortesia ?? 0), nota: 'transf., Rappi…' },
+    ],
+    top: top.map((p) => ({ nombre: p.nombre ?? '—', vendido: Number(p.total_vendido ?? 0) })),
+    horno: hornoItems,
+    stockBajo: bajos.map((s) => ({
+      insumo: s.insumo ?? '—',
+      almacen: s.almacen ?? '',
+      actual: `${Number(s.stock_actual ?? 0)} ${s.unidad ?? ''}`.trim(),
+      minimo: String(Number(s.stock_minimo ?? 0)),
+    })),
+  }
+}
 
-      {/* KPIs del día */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        {kpis.map((k) => (
-          <div
-            key={k.lbl}
-            className="bg-white rounded-sa p-5 shadow-sa-sm border border-sa-green-ink/5 transition-all hover:shadow-sa hover:-translate-y-0.5"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-xs text-sa-green-ink/60 font-mono uppercase tracking-wide">{k.lbl}</span>
-              <span className={`w-2.5 h-2.5 rounded-full bg-current ${k.accent}`} />
-            </div>
-            <p className="text-4xl font-display text-sa-green-ink leading-none">{k.val}</p>
-            <p className="text-xs mt-3 text-sa-green-ink/60">{k.sub}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Dos columnas */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          {/* Tendencia 7 días */}
-          <Panel title="Ventas últimos 7 días">
-            {dias.length === 0 ? (
-              <p className={cx.muted}>Sin ventas en el periodo.</p>
-            ) : (
-              <div className="flex items-end gap-3 h-44 pt-2">
-                {dias.map((d) => (
-                  <div key={d.dia} className="flex-1 flex flex-col items-center gap-2 h-full">
-                    <div className="flex-1 w-full flex items-end">
-                      <div
-                        className="w-full min-h-[3px] rounded-t-lg bg-sa-green transition-all"
-                        style={{ height: `${Math.round(((d.total_ventas ?? 0) / maxDia) * 100)}%` }}
-                        title={mxn(d.total_ventas ?? 0)}
-                      />
-                    </div>
-                    <span className="text-xs text-sa-green-ink/60 font-mono capitalize">
-                      {new Date(d.dia + 'T00:00:00').toLocaleDateString('es-MX', { weekday: 'short' })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-
-          {/* Desglose de pago de hoy */}
-          <Panel title="Cómo se cobró hoy">
-            {!hoy && <p className={cx.muted}>Aún no hay ventas registradas hoy.</p>}
-            {hoy && (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  ['Efectivo', hoy.efectivo ?? 0],
-                  ['Tarjeta', hoy.tarjeta ?? 0],
-                  ['Clip', hoy.clip ?? 0],
-                  ['Cortesía', hoy.cortesia ?? 0],
-                ].map(([lbl, val]) => (
-                  <div key={lbl as string} className="flex flex-col gap-1 bg-sa-cream-soft/60 border border-sa-green-ink/5 rounded-sa px-4 py-3">
-                    <span className="text-xs text-sa-green-ink/60 font-mono uppercase tracking-wide">{lbl}</span>
-                    <b className="font-mono text-lg text-sa-green-ink">{mxn(val as number)}</b>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-        </div>
-
-        <div className="space-y-6">
-          {/* Top productos */}
-          <Panel title="Más vendidos">
-            {top.length === 0 ? (
-              <p className={cx.muted}>Sin datos aún.</p>
-            ) : (
-              <ol className="space-y-2">
-                {top.map((p, i) => (
-                  <li key={p.id} className="flex items-center justify-between py-2 border-b border-sa-green-ink/5 last:border-0">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-6 h-6 flex items-center justify-center rounded-full bg-sa-green text-sa-cream font-mono text-xs font-bold shrink-0">
-                        {i + 1}
-                      </span>
-                      <span className="text-sm text-sa-green-ink truncate">{p.nombre}</span>
-                    </div>
-                    <span className="text-sm font-mono font-semibold text-sa-green-ink shrink-0 ml-2">{p.total_vendido}</span>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </Panel>
-
-          {/* Alertas de stock */}
-          <Panel title="Stock bajo mínimo">
-            {bajos.length === 0 ? (
-              <div className="text-center py-6 text-sa-green font-medium">Todo por encima del mínimo ✓</div>
-            ) : (
-              <div className="space-y-2">
-                {bajos.map((s) => (
-                  <div
-                    key={s.id}
-                    className="flex items-center justify-between px-3 py-2.5 rounded-sa bg-sa-strawberry/10 border border-sa-strawberry/30"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-sm text-sa-green-ink truncate">{s.insumo}</p>
-                      <p className="text-xs text-sa-green-ink/50">{s.almacen}</p>
-                    </div>
-                    <div className="text-right shrink-0 ml-2">
-                      <p className="text-sm font-mono font-semibold text-sa-strawberry">{s.stock_actual} {s.unidad}</p>
-                      <p className="text-xs font-mono text-sa-green-ink/50">mín {s.stock_minimo}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </Panel>
-        </div>
-      </div>
-    </div>
-  )
+// El Dashboard mostraba antes los pesos con `mxn`; la vista ya los formatea con
+// `mxn` también. Aquí solo armamos las cifras que van como texto en los KPIs.
+function money(n: number): string {
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 }
