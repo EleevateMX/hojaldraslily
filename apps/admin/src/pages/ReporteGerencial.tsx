@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { mxn } from '@lily/utils'
 import { Panel, PageHeader, cx } from '../ui'
 
@@ -148,7 +148,10 @@ function Seccion({ title, hint, children }: { title: string; hint?: string; chil
 
 // ── Página ──────────────────────────────────────────────────────────────────
 
+const PERIODOS = ['Esta semana', 'Este mes', '90 días']
+
 export default function ReporteGerencial({ data }: { data: ReporteData }) {
+  const [pi, setPi] = useState(1)
   const maxCalor = Math.max(1, ...data.calor.map((c) => c.total))
   const maxDia = Math.max(1, ...data.porDiaSemana.map((d) => d.promedio))
   const maxProd = Math.max(1, ...data.productoPorDia.map((p) => p.unidades))
@@ -158,15 +161,23 @@ export default function ReporteGerencial({ data }: { data: ReporteData }) {
     <div className="space-y-6">
       <PageHeader
         title="Reporte gerencial"
-        subtitle={<>Comparativas del negocio · <span className="font-mono text-sa-green-ink/80">{data.periodo}</span></>}
+        subtitle={<>Comparativas del negocio · <span className="font-mono text-sa-green-ink/80">{PERIODOS[pi]}</span></>}
         action={
           <div className="flex items-center gap-3 flex-wrap">
             <div className="inline-flex rounded-full bg-white border border-sa-green-ink/10 p-1 shadow-sa-sm">
-              {['Esta semana', 'Este mes', '90 días'].map((p, i) => (
-                <span key={p} className={`px-3 py-1 rounded-full text-sm font-medium ${i === 1 ? 'bg-sa-green text-sa-cream' : 'text-sa-green-ink/60'}`}>{p}</span>
+              {PERIODOS.map((p, i) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPi(i)}
+                  aria-pressed={i === pi}
+                  className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${i === pi ? 'bg-sa-green text-sa-cream' : 'text-sa-green-ink/60 hover:text-sa-green-ink'}`}
+                >
+                  {p}
+                </button>
               ))}
             </div>
-            <span className={cx.btnSec}>Exportar PDF</span>
+            <button type="button" className={cx.btnSec} onClick={() => window.print()}>Exportar PDF</button>
           </div>
         }
       />
