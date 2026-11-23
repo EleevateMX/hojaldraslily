@@ -150,8 +150,19 @@ function Seccion({ title, hint, children }: { title: string; hint?: string; chil
 
 const PERIODOS = ['Esta semana', 'Este mes', '90 días']
 
-export default function ReporteGerencial({ data }: { data: ReporteData }) {
-  const [pi, setPi] = useState(1)
+export default function ReporteGerencial({
+  data,
+  periodoActivo,
+  onCambiarPeriodo,
+}: {
+  data: ReporteData
+  /** Periodo seleccionado, cuando lo controla el contenedor (para refetch). */
+  periodoActivo?: number
+  onCambiarPeriodo?: (i: number) => void
+}) {
+  const [piLocal, setPiLocal] = useState(periodoActivo ?? 1)
+  const pi = periodoActivo ?? piLocal
+  const setPi = onCambiarPeriodo ?? setPiLocal
   const maxCalor = Math.max(1, ...data.calor.map((c) => c.total))
   const maxDia = Math.max(1, ...data.porDiaSemana.map((d) => d.promedio))
   const maxProd = Math.max(1, ...data.productoPorDia.map((p) => p.unidades))
@@ -161,7 +172,7 @@ export default function ReporteGerencial({ data }: { data: ReporteData }) {
     <div className="space-y-6">
       <PageHeader
         title="Reporte gerencial"
-        subtitle={<>Comparativas del negocio · <span className="font-mono text-sa-green-ink/80">{PERIODOS[pi]}</span></>}
+        subtitle={<>{PERIODOS[pi]} · <span className="font-mono text-sa-green-ink/80">{data.periodo}</span></>}
         action={
           <div className="flex items-center gap-3 flex-wrap">
             <div className="inline-flex rounded-full bg-white border border-sa-green-ink/10 p-1 shadow-sa-sm">

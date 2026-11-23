@@ -43,3 +43,20 @@ export async function ordenesRecientes(
   if (error) throw error
   return data
 }
+
+/**
+ * Reporte gerencial con datos reales (una sola RPC arma todo el JSON). Las
+ * fechas van como 'YYYY-MM-DD' en hora de Mérida. Devuelve el objeto tal cual
+ * lo pinta Admin → Reporte gerencial (el tipo vive en la app).
+ */
+type RpcFn = (fn: string, args: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>
+
+export async function reporteGerencial(
+  sb: ClienteLily,
+  desde: string,
+  hasta: string,
+): Promise<unknown> {
+  const { data, error } = await (sb.rpc as unknown as RpcFn)('fn_reporte_gerencial', { p_desde: desde, p_hasta: hasta })
+  if (error) throw error
+  return data
+}
