@@ -9,6 +9,7 @@ import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@lily/types'
 import { mensajeDeError } from '@lily/utils'
 import { Loading, ErrorMsg } from '../ui'
 import DashboardVista, { type DashboardData, type HornoItem, type Periodo } from './DashboardVista'
+import MandarAHacerModal from './MandarAHacerModal'
 import type { Callout, Delta } from './dashboardUi'
 
 /**
@@ -35,6 +36,7 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [mandar, setMandar] = useState(false)
   const hayData = useRef(false)
 
   useEffect(() => {
@@ -80,9 +82,15 @@ export default function Dashboard() {
   if (cargando) return <Loading>Cargando panel…</Loading>
   if (error) return <ErrorMsg>{error}</ErrorMsg>
   if (!data) return <ErrorMsg>No se pudo cargar el panel.</ErrorMsg>
-  // «Mandar a hacer» lleva a Producción (el flujo completo vive ahí): el Admin
-  // navega por el hash, sin router.
-  return <DashboardVista data={data} onMandarAHacer={() => { window.location.hash = 'produccion' }} />
+  // «Mandar a hacer» abre el envío rápido ahí mismo; su botón «Ver todo en
+  // Producción» lleva al flujo completo. El camino del pan se actualiza solo
+  // (Realtime de ordenes_produccion) tras mandar.
+  return (
+    <>
+      <DashboardVista data={data} onMandarAHacer={() => setMandar(true)} />
+      {mandar && <MandarAHacerModal onClose={() => setMandar(false)} />}
+    </>
+  )
 }
 
 type Fuentes = {
