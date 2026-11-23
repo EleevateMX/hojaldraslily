@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sb } from '../lib/sb'
 import {
   ventasDiarias, productosMasVendidos, stockPorAlmacen, hornoEnVivo,
-  listarEncargos, cortesDeCaja, facturasListar,
+  listarEncargos, cortesDeCaja, facturasListar, suscribirProduccion,
   type HornoEnVivo, type Encargo, type CorteDeCaja, type FacturaGlobal,
 } from '@lily/supabase'
 import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@lily/types'
@@ -38,25 +38,46 @@ export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const hayData = useRef(false)
 
   useEffect(() => {
-    const HOY = fechaMerida(0)
-    const AYER = fechaMerida(1)
-    Promise.all([
-      ventasDiarias(sb, 14),
-      productosMasVendidos(sb, 6),
-      stockPorAlmacen(sb),
-      hornoEnVivo(sb),
-      listarEncargos(sb),
-      cortesDeCaja(sb, AYER, HOY),
-      facturasListar(sb, AYER, HOY),
-    ])
-      .then(([dias, top, stock, horno, encargos, cortes, facturas]) => {
+    let vivo = true
+    async function cargar() {
+      const HOY = fechaMerida(0)
+      const AYER = fechaMerida(1)
+      try {
+        const [dias, top, stock, horno, encargos, cortes, facturas] = await Promise.all([
+          ventasDiarias(sb, 14),
+          productosMasVendidos(sb, 6),
+          stockPorAlmacen(sb),
+          hornoEnVivo(sb),
+          listarEncargos(sb),
+          cortesDeCaja(sb, AYER, HOY),
+          facturasListar(sb, AYER, HOY),
+        ])
+        if (!vivo) return
         setData(armar({ dias, top, stock, horno, encargos, cortes, facturas }))
+        hayData.current = true
         setError(null)
-      })
-      .catch((e) => setError(mensajeDeError(e)))
-      .finally(() => setCargando(false))
+      } catch (e) {
+        // Si ya hay datos en pantalla, un fallo de refresco se ignora y se
+        // reintenta al siguiente ciclo; solo la primera carga muestra el error
+        // (la regla de la casa: si se recupera con un reintento, en silencio).
+        if (vivo && !hayData.current) setError(mensajeDeError(e))
+      } finally {
+        if (vivo) setCargando(false)
+      }
+    }
+    void cargar()
+    // Se refresca solo: cada minuto, y al instante cuando cambia el camino del
+    // pan (horno/encargos) por Realtime, como las pantallas de estación.
+    const id = setInterval(() => void cargar(), 60000)
+    const off = suscribirProduccion(sb, () => void cargar())
+    return () => {
+      vivo = false
+      clearInterval(id)
+      off()
+    }
   }, [])
 
   if (cargando) return <Loading>Cargando panel…</Loading>
