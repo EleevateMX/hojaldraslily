@@ -7,7 +7,7 @@
  * No toca el Dashboard.tsx real: es una propuesta para mirar antes de armar.
  */
 import { createRoot } from 'react-dom/client'
-import DashboardPreview, { type DashboardData } from '../src/pages/DashboardPreview'
+import DashboardVista, { type DashboardData } from '../src/pages/DashboardVista'
 import '../src/index.css'
 
 const DATA: DashboardData = {
@@ -68,7 +68,7 @@ const DATA: DashboardData = {
 createRoot(document.getElementById('root')!).render(
   <div style={{ minHeight: '100vh', background: 'var(--sa-cream-paper)', padding: '24px' }}>
     <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
-      <DashboardPreview data={DATA} />
+      <DashboardVista data={DATA} />
     </div>
   </div>,
 )
