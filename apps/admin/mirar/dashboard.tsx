@@ -65,6 +65,7 @@ const DATA: DashboardData = {
     { tono: 'aviso', titulo: 'Factura global de ayer sin timbrar', detalle: '24 folios con tarjeta ($8,545). Entra a Facturación.' },
     { tono: 'ok', titulo: 'El corte de ayer cuadró', detalle: 'Sin faltante ni sobrante. $8,120 en 73 folios.' },
   ],
+  camino: { porArmar: 2, esperando: 1, enHorno: 2, porEmpacar: 2 },
   pagos: [
     { lbl: 'Efectivo', val: 4100 },
     { lbl: 'Terminal 1', val: 2800, nota: 'Banorte' },
@@ -96,7 +97,7 @@ const DATA: DashboardData = {
 createRoot(document.getElementById('root')!).render(
   <div style={{ minHeight: '100vh', background: 'var(--sa-cream-paper)', padding: '24px' }}>
     <div style={{ maxWidth: '1152px', margin: '0 auto' }}>
-      <DashboardVista data={DATA} />
+      <DashboardVista data={DATA} onMandarAHacer={() => {}} />
     </div>
   </div>,
 )
