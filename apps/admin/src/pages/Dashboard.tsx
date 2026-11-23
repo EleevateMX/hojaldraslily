@@ -80,7 +80,9 @@ export default function Dashboard() {
   if (cargando) return <Loading>Cargando panel…</Loading>
   if (error) return <ErrorMsg>{error}</ErrorMsg>
   if (!data) return <ErrorMsg>No se pudo cargar el panel.</ErrorMsg>
-  return <DashboardVista data={data} />
+  // «Mandar a hacer» lleva a Producción (el flujo completo vive ahí): el Admin
+  // navega por el hash, sin router.
+  return <DashboardVista data={data} onMandarAHacer={() => { window.location.hash = 'produccion' }} />
 }
 
 type Fuentes = {
@@ -249,6 +251,12 @@ function armar({ dias, top, stock, horno, encargos, cortes, facturas }: Fuentes)
     sucursal: 'Principal',
     periodos,
     pendientes,
+    camino: {
+      porArmar: horno.resumen?.sin_armar ?? 0,
+      esperando: horno.resumen?.esperando ?? 0,
+      enHorno: enHorno,
+      porEmpacar: sinEmpacar.length,
+    },
     pagos,
     top: top.map((p) => ({ nombre: p.nombre ?? '—', vendido: Number(p.total_vendido ?? 0) })),
     horno: hornoItems,

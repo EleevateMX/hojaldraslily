@@ -32,11 +32,15 @@ export type Periodo = {
   etiquetaTotal: string
 }
 
+/** El pipeline C→P→H→E resumido en números (lo pinta «Camino del pan»). */
+export type Camino = { porArmar: number; esperando: number; enHorno: number; porEmpacar: number }
+
 export type DashboardData = {
   fecha: string
   sucursal: string
   periodos: Periodo[]
   pendientes: Callout[]
+  camino: Camino
   pagos: Pago[]
   top: TopProd[]
   horno: HornoItem[]
@@ -53,7 +57,7 @@ const HORNO_ESTADO: Record<HornoItem['estado'], { txt: string; cls: string }> = 
 // los primeros y un «y N más», para que el panel no se vuelva una tira sin fin.
 const TOPE_STOCK = 8
 
-export default function DashboardVista({ data }: { data: DashboardData }) {
+export default function DashboardVista({ data, onMandarAHacer }: { data: DashboardData; onMandarAHacer?: () => void }) {
   const [pi, setPi] = useState(0)
   const periodo = data.periodos[Math.min(pi, data.periodos.length - 1)] ?? data.periodos[0]
 
@@ -63,6 +67,12 @@ export default function DashboardVista({ data }: { data: DashboardData }) {
   const compacto = periodo.barras.length > 10
   const stockMostrado = data.stockBajo.slice(0, TOPE_STOCK)
   const stockRestante = data.stockBajo.length - stockMostrado.length
+  const etapas = [
+    { lbl: 'Por armar', n: data.camino.porArmar },
+    { lbl: 'Esperando', n: data.camino.esperando },
+    { lbl: 'En el horno', n: data.camino.enHorno },
+    { lbl: 'Por empacar', n: data.camino.porEmpacar },
+  ]
 
   return (
     <div>
@@ -103,6 +113,28 @@ export default function DashboardVista({ data }: { data: DashboardData }) {
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {data.pendientes.map((c) => <CalloutCard key={c.titulo} c={c} />)}
+        </div>
+      </div>
+
+      {/* Camino del pan: el pipeline C→P→H→E de un vistazo, y el mando de
+          gerencia para mandar a hacer. Avanzar cada paso vive en su estación. */}
+      <div className="bg-white rounded-sa p-5 shadow-sa-sm border border-sa-green-ink/5 mb-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className={`${cx.h3} mr-2`}>Camino del pan</h3>
+            {etapas.map((e, i) => (
+              <span key={e.lbl} className="flex items-center gap-2">
+                {i > 0 && <span className="text-sa-green-ink/30" aria-hidden>→</span>}
+                <span className="flex items-center gap-2 bg-sa-cream-soft/70 rounded-full pl-1.5 pr-3 py-1">
+                  <span className={`min-w-6 h-6 px-1.5 flex items-center justify-center rounded-full font-mono text-xs font-bold ${e.n > 0 ? 'bg-sa-green text-sa-cream' : 'bg-sa-cream-warm text-sa-green-ink/50'}`}>{e.n}</span>
+                  <span className="text-sm text-sa-green-ink">{e.lbl}</span>
+                </span>
+              </span>
+            ))}
+          </div>
+          {onMandarAHacer && (
+            <button type="button" className={cx.btnPrimary} onClick={onMandarAHacer}>Mandar a hacer</button>
+          )}
         </div>
       </div>
 
