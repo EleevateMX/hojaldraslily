@@ -29,6 +29,10 @@ function diaCorto(dia: string): string {
   // Mediodía UTC para que el nombre del día no se corra por zona horaria.
   return new Date(dia + 'T12:00:00Z').toLocaleDateString('es-MX', { weekday: 'short', timeZone: ZONA })
 }
+/** La fecha de Mérida de un timestamp (para saber a qué día pertenece un corte). */
+function diaDeTimestamp(ts: string): string {
+  return new Date(ts).toLocaleDateString('en-CA', { timeZone: ZONA })
+}
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null)
@@ -112,6 +116,25 @@ function armar({ dias, top, stock, horno, encargos, cortes, facturas }: Fuentes)
   const folioAyer = `GLOBAL-${AYER.replaceAll('-', '')}`
   const timbradaAyer = facturas.some((f) => f.estatus === 'timbrada' && f.folio_original === folioAyer)
   const ayerConTarjeta = Number(ayerRow?.tarjeta ?? 0) > 0
+
+  // Cómo se cobró hoy, con el desglose REAL por método: sale de los cortes de
+  // hoy, que sí separan Banorte, Inbursa, transferencia y Rappi (la vista de
+  // ventas los junta). Si todavía no hay corte de hoy, cae a la vista.
+  const cortesHoy = cortes.filter((c) => diaDeTimestamp(c.abierto_en) === HOY)
+  const sumaCorte = (sel: (c: CorteDeCaja) => number) => cortesHoy.reduce((a, c) => a + (sel(c) ?? 0), 0)
+  const pagos = cortesHoy.length
+    ? [
+        { lbl: 'Efectivo', val: sumaCorte((c) => c.total_efectivo) },
+        { lbl: 'Terminal 1', val: sumaCorte((c) => c.total_tarjeta), nota: 'Banorte' },
+        { lbl: 'Terminal 2', val: sumaCorte((c) => c.total_inbursa), nota: 'Inbursa' },
+        { lbl: 'Transferencia', val: sumaCorte((c) => c.total_transferencia) },
+        { lbl: 'Rappi', val: sumaCorte((c) => c.total_rappi), nota: 'plataforma' },
+      ]
+    : [
+        { lbl: 'Efectivo', val: Number(hoyRow?.efectivo ?? 0) },
+        { lbl: 'Tarjeta', val: Number(hoyRow?.tarjeta ?? 0), nota: 'terminal' },
+        { lbl: 'Otro', val: Number(hoyRow?.otro ?? 0) + Number(hoyRow?.clip ?? 0) + Number(hoyRow?.cortesia ?? 0), nota: 'transf., Rappi…' },
+      ]
 
   const tarde = horno.resumen?.tarde ?? 0
   const enHorno = horno.resumen?.en_horno ?? 0
@@ -198,11 +221,7 @@ function armar({ dias, top, stock, horno, encargos, cortes, facturas }: Fuentes)
     })),
     totalSemana: total7,
     deltaSemana,
-    pagos: [
-      { lbl: 'Efectivo', val: Number(hoyRow?.efectivo ?? 0) },
-      { lbl: 'Tarjeta', val: Number(hoyRow?.tarjeta ?? 0), nota: 'terminal' },
-      { lbl: 'Otro', val: Number(hoyRow?.otro ?? 0) + Number(hoyRow?.clip ?? 0) + Number(hoyRow?.cortesia ?? 0), nota: 'transf., Rappi…' },
-    ],
+    pagos,
     top: top.map((p) => ({ nombre: p.nombre ?? '—', vendido: Number(p.total_vendido ?? 0) })),
     horno: hornoItems,
     stockBajo: bajos.map((s) => ({
