@@ -2,6 +2,7 @@
 import logo from '@lily/brand/logo-negativo.png'
 import { useEffect, useState, type ReactElement } from 'react'
 import Dashboard from './pages/Dashboard'
+import Reporte from './pages/Reporte'
 import EnVivo from './pages/EnVivo'
 import Diagnostico from './pages/Diagnostico'
 import Menu from './pages/Menu'
@@ -20,13 +21,18 @@ import Facturacion from './pages/Facturacion'
 import Descargas from './pages/Descargas'
 import { useSesion } from './sesion'
 
-type Tab = 'dashboard' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
+type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
 
 const w = 18
 
 const IconDashboard = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="13" width="4" height="8" rx="1" /><rect x="10" y="8" width="4" height="13" rx="1" /><rect x="17" y="3" width="4" height="18" rx="1" />
+  </svg>
+)
+const IconReporte = () => (
+  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4 4v16h16" /><polyline points="7 14 11 10 14 13 19 7" />
   </svg>
 )
 const IconEnVivo = () => (
@@ -126,25 +132,48 @@ const IconSistema = () => (
  *
  * El historial de git las guarda si algun dia hacen falta.
  */
-const navItems: { id: Tab; label: string; Icon: () => ReactElement }[] = [
-  { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
-  { id: 'envivo', label: 'En vivo', Icon: IconEnVivo },
-  { id: 'produccion', label: 'Producción', Icon: IconProduccion },
-  { id: 'almacen', label: 'Almacén', Icon: IconAlmacen },
-  { id: 'menus', label: 'Menús del día', Icon: IconMenus },
-  { id: 'diagnostico', label: 'Diagnóstico', Icon: IconDiagnostico },
-  { id: 'menu', label: 'Menú', Icon: IconMenu },
-  { id: 'categorias', label: 'Categorías', Icon: IconCategorias },
-  { id: 'combos', label: 'Combos', Icon: IconCombos },
-  { id: 'inventario', label: 'Inventario', Icon: IconInventario },
-  { id: 'ventas', label: 'Ventas', Icon: IconVentas },
-  { id: 'cortes', label: 'Cortes de caja', Icon: IconCortes },
-  { id: 'facturacion', label: 'Facturación', Icon: IconFacturacion },
-  { id: 'empleados', label: 'Empleados', Icon: IconEmpleados },
-  { id: 'impresoras', label: 'Impresoras', Icon: IconImpresoras },
-  { id: 'descargas', label: 'Descargas', Icon: IconDescargas },
-  { id: 'sistema', label: 'Sistema', Icon: IconSistema },
+type NavItem = { id: Tab; label: string; Icon: () => ReactElement }
+type NavGrupo = { titulo: string; items: NavItem[] }
+
+/**
+ * La barra, agrupada por secciones (antes eran 17 ítems planos y nadie los
+ * encontraba). El orden va de lo que más se mira a lo que menos: Resumen
+ * arriba, Sistema abajo.
+ */
+const navGrupos: NavGrupo[] = [
+  { titulo: 'Resumen', items: [
+    { id: 'dashboard', label: 'Dashboard', Icon: IconDashboard },
+    { id: 'reporte', label: 'Reporte gerencial', Icon: IconReporte },
+    { id: 'envivo', label: 'En vivo', Icon: IconEnVivo },
+  ] },
+  { titulo: 'Operación', items: [
+    { id: 'produccion', label: 'Producción', Icon: IconProduccion },
+    { id: 'almacen', label: 'Almacén', Icon: IconAlmacen },
+    { id: 'menus', label: 'Menús del día', Icon: IconMenus },
+    { id: 'inventario', label: 'Inventario', Icon: IconInventario },
+  ] },
+  { titulo: 'Ventas y dinero', items: [
+    { id: 'ventas', label: 'Ventas', Icon: IconVentas },
+    { id: 'cortes', label: 'Cortes de caja', Icon: IconCortes },
+    { id: 'facturacion', label: 'Facturación', Icon: IconFacturacion },
+  ] },
+  { titulo: 'Catálogo', items: [
+    { id: 'menu', label: 'Menú', Icon: IconMenu },
+    { id: 'categorias', label: 'Categorías', Icon: IconCategorias },
+    { id: 'combos', label: 'Combos', Icon: IconCombos },
+  ] },
+  { titulo: 'Sistema', items: [
+    { id: 'empleados', label: 'Empleados', Icon: IconEmpleados },
+    { id: 'impresoras', label: 'Impresoras', Icon: IconImpresoras },
+    { id: 'descargas', label: 'Descargas', Icon: IconDescargas },
+    { id: 'diagnostico', label: 'Diagnóstico', Icon: IconDiagnostico },
+    { id: 'sistema', label: 'Sistema', Icon: IconSistema },
+  ] },
 ]
+
+// Lista plana derivada de los grupos: el resto del archivo (hash de la URL,
+// filtro de contabilidad, sección activa) sigue razonando por ítem.
+const navItems: NavItem[] = navGrupos.flatMap((g) => g.items)
 
 const TABS = new Set<Tab>(navItems.map((n) => n.id))
 
@@ -163,6 +192,9 @@ export default function App() {
   const sesion = useSesion()
   const soloFacturacion = sesion?.rol === 'contabilidad'
   const items = soloFacturacion ? navItems.filter((n) => n.id === 'facturacion') : navItems
+  // Para pintar la barra: contabilidad ve un solo ítem sin encabezado; el
+  // resto ve los grupos completos.
+  const grupos: NavGrupo[] = soloFacturacion ? [{ titulo: '', items }] : navGrupos
 
   // La pestaña va también en el hash de la URL. Sirve para dos cosas: mandar
   // por WhatsApp «mira admin.hojaldraslily.com/#impresoras» y que abra ahí,
@@ -211,21 +243,30 @@ export default function App() {
           </button>
         </div>
         <nav
-          className={`${menuAbierto ? 'grid' : 'hidden'} md:flex grid-cols-2 gap-1 px-3 pb-3 md:pb-0 md:flex-col md:flex-1 md:overflow-y-auto`}
+          className={`${menuAbierto ? 'flex' : 'hidden'} md:flex flex-col gap-4 px-3 pb-3 md:pb-0 md:flex-1 md:overflow-y-auto`}
         >
-          {items.map(({ id, label, Icon }) => (
-            <button
-              key={id}
-              onClick={() => { setTab(id); setMenuAbierto(false) }}
-              className={`md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-sa-lg text-sm whitespace-nowrap transition-colors ${
-                tabActivo === id
-                  ? 'bg-sa-cream text-sa-green-ink font-semibold shadow-sa-sm'
-                  : 'text-sa-cream/80 hover:text-sa-cream hover:bg-white/5 font-medium'
-              }`}
-            >
-              <Icon />
-              {label}
-            </button>
+          {grupos.map((g) => (
+            <div key={g.titulo || 'solo'}>
+              {g.titulo && (
+                <p className="text-[11px] font-mono uppercase tracking-wider text-sa-cream/45 px-3 mb-1">{g.titulo}</p>
+              )}
+              <div className="grid grid-cols-2 gap-1 md:flex md:flex-col">
+                {g.items.map(({ id, label, Icon }) => (
+                  <button
+                    key={id}
+                    onClick={() => { setTab(id); setMenuAbierto(false) }}
+                    className={`md:w-full flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2.5 md:py-3 rounded-sa-lg text-sm whitespace-nowrap transition-colors ${
+                      tabActivo === id
+                        ? 'bg-sa-cream text-sa-green-ink font-semibold shadow-sa-sm'
+                        : 'text-sa-cream/80 hover:text-sa-cream hover:bg-white/5 font-medium'
+                    }`}
+                  >
+                    <Icon />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </nav>
         <div className="hidden md:block px-4 py-4 border-t border-sa-cream/10">
@@ -238,6 +279,7 @@ export default function App() {
       {/* Contenido */}
       <main className="flex-1 min-w-0 p-4 md:p-8 pb-24 md:pb-8">
         {tabActivo === 'dashboard' && <Dashboard />}
+        {tabActivo === 'reporte' && <Reporte />}
         {tabActivo === 'envivo' && <EnVivo />}
         {tabActivo === 'diagnostico' && <Diagnostico />}
         {tabActivo === 'produccion' && <Produccion />}
