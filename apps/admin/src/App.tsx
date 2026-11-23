@@ -12,6 +12,7 @@ import Almacen from './pages/Almacen'
 import Categorias from './pages/Categorias'
 import Combos from './pages/Combos'
 import Ventas from './pages/Ventas'
+import Clientes from './pages/Clientes'
 import Inventario from './pages/Inventario'
 import Empleados from './pages/Empleados'
 import Impresoras from './pages/Impresoras'
@@ -21,13 +22,18 @@ import Facturacion from './pages/Facturacion'
 import Descargas from './pages/Descargas'
 import { useSesion } from './sesion'
 
-type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
+type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'clientes' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
 
 const w = 18
 
 const IconDashboard = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="13" width="4" height="8" rx="1" /><rect x="10" y="8" width="4" height="13" rx="1" /><rect x="17" y="3" width="4" height="18" rx="1" />
+  </svg>
+)
+const IconClientes = () => (
+  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" />
   </svg>
 )
 const IconReporte = () => (
@@ -154,6 +160,7 @@ const navGrupos: NavGrupo[] = [
   ] },
   { titulo: 'Ventas y dinero', items: [
     { id: 'ventas', label: 'Ventas', Icon: IconVentas },
+    { id: 'clientes', label: 'Clientes', Icon: IconClientes },
     { id: 'cortes', label: 'Cortes de caja', Icon: IconCortes },
     { id: 'facturacion', label: 'Facturación', Icon: IconFacturacion },
   ] },
@@ -289,6 +296,7 @@ export default function App() {
         {tabActivo === 'categorias' && <Categorias />}
         {tabActivo === 'combos' && <Combos />}
         {tabActivo === 'ventas' && <Ventas />}
+        {tabActivo === 'clientes' && <Clientes />}
         {tabActivo === 'cortes' && <Cortes />}
         {tabActivo === 'facturacion' && <Facturacion />}
         {tabActivo === 'inventario' && <Inventario />}
