@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react'
 import { sb } from '../lib/sb'
-import { ventasDiarias, productosMasVendidos, stockPorAlmacen, hornoEnVivo, type HornoEnVivo } from '@lily/supabase'
+import {
+  ventasDiarias, productosMasVendidos, stockPorAlmacen, hornoEnVivo,
+  listarEncargos, cortesDeCaja, facturasListar,
+  type HornoEnVivo, type Encargo, type CorteDeCaja, type FacturaGlobal,
+} from '@lily/supabase'
 import type { VentaDiaria, ProductoVendido, StockAlmacen } from '@lily/types'
 import { mensajeDeError } from '@lily/utils'
 import { Loading, ErrorMsg } from '../ui'
@@ -32,14 +36,19 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
+    const HOY = fechaMerida(0)
+    const AYER = fechaMerida(1)
     Promise.all([
       ventasDiarias(sb, 14),
       productosMasVendidos(sb, 6),
       stockPorAlmacen(sb),
       hornoEnVivo(sb),
+      listarEncargos(sb),
+      cortesDeCaja(sb, AYER, HOY),
+      facturasListar(sb, AYER, HOY),
     ])
-      .then(([dias, top, stock, horno]) => {
-        setData(armar(dias, top, stock, horno))
+      .then(([dias, top, stock, horno, encargos, cortes, facturas]) => {
+        setData(armar({ dias, top, stock, horno, encargos, cortes, facturas }))
         setError(null)
       })
       .catch((e) => setError(mensajeDeError(e)))
@@ -52,13 +61,18 @@ export default function Dashboard() {
   return <DashboardVista data={data} />
 }
 
-/** Convierte las cuatro consultas en lo que pinta la vista. */
-function armar(
-  dias: VentaDiaria[],
-  top: ProductoVendido[],
-  stock: StockAlmacen[],
-  horno: HornoEnVivo,
-): DashboardData {
+type Fuentes = {
+  dias: VentaDiaria[]
+  top: ProductoVendido[]
+  stock: StockAlmacen[]
+  horno: HornoEnVivo
+  encargos: Encargo[]
+  cortes: CorteDeCaja[]
+  facturas: FacturaGlobal[]
+}
+
+/** Convierte las consultas en lo que pinta la vista. */
+function armar({ dias, top, stock, horno, encargos, cortes, facturas }: Fuentes): DashboardData {
   const HOY = fechaMerida(0)
   const AYER = fechaMerida(1)
   const porDia = new Map(dias.filter((d) => d.dia).map((d) => [d.dia as string, d]))
@@ -84,11 +98,35 @@ function armar(
 
   const bajos = stock.filter((s) => s.bajo_minimo)
 
-  // Riel «qué hay que atender»: lo urgente primero (horno pasado de hora,
-  // stock bajo), luego lo informativo.
-  const pendientes: Callout[] = []
+  // Encargos de HOY o antes (regla de la casa: «ese día o antes»). Lo que se
+  // pasó de su día sigue contando porque sigue en una bolsa con nombre.
+  const encHoy = encargos.filter((e) => !e.fecha_entrega || e.fecha_entrega <= HOY)
+  const sinEmpacar = encHoy.filter((e) => !e.empacado_at)
+
+  // El último corte cerrado: ¿cuadró el cajón?
+  const ultimoCorte = cortes
+    .filter((c) => c.estado === 'cerrada' && c.cerrado_en)
+    .sort((a, b) => (a.cerrado_en! < b.cerrado_en! ? 1 : -1))[0]
+
+  // Factura global de ayer: si ayer hubo cobro con tarjeta y no está timbrada.
+  const folioAyer = `GLOBAL-${AYER.replaceAll('-', '')}`
+  const timbradaAyer = facturas.some((f) => f.estatus === 'timbrada' && f.folio_original === folioAyer)
+  const ayerConTarjeta = Number(ayerRow?.tarjeta ?? 0) > 0
+
   const tarde = horno.resumen?.tarde ?? 0
   const enHorno = horno.resumen?.en_horno ?? 0
+
+  // Riel «qué hay que atender»: urgentes primero (lo que duele hoy), luego
+  // avisos, luego lo que está bien.
+  const pendientes: Callout[] = []
+  if (sinEmpacar.length > 0) {
+    const quienes = sinEmpacar.slice(0, 3).map((e) => e.cliente).filter(Boolean).join(', ')
+    pendientes.push({
+      tono: 'urgente',
+      titulo: `${sinEmpacar.length} ${sinEmpacar.length === 1 ? 'encargo' : 'encargos'} sin empacar`,
+      detalle: `${quienes}${sinEmpacar.length > 3 ? '…' : ''}. Revisa Empaque.`,
+    })
+  }
   if (tarde > 0) {
     pendientes.push({
       tono: 'urgente',
@@ -104,11 +142,33 @@ function armar(
       detalle: `${nombres}${bajos.length > 3 ? '…' : ''}. Revisa la lista de compra.`,
     })
   }
+  if (ultimoCorte && (ultimoCorte.diferencia ?? 0) !== 0) {
+    const dif = ultimoCorte.diferencia ?? 0
+    pendientes.push({
+      tono: 'aviso',
+      titulo: `El último corte tuvo ${dif < 0 ? 'faltante' : 'sobrante'} de ${money(Math.abs(dif))}`,
+      detalle: `Corte #${ultimoCorte.folio}. Revisa Cortes de caja.`,
+    })
+  }
+  if (ayerConTarjeta && !timbradaAyer) {
+    pendientes.push({
+      tono: 'aviso',
+      titulo: 'Factura global de ayer sin timbrar',
+      detalle: `Hubo cobros con tarjeta el ${AYER}. Entra a Facturación.`,
+    })
+  }
   if (enHorno > 0) {
     pendientes.push({
       tono: 'aviso',
       titulo: `${enHorno} ${enHorno === 1 ? 'tanda' : 'tandas'} en el horno`,
       detalle: 'Saldrán pronto; ten listo el mostrador.',
+    })
+  }
+  if (ultimoCorte && (ultimoCorte.diferencia ?? 0) === 0) {
+    pendientes.push({
+      tono: 'ok',
+      titulo: 'El último corte cuadró',
+      detalle: `Corte #${ultimoCorte.folio}, sin faltante ni sobrante.`,
     })
   }
   if (pendientes.length === 0) {
@@ -128,7 +188,7 @@ function armar(
       { lbl: 'Ventas de hoy', val: money(ventasHoy), sub: `${ordHoy} ${ordHoy === 1 ? 'orden' : 'órdenes'}`, delta: ayerRow ? { pct: pct(ventasHoy, ventasAyer), buenoSiSube: true } : undefined },
       { lbl: 'Ticket promedio', val: money(ticket), sub: 'hoy', delta: ticketAyer > 0 ? { pct: pct(ticket, ticketAyer), buenoSiSube: true } : undefined },
       { lbl: 'Ventas 7 días', val: money(total7), sub: 'acumulado', delta: prev7 > 0 ? { pct: deltaSemana, buenoSiSube: true } : undefined },
-      { lbl: 'Alertas de stock', val: String(bajos.length), sub: 'bajo mínimo' },
+      { lbl: 'Encargos de hoy', val: String(encHoy.length), sub: encHoy.length ? `${sinEmpacar.length} sin empacar` : 'nada por entregar' },
     ],
     pendientes,
     semana: ultimos.map((dia) => ({
@@ -154,8 +214,8 @@ function armar(
   }
 }
 
-// El Dashboard mostraba antes los pesos con `mxn`; la vista ya los formatea con
-// `mxn` también. Aquí solo armamos las cifras que van como texto en los KPIs.
+// Cifra en pesos sin centavos, para los KPIs grandes (la vista usa `mxn` con
+// centavos en el resto).
 function money(n: number): string {
   return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 0 }).format(n)
 }
