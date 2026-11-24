@@ -152,8 +152,8 @@ export default function Sistema() {
       {ok && <OkMsg>{ok}</OkMsg>}
 
       {hayCriticos && (
-        <div className="mb-6 rounded-sa border border-sa-strawberry bg-sa-strawberry/10 px-5 py-3">
-          <p className="text-sa-strawberry font-medium text-sm">⚠ Hay indicadores en advertencia — revísalos abajo.</p>
+        <div className="mb-6 rounded-sa border border-sa-green-deep bg-sa-green-deep/10 px-5 py-3">
+          <p className="text-sa-green-deep font-medium text-sm">⚠ Hay indicadores en advertencia — revísalos abajo.</p>
         </div>
       )}
 

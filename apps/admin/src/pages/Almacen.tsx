@@ -149,7 +149,7 @@ function TarjetaEncargo({
     <div
       className={[
         'rounded-sa border p-5',
-        vencido ? 'bg-sa-strawberry/8 border-sa-strawberry/40' : 'bg-white border-sa-green-ink/10',
+        vencido ? 'bg-sa-green-deep/8 border-sa-green-deep/40' : 'bg-white border-sa-green-ink/10',
       ].join(' ')}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -172,7 +172,7 @@ function TarjetaEncargo({
           <p
             className={[
               'font-display text-lg leading-none',
-              vencido ? 'text-sa-strawberry' : 'text-sa-green-ink',
+              vencido ? 'text-sa-green-deep' : 'text-sa-green-ink',
             ].join(' ')}
           >
             {tituloDelDia(e.fecha_entrega)}
@@ -591,7 +591,7 @@ export default function Almacen() {
                   className={[
                     'font-display text-xl leading-none',
                     d.vencido
-                      ? 'text-sa-green-deep bg-sa-strawberry/25 rounded-full px-3 py-1'
+                      ? 'text-sa-green-deep bg-sa-green-deep/25 rounded-full px-3 py-1'
                       : 'text-sa-green-ink',
                   ].join(' ')}
                 >

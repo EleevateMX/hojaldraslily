@@ -156,7 +156,7 @@ export function BotonActualizarPantallas({ compacto = false }: { compacto?: bool
       {(aviso || error) && (
         <p
           className={`absolute right-0 top-full mt-2 z-10 whitespace-nowrap text-xs font-mono px-3 py-2 rounded-sa shadow-sa-sm ${
-            error ? 'bg-sa-strawberry text-white' : 'bg-sa-mint/25 text-sa-green-ink'
+            error ? 'bg-sa-green-deep text-white' : 'bg-sa-mint/25 text-sa-green-ink'
           }`}
         >
           {error ?? aviso}

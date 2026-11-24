@@ -81,7 +81,7 @@ export function Fila({
     <div
       className={[
         'flex flex-wrap sm:flex-nowrap items-center gap-3 sm:gap-4 rounded-sa border p-4 transition-colors',
-        agotado ? 'bg-sa-strawberry/10 border-sa-strawberry/40' : 'bg-white border-sa-green-ink/10',
+        agotado ? 'bg-sa-green-deep/10 border-sa-green-deep/40' : 'bg-white border-sa-green-ink/10',
       ].join(' ')}
     >
       {foto && <img src={foto} alt="" className="w-14 h-14 shrink-0 object-contain" draggable={false} />}
@@ -862,7 +862,7 @@ export default function Produccion() {
       </div>
 
       {agotados.length > 0 && (
-        <div className="rounded-sa bg-sa-strawberry/10 border-l-4 border-sa-strawberry px-5 py-4">
+        <div className="rounded-sa bg-sa-green-deep/10 border-l-4 border-sa-green-deep px-5 py-4">
           <p className="font-display text-lg text-sa-green-ink">
             Se acabó {agotados.length === 1 ? 'este sabor' : `${agotados.length} sabores`}
           </p>

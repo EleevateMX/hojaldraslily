@@ -302,8 +302,8 @@ export default function Impresoras() {
       {ok && <OkMsg>{ok}</OkMsg>}
 
       {(fallidos > 0) && (
-        <div className="mb-6 rounded-sa border border-sa-strawberry bg-sa-strawberry/10 px-5 py-3">
-          <p className="text-sa-strawberry font-medium text-sm">
+        <div className="mb-6 rounded-sa border border-sa-green-deep bg-sa-green-deep/10 px-5 py-3">
+          <p className="text-sa-green-deep font-medium text-sm">
             ⚠ {fallidos} comanda{fallidos === 1 ? '' : 's'} no se pudo imprimir tras varios intentos. Revisa la cola abajo y reimprime manualmente.
           </p>
         </div>
@@ -584,7 +584,7 @@ export default function Impresoras() {
                     <td className={cx.td}><Chip tone={ESTADO_TONO[t.estado]}>{ESTADO_LABEL[t.estado]}</Chip></td>
                     <td className={cx.td}>{t.intentos}/{t.max_intentos}</td>
                     <td className={cx.td}>
-                      {t.error_ultimo ? <span className="text-sa-strawberry text-xs">{t.error_ultimo}</span> : <span className={cx.muted}>—</span>}
+                      {t.error_ultimo ? <span className="text-sa-green-deep text-xs">{t.error_ultimo}</span> : <span className={cx.muted}>—</span>}
                     </td>
                     <td className={cx.td}>{fechaHoraEnMerida(t.created_at)}</td>
                     <td className={cx.tdNum}>

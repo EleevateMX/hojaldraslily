@@ -64,7 +64,7 @@ function Diferencia({ c }: { c: CorteDeCaja }) {
   if (Math.abs(d) < 0.005) return <Chip tone="si">Cuadra</Chip>
   if (d < 0) {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sa-strawberry/30 text-sa-green-deep">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-sa-green-deep text-sa-cream">
         Faltan {mxn(-d)}
       </span>
     )

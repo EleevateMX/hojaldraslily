@@ -76,7 +76,7 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export function ErrorMsg({ children }: { children: ReactNode }) {
   return (
-    <div className="bg-sa-strawberry/10 border border-sa-strawberry/30 text-sa-strawberry px-4 py-3 rounded-sa text-sm font-medium mb-4">
+    <div className="bg-sa-green-deep/10 border border-sa-green-deep/30 text-sa-green-deep px-4 py-3 rounded-sa text-sm font-medium mb-4">
       {children}
     </div>
   )

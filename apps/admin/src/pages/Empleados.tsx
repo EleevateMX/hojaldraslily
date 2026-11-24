@@ -152,7 +152,7 @@ export default function Empleados() {
                   <td className={cx.td}>
                     {e.tiene_pin
                       ? <span className="text-xs font-mono text-sa-green">•••• ✓</span>
-                      : <span className="text-xs font-mono text-sa-strawberry">sin PIN</span>}
+                      : <span className="text-xs font-mono text-sa-green-deep">sin PIN</span>}
                   </td>
                   <td className={cx.td}>
                     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${e.activo ? 'text-sa-green' : 'text-sa-green-ink/40'}`}>

@@ -118,10 +118,10 @@ export default function EnVivo() {
           <BotonActualizarPantallas compacto />
           <div
             className={`flex items-center gap-2.5 rounded-full px-4 py-2 shadow-sa-sm border ${
-              conectado ? 'bg-white border-sa-green-ink/10' : 'bg-sa-strawberry/10 border-sa-strawberry/30'
+              conectado ? 'bg-white border-sa-green-ink/10' : 'bg-sa-green-deep/10 border-sa-green-deep/30'
             }`}
           >
-            <span className={`w-2 h-2 rounded-full bg-sa-strawberry ${conectado ? 'animate-pulse' : ''}`} />
+            <span className={`w-2 h-2 rounded-full bg-sa-green-deep ${conectado ? 'animate-pulse' : ''}`} />
             <span className="font-mono text-xs uppercase tracking-wider text-sa-green-ink">
               {conectado ? 'EN VIVO' : 'RECONECTANDO…'}
             </span>
@@ -137,7 +137,7 @@ export default function EnVivo() {
         <>
           {/* Alerta: el papel no está saliendo */}
           {panel.impresion_atorada > 0 && (
-            <div className="mb-6 bg-sa-strawberry text-white rounded-sa-lg px-5 py-4 flex items-center gap-3 shadow-sa">
+            <div className="mb-6 bg-sa-green-deep text-white rounded-sa-lg px-5 py-4 flex items-center gap-3 shadow-sa">
               <span className="text-2xl">🚨</span>
               <div>
                 <p className="font-display text-lg leading-tight">La impresión está atorada</p>
@@ -160,7 +160,7 @@ export default function EnVivo() {
               sub={panel.corte
                 ? `${panel.corte.abrio ?? 'sin registro'} · fondo ${mxn(panel.corte.fondo)} · lleva ${panel.turno.ordenes} órdenes (${mxn(panel.turno.total)})`
                 : 'Nadie ha abierto turno'}
-              accent={panel.corte ? 'text-sa-mint' : 'text-sa-strawberry'}
+              accent={panel.corte ? 'text-sa-mint' : 'text-sa-green-deep'}
             />
           </div>
 
@@ -179,10 +179,10 @@ export default function EnVivo() {
                 className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm border ${
                   i.en_linea
                     ? 'bg-sa-mint/15 border-sa-mint/40 text-sa-green-ink'
-                    : 'bg-sa-strawberry/10 border-sa-strawberry/30 text-sa-strawberry'
+                    : 'bg-sa-green-deep/10 border-sa-green-deep/30 text-sa-green-deep'
                 }`}
               >
-                <span className={`w-2 h-2 rounded-full ${i.en_linea ? 'bg-sa-mint animate-pulse' : 'bg-sa-strawberry'}`} />
+                <span className={`w-2 h-2 rounded-full ${i.en_linea ? 'bg-sa-mint animate-pulse' : 'bg-sa-green-deep'}`} />
                 {i.nombre.replace(' — ', ' ')} {i.en_linea ? '· en línea' : '· SIN SEÑAL'}
                 {i.ultima_impresion && <span className="font-mono text-xs opacity-60">últ. {i.ultima_impresion}</span>}
                 {/* La version del agente: sin esto no se distingue "no lo
@@ -234,7 +234,7 @@ export default function EnVivo() {
                         <span className={`text-[11px] font-mono uppercase px-2.5 py-1 rounded-full border ${ESTADOS_COCINA[c.estado] ?? 'bg-sa-cream-soft text-sa-green-ink/60 border-sa-green-ink/10'}`}>
                           {c.estado.replace('_', ' ')}
                         </span>
-                        <span className={`font-mono text-sm ${c.minutos >= 10 ? 'text-sa-strawberry font-bold' : 'text-sa-green-ink/60'}`}>
+                        <span className={`font-mono text-sm ${c.minutos >= 10 ? 'text-sa-green-deep font-bold' : 'text-sa-green-ink/60'}`}>
                           {c.minutos}m
                         </span>
                       </div>
@@ -327,7 +327,7 @@ export default function EnVivo() {
                   <div
                     key={`${ev.ts}-${i}`}
                     className={`flex items-center gap-3 py-2 border-b border-dotted border-sa-green-ink/10 last:border-0 ${
-                      ev.tipo === 'falla' ? 'text-sa-strawberry' : 'text-sa-green-ink'
+                      ev.tipo === 'falla' ? 'text-sa-green-deep' : 'text-sa-green-ink'
                     }`}
                   >
                     <span className="text-base shrink-0">{ICONO_EVENTO[ev.tipo] ?? '•'}</span>
