@@ -14,9 +14,15 @@ services:
     image: caddy:2.8.4
     container_name: lily-caddy
     restart: unless-stopped
-    network_mode: host
+    # Publicado en localhost:80 (Tailscale Serve le habla ahí). No se usa
+    # network_mode host porque Docker Desktop (Windows/WSL2) no lo soporta.
+    ports:
+      - "80:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     environment:
-      SUPABASE_KONG: ${SUPABASE_KONG:-localhost:8000}
+      # Kong (la API de Supabase) queda publicado por el stack en el host:8000.
+      SUPABASE_KONG: ${SUPABASE_KONG:-host.docker.internal:8000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./web:/srv/web:ro
