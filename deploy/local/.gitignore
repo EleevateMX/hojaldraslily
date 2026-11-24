@@ -1,0 +1,5 @@
+# Generado y secreto — nunca al repo.
+web/
+supabase-stack/
+.env.apps
+.env.servidor
