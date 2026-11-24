@@ -41,9 +41,41 @@ Tailscale Serve (HTTPS, cert real del tailnet)
 | `scripts/30-desplegar-funciones.sh` | Pone las Edge Functions en el stack. |
 | `scripts/40-tailscale-servir.sh` | Expone el servidor por HTTPS en el tailnet. |
 | `scripts/actualizar.sh` | **El flujo de Nuvora**: actualizar todo por Tailscale. |
+| `scripts/instalar-servidor.sh` | Instalador de un comando del servidor (Linux/WSL). |
 | `scripts/respaldo.sh` / `restaurar.sh` | Respaldo diario con rotación / restauración. |
+| `windows/instalar-local.bat` | **Instalador para una sola PC Windows** (doble clic). |
+| `windows/preparar-windows.ps1` | WSL2 + Docker + Tailscale + servidor, en Windows. |
+| `windows/repuntar-agentes.ps1` | Apunta los agentes (impresión, caja, Banorte) a local. |
 
-## Instalar (una vez)
+## Instalar en UNA sola PC Windows (lo elegido para Hojaldras Lily)
+
+Todo en el mismo equipo: Supabase por Docker Desktop/WSL2, las apps, Tailscale, y
+los agentes nativos (incluido Banorte).
+
+1. **Doble clic a `windows\instalar-local.bat`** (pide admin una vez). Asegura
+   WSL2 + Ubuntu, Docker Desktop, Tailscale y Git; clona el repo; corre el
+   instalador del servidor dentro de WSL; y une el equipo al tailnet
+   exponiéndolo por HTTPS. Puede pedir **reiniciar** (por WSL/Docker) y
+   volver a correrlo — es idempotente.
+   - La primera vez se detiene para que edites `supabase-stack/.env` (tu
+     `JWT_SECRET`, `ANON_KEY`/`SERVICE_ROLE_KEY`, la URL del tailnet) y
+     `.env.apps` (la misma URL `ts.net` y la anon key local). Luego se vuelve
+     a correr y termina solo.
+2. **Cobro con tarjeta (Banorte):** corre `windows\repuntar-agentes.ps1` y pega
+   la anon key local. Apunta impresión, caja y **Banorte** al Supabase local
+   (`http://localhost:8000`, directo a Kong — no pasan por Tailscale). El token
+   de la terminal se da de alta en **Admin local → Impresoras / Terminal**.
+   El cobro queda local: caja → cola → agente DLL → pinpad; solo la
+   autorización del banco en la pinpad usa internet.
+3. **Admin desde el teléfono:** instala Tailscale en el celular, únelo al
+   tailnet, y abre `https://<equipo>.<tailnet>.ts.net/admin/`.
+
+> Lo que sigue sin automatizar (pide una PC de verdad para probarse): el primer
+> arranque de Docker Desktop con integración WSL, los reinicios de WSL, y traer
+> los **datos de configuración** de la nube (pg_dump selectivo: catálogo,
+> empleados, impresoras, parámetros con el logo).
+
+## Instalar paso a paso (Linux / depuración)
 
 ```bash
 # En el mini-PC (Linux, Docker). El repo va en /opt/hojaldraslily.

@@ -22,7 +22,7 @@
 	# --- API de Supabase (Kong) ---
 	@supabase path /auth/* /rest/* /realtime/* /storage/* /functions/* /graphql/*
 	handle @supabase {
-		reverse_proxy {$SUPABASE_KONG:localhost:8000}
+		reverse_proxy {$SUPABASE_KONG:host.docker.internal:8000}
 	}
 
 	# --- Apps (cada una compilada con --base /<app>/) ---
