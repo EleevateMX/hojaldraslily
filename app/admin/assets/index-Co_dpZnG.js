@@ -109,7 +109,7 @@ Mérida, Yuc., C.P. 97148`,telefono:"999 926 71 51",rfc:"",leyenda:"¡Gracias po
   .sello { text-align:center; font-size:9px; letter-spacing:.3em; border:1px solid #000; padding:3px 2px; margin-bottom:6px; }
 </style></head><body onload="window.print()">
 ${Array.from({length:Math.max(1,Math.round(s))},(be,K)=>{var ie;return`<div class="t${K>0?" copia":""}">
-  ${K>0?'<div class="sello">COPIA</div>':""}
+  ${K>0?'<div class="sello">COPIA</div>':n.reimpresion?'<div class="sello">REIMPRESIÓN</div>':""}
 
   <div class="center">
     ${P}
