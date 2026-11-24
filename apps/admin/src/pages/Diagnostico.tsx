@@ -11,8 +11,8 @@ import { PageHeader, Loading, ErrorMsg, Panel, Chip, cx } from '../ui'
 const SEVERIDAD: Record<string, { etiqueta: string; caja: string; punto: string }> = {
   alta: {
     etiqueta: 'Atender hoy',
-    caja: 'bg-sa-strawberry/10 border-sa-strawberry/40',
-    punto: 'bg-sa-strawberry',
+    caja: 'bg-sa-green-deep/10 border-sa-green-deep/40',
+    punto: 'bg-sa-green-deep',
   },
   media: {
     etiqueta: 'Cuando puedas',
@@ -114,7 +114,7 @@ export default function Diagnostico() {
           <p className="text-sm text-sa-green-ink/70 mb-5">
             {graves > 0 ? (
               <>
-                <b className="text-sa-strawberry">{graves} {graves === 1 ? 'cosa necesita' : 'cosas necesitan'} atención hoy</b>
+                <b className="text-sa-green-deep">{graves} {graves === 1 ? 'cosa necesita' : 'cosas necesitan'} atención hoy</b>
                 {hallazgos.length > graves && <> · {hallazgos.length - graves} más pueden esperar</>}
               </>
             ) : (

@@ -95,7 +95,7 @@ export default function MandarAHacerModal({
           <button type="button" onClick={onClose} aria-label="Cerrar" className="text-sa-green-ink/50 hover:text-sa-green-ink text-xl leading-none">×</button>
         </div>
 
-        {error && <div className="bg-sa-strawberry/10 border border-sa-strawberry/30 text-sa-green-deep px-3 py-2 rounded-sa text-sm">{error}</div>}
+        {error && <div className="bg-sa-green-deep/10 border border-sa-green-deep/30 text-sa-green-deep px-3 py-2 rounded-sa text-sm">{error}</div>}
         {aviso && <div className="bg-sa-mint/20 border border-sa-mint/40 text-sa-green-ink px-3 py-2 rounded-sa text-sm">{aviso}</div>}
 
         {productos === null ? (
