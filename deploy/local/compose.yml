@@ -1,0 +1,28 @@
+# Servidor web (Caddy) del montaje local de Hojaldras Lily.
+#
+# Sirve las apps compiladas (deploy/local/web) y hace de puente a la API de
+# Supabase self-hosted (Kong en localhost:8000). Va en red del host para
+# alcanzar Kong en localhost y para que Tailscale Serve, que corre en el host,
+# le hable a localhost:80.
+#
+# El stack de Supabase (Postgres, Auth, API, Realtime, Storage, Functions) NO
+# está aquí: se levanta con el bundle oficial de auto-hospedaje (ver
+# scripts/00-bootstrap.sh y el README). Este compose es solo la capa web.
+
+services:
+  caddy:
+    image: caddy:2.8.4
+    container_name: lily-caddy
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      SUPABASE_KONG: ${SUPABASE_KONG:-localhost:8000}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./web:/srv/web:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:

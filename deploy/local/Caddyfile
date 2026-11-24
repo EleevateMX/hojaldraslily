@@ -1,0 +1,43 @@
+# Caddy del servidor local de Hojaldras Lily.
+#
+# Un solo origen para TODO: sirve las 9 apps estáticas bajo su ruta
+# (/caja = /pos/, /admin/, …) y hace de puente a la API de Supabase
+# (Kong, puerto 8000) bajo las rutas que usa el cliente de Supabase
+# (/auth, /rest, /realtime, /storage, /functions).
+#
+# No hace HTTPS él mismo: escucha HTTP en :80 y **Tailscale Serve** le pone
+# el HTTPS con certificado real del tailnet (ver scripts/tailscale-servir.sh).
+# Así cada aparato —las PC de la tienda y el teléfono de la dueña— abre el
+# MISMO origen https://<servidor>.<tailnet>.ts.net y el service worker/PWA
+# funciona sin avisos de certificado.
+
+{
+	auto_https off
+	admin off
+}
+
+:80 {
+	encode gzip
+
+	# --- API de Supabase (Kong) ---
+	@supabase path /auth/* /rest/* /realtime/* /storage/* /functions/* /graphql/*
+	handle @supabase {
+		reverse_proxy {$SUPABASE_KONG:localhost:8000}
+	}
+
+	# --- Apps (cada una compilada con --base /<app>/) ---
+	handle /pos/* { root * /srv/web; try_files {path} /pos/index.html; file_server }
+	handle /admin/* { root * /srv/web; try_files {path} /admin/index.html; file_server }
+	handle /produccion/* { root * /srv/web; try_files {path} /produccion/index.html; file_server }
+	handle /horno/* { root * /srv/web; try_files {path} /horno/index.html; file_server }
+	handle /empaque/* { root * /srv/web; try_files {path} /empaque/index.html; file_server }
+	handle /kiosko/* { root * /srv/web; try_files {path} /kiosko/index.html; file_server }
+	handle /cliente-display/* { root * /srv/web; try_files {path} /cliente-display/index.html; file_server }
+	handle /web/* { root * /srv/web; try_files {path} /web/index.html; file_server }
+	handle /costos/* { root * /srv/web; try_files {path} /costos/index.html; file_server }
+
+	# La raíz manda a la caja.
+	handle / {
+		redir /pos/ 302
+	}
+}
