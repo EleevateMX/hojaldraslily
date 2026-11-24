@@ -13,6 +13,7 @@ import Categorias from './pages/Categorias'
 import Combos from './pages/Combos'
 import Ventas from './pages/Ventas'
 import Clientes from './pages/Clientes'
+import Registro from './pages/Registro'
 import Inventario from './pages/Inventario'
 import Empleados from './pages/Empleados'
 import Impresoras from './pages/Impresoras'
@@ -22,7 +23,7 @@ import Facturacion from './pages/Facturacion'
 import Descargas from './pages/Descargas'
 import { useSesion } from './sesion'
 
-type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'clientes' | 'cortes' | 'facturacion' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
+type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'clientes' | 'cortes' | 'facturacion' | 'registro' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
 
 const w = 18
 
@@ -114,6 +115,11 @@ const IconFacturacion = () => (
     <path d="M6 2h9l5 5v13a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z" /><polyline points="14 2 14 8 20 8" /><path d="M9 13h6M9 17h6" />
   </svg>
 )
+const IconRegistro = () => (
+  <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v5h5" /><path d="M3.05 13A9 9 0 1 0 6 5.3L3 8" /><path d="M12 7v5l3 2" />
+  </svg>
+)
 const IconDescargas = () => (
   <svg width={w} height={w} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
@@ -162,6 +168,7 @@ const navGrupos: NavGrupo[] = [
     { id: 'ventas', label: 'Ventas', Icon: IconVentas },
     { id: 'clientes', label: 'Clientes', Icon: IconClientes },
     { id: 'cortes', label: 'Cortes de caja', Icon: IconCortes },
+    { id: 'registro', label: 'Registro de cambios', Icon: IconRegistro },
     { id: 'facturacion', label: 'Facturación', Icon: IconFacturacion },
   ] },
   { titulo: 'Catálogo', items: [
@@ -298,6 +305,7 @@ export default function App() {
         {tabActivo === 'ventas' && <Ventas />}
         {tabActivo === 'clientes' && <Clientes />}
         {tabActivo === 'cortes' && <Cortes />}
+        {tabActivo === 'registro' && <Registro />}
         {tabActivo === 'facturacion' && <Facturacion />}
         {tabActivo === 'inventario' && <Inventario />}
         {tabActivo === 'empleados' && <Empleados />}
