@@ -208,6 +208,13 @@ export interface TicketData {
    * el ticket con la plataforma. Vacío = no se imprime.
    */
   rappiEntregaId?: string | null
+  /**
+   * Marca de que esto es una REIMPRESIÓN de una venta ya cobrada, no un cobro
+   * nuevo. Sale un sello «REIMPRESIÓN» arriba del papel para que una copia del
+   * mismo folio no se confunda con una segunda venta. No cambia totales ni el
+   * método: es el mismo ticket, sellado. Vacío = ticket original.
+   */
+  reimpresion?: boolean
 }
 
 /** Datos del negocio por defecto — REEMPLAZAR con los reales de Hojaldras Lily. */

@@ -5,7 +5,7 @@ import { sb } from '../lib/sb'
 import { ventasDelTurno, cancelarVentaDelTurno, type VentaDelTurno } from '@lily/supabase'
 import { mxn, mensajeDeError, horaEnMerida } from '@lily/utils'
 import { ModalAutorizacion } from '@/components/pos/ModalAutorizacion'
-import { imprimirComprobanteCancelacion } from '../lib/ticket'
+import { imprimirComprobanteCancelacion, reimprimirTicketVenta } from '../lib/ticket'
 
 /**
  * El «Historial de tickets» del turno.
@@ -149,22 +149,32 @@ export function Historial() {
                       <div className={`font-display text-xl text-sa-green-ink ${inactiva ? 'line-through' : ''}`}>
                         {mxn(v.total)}
                       </div>
-                      {!inactiva && (
-                        <div className="mt-2 flex flex-col gap-1.5 items-end">
-                          <button
-                            onClick={() => { setModificando(v); setCancelando(null); setPidiendoPin(true) }}
-                            className="font-mono text-xs uppercase tracking-wide bg-sa-green/10 hover:bg-sa-green/20 text-sa-green-deep px-3 py-1.5 rounded-full border border-sa-green/30"
-                          >
-                            Modificar
-                          </button>
-                          <button
-                            onClick={() => { setCancelando(v); setModificando(null); setMotivo('') }}
-                            className="font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-3 py-1.5 rounded-full border border-sa-strawberry/30"
-                          >
-                            Cancelar / Devolver
-                          </button>
-                        </div>
-                      )}
+                      <div className="mt-2 flex flex-col gap-1.5 items-end">
+                        {!inactiva && (
+                          <>
+                            <button
+                              onClick={() => { setModificando(v); setCancelando(null); setPidiendoPin(true) }}
+                              className="font-mono text-xs uppercase tracking-wide bg-sa-green/10 hover:bg-sa-green/20 text-sa-green-deep px-3 py-1.5 rounded-full border border-sa-green/30"
+                            >
+                              Modificar
+                            </button>
+                            <button
+                              onClick={() => { setCancelando(v); setModificando(null); setMotivo('') }}
+                              className="font-mono text-xs uppercase tracking-wide bg-sa-strawberry/15 hover:bg-sa-strawberry/30 text-sa-strawberry px-3 py-1.5 rounded-full border border-sa-strawberry/30"
+                            >
+                              Cancelar / Devolver
+                            </button>
+                          </>
+                        )}
+                        {/* Reimprimir es de solo lectura: vale para toda venta,
+                            cancelada o no, porque el papel es un hecho pasado. */}
+                        <button
+                          onClick={() => reimprimirTicketVenta(v)}
+                          className="font-mono text-xs uppercase tracking-wide bg-sa-green-ink/5 hover:bg-sa-green-ink/10 text-sa-green-ink/70 px-3 py-1.5 rounded-full border border-sa-green-ink/15"
+                        >
+                          Reimprimir
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
