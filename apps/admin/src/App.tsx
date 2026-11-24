@@ -21,6 +21,7 @@ import Sistema from './pages/Sistema'
 import Cortes from './pages/Cortes'
 import Facturacion from './pages/Facturacion'
 import Descargas from './pages/Descargas'
+import HojaldrIA from './components/HojaldrIA'
 import { useSesion } from './sesion'
 
 type Tab = 'dashboard' | 'reporte' | 'envivo' | 'menus' | 'produccion' | 'almacen' | 'diagnostico' | 'menu' | 'categorias' | 'combos' | 'inventario' | 'ventas' | 'clientes' | 'cortes' | 'facturacion' | 'registro' | 'empleados' | 'impresoras' | 'descargas' | 'sistema'
@@ -313,6 +314,10 @@ export default function App() {
         {tabActivo === 'descargas' && <Descargas />}
         {tabActivo === 'sistema' && <Sistema />}
       </main>
+
+      {/* La asistente de la casa. No va para Contabilidad, que es un puesto
+          acotado a Facturación. */}
+      {!soloFacturacion && <HojaldrIA />}
     </div>
   )
 }
