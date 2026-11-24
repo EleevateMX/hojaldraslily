@@ -211,7 +211,7 @@ export function ticketHTML(data: TicketData, negocio: TicketNegocio = NEGOCIO_DE
   .sello { text-align:center; font-size:9px; letter-spacing:.3em; border:1px solid #000; padding:3px 2px; margin-bottom:6px; }
 </style></head><body onload="window.print()">
 ${Array.from({ length: Math.max(1, Math.round(copias)) }, (_u, __i) => `<div class="t${__i > 0 ? ' copia' : ''}">
-  ${__i > 0 ? '<div class="sello">COPIA</div>' : ''}
+  ${__i > 0 ? '<div class="sello">COPIA</div>' : (data.reimpresion ? '<div class="sello">REIMPRESIÓN</div>' : '')}
 
   <div class="center">
     ${logo}

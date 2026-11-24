@@ -1,4 +1,4 @@
-import { encolarTicketCaja, encolarVoucherCaja, datosDelTicket } from '@lily/supabase'
+import { encolarTicketCaja, encolarVoucherCaja, datosDelTicket, type VentaDelTurno } from '@lily/supabase'
 import {
   imprimirTicket, imprimirVoucher, NEGOCIO_DEFAULT,
   type TicketData, type TicketNegocio, type VoucherTarjeta,
@@ -64,6 +64,51 @@ export async function sacarTicket(ordenId: string | null, ticket: TicketData): P
   // del driver de la térmica, salen cortadas por separado. Por el agente
   // ESC/POS esto será cosa del agente; por ahora la caja imprime por navegador.
   imprimirTicket(ticket, negocioCargado, 2)
+}
+
+/**
+ * Reimprime el ticket de una venta YA cobrada (del «Historial de tickets»).
+ *
+ * Es una copia de cortesía —el cliente que pide otra vez su nota, o una
+ * aclaración—: re-dibuja el MISMO folio con un sello «REIMPRESIÓN» para que no
+ * se confunda con una venta nueva. NO vuelve a cobrar, NO toca inventario ni el
+ * corte. Por eso sale por el **navegador** y no por la cola de la térmica: un
+ * trabajo de ticket de una orden ya cobrada ensuciaría la cola de Admin con un
+ * duplicado, y la reimpresión es una cortesía manual, no un registro de venta
+ * (igual que los comprobantes de cancelación y de rechazo).
+ */
+export function reimprimirTicketVenta(venta: VentaDelTurno): void {
+  const esRappi = venta.canal === 'rappi'
+  const ticket: TicketData = {
+    folio: venta.folio,
+    fecha: venta.created_at,
+    canal: esRappi ? 'Rappi' : 'Caja',
+    items: venta.items.map((i) => ({
+      cantidad: i.cantidad,
+      nombre: i.nombre,
+      precioUnitario: i.precio,
+    })),
+    metodoPago: etiquetaMetodoTicket(venta.metodo_pago, esRappi),
+    reimpresion: true,
+  }
+  imprimirTicket(ticket, negocioCargado, 1)
+}
+
+/**
+ * El método como se lee en el ticket, igual que en el cobro: las dos
+ * terminales salen como «Terminal 1» (Banorte) y «Terminal 2» (Inbursa).
+ */
+function etiquetaMetodoTicket(m: string | null, esRappi: boolean): string {
+  if (esRappi) return 'Pedido de Rappi'
+  switch (m) {
+    case 'efectivo': return 'Efectivo'
+    case 'tarjeta': return 'Terminal 1'
+    case 'inbursa': return 'Terminal 2'
+    case 'transferencia': return 'Transferencia'
+    case 'mixto': return 'Mixto'
+    case 'rappi': return 'Pedido de Rappi'
+    default: return m ?? '—'
+  }
 }
 
 /**
