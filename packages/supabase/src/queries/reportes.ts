@@ -60,3 +60,33 @@ export async function reporteGerencial(
   if (error) throw error
   return data
 }
+
+/**
+ * Un cambio (cancelación o modificación) de una venta, para el registro de
+ * Admin. El histórico que la caja solo enseñaba del turno abierto.
+ */
+export interface CambioRegistrado {
+  tipo: 'cancelada' | 'modificada'
+  cuando: string
+  folio: number
+  total: number
+  metodo_pago: string | null
+  canal: string
+  motivo: string | null
+  autorizo: string | null
+  created_at: string
+}
+
+/**
+ * El registro de cancelaciones y modificaciones por rango de fechas (gerencia).
+ * El día del evento se decide en Mérida, igual que el inventario y el corte.
+ */
+export async function registroCambios(
+  sb: ClienteLily,
+  desde: string,
+  hasta: string,
+): Promise<CambioRegistrado[]> {
+  const { data, error } = await (sb.rpc as unknown as RpcFn)('fn_registro_cambios', { p_desde: desde, p_hasta: hasta })
+  if (error) throw error
+  return (data as CambioRegistrado[] | null) ?? []
+}
