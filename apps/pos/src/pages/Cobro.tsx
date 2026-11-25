@@ -563,6 +563,12 @@ export function Cobro() {
             descuento: descuentoTotal(),
             efectivo: enEfectivo,
             tarjeta: conTarjeta,
+            // El método para el caso de un solo cobro que no es la pinpad:
+            // Inbursa o transferencia (o efectivo). En mixto y en la pinpad el
+            // servidor lo ignora, pero sin esto un encargo por Inbursa llegaba
+            // con efectivo=0, tarjeta=0 y método 'efectivo' → «el monto no
+            // coincide». Es el bug que reportó la casa.
+            metodo: mixto ? 'efectivo' : metodo,
             referencia: referencia.trim() || null,
             idempotencyKey: crypto.randomUUID(),
           },

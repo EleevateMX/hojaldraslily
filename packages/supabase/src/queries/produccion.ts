@@ -1,3 +1,4 @@
+import type { MetodoPago } from '@lily/types'
 import type { ClienteLily } from '../client'
 
 /**
@@ -864,6 +865,13 @@ export async function entregarEncargoConVenta(
     descuento?: number
     efectivo?: number
     tarjeta?: number
+    /**
+     * El método cuando NO es mixto ni la pinpad de Banorte: 'efectivo' (por
+     * omisión), 'inbursa' (2ª terminal) o 'transferencia'. Con esto el pago de
+     * un encargo queda con su método real; antes caía siempre a 'efectivo' con
+     * importe 0 y el servidor lo rechazaba con «el monto no coincide».
+     */
+    metodo?: MetodoPago
     referencia?: string | null
     idempotencyKey?: string
   },
@@ -887,6 +895,7 @@ export async function entregarEncargoConVenta(
     p_descuento: venta.descuento ?? 0,
     p_efectivo: venta.efectivo ?? 0,
     p_tarjeta: venta.tarjeta ?? 0,
+    p_metodo: venta.metodo ?? undefined,
     p_referencia: venta.referencia ?? undefined,
     p_idempotency_key: venta.idempotencyKey ?? undefined,
   })

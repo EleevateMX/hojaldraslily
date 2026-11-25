@@ -4840,6 +4840,7 @@ export type Database = {
           p_encargo_id: string
           p_idempotency_key?: string
           p_items: Json
+          p_metodo?: string
           p_referencia?: string
           p_sucursal_id: string
           p_tarjeta?: number
