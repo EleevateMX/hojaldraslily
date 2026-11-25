@@ -234,7 +234,10 @@ export class BanorteDllTerminal implements TerminalDeCobro {
         ok: false,
         estado: 'no_configurado',
         codigo: 'not_configured',
-        mensaje: 'La terminal de Banorte todavía no está conectada al sistema: cobra en la pinpad a mano y confirma aquí.',
+        // Cubre los dos casos: nunca se dio de alta, o está dada de alta pero el
+        // agente no late ahora (se desconectó / se cambió la pinpad). En los dos
+        // la salida es la misma: cobra a mano, sin esperar al agente.
+        mensaje: 'La terminal de Banorte no está conectada en este momento: cobra en la pinpad a mano y confirma aquí.',
       }
     }
     const cobroId = pedido.cobro_id!
