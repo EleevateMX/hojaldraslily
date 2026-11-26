@@ -8,6 +8,7 @@ import {
   cobrarOrdenMixto,
   entregarEncargoConVenta,
   cobrarModificacion,
+  folioDeOrden,
 } from '@lily/supabase'
 import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
 import { type TicketData } from '@lily/ui'
@@ -401,7 +402,9 @@ export function Cobro() {
           idempotencyKey: crypto.randomUUID(),
         })
         ordenViva.current = null
-        await sacarTicket(orden.id, armarDatosDelTicket(orden.folio))
+        // El folio se asigna al cobrarse, así que se lee ahora (ya pagada).
+        const folioRappi = (await folioDeOrden(sb, orden.id)) ?? orden.folio
+        await sacarTicket(orden.id, armarDatosDelTicket(folioRappi))
         limpiarOrden()
         navigate('/', { replace: true })
         return
@@ -423,7 +426,8 @@ export function Cobro() {
           canal,
           descuentoTotal(),
         )
-        await sacarTicket(r.orden_id, armarDatosDelTicket(r.folio))
+        const folioModif = (await folioDeOrden(sb, r.orden_id)) ?? r.folio
+        await sacarTicket(r.orden_id, armarDatosDelTicket(folioModif))
         limpiarOrden()
         navigate('/', { replace: true })
         return
@@ -621,6 +625,13 @@ export function Cobro() {
         ordenViva.current = null
       }
 
+      // El folio se asigna al cobrarse (no al crear el ticket), así que se lee
+      // aquí, cuando la orden ya está pagada y el folio existe. Así un cobro que
+      // no se completó no se comió un número.
+      if (ordenId) {
+        const f = await folioDeOrden(sb, ordenId)
+        if (f != null) folio = f
+      }
       await sacarTicket(ordenId, armarDatosDelTicket(folio, voucher))
 
       // El voucher de la terminal: según lo que puso Admin, sale chico aparte

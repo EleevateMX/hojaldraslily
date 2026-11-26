@@ -151,6 +151,27 @@ export async function cobrarOrdenMixto(
   })
 }
 
+/**
+ * El folio YA asignado de una orden. Desde 20261126 el folio se pone al
+ * COBRARSE (no al crear el ticket), para que un cobro que no se completa
+ * —tarjeta declinada, intento abandonado— no se coma un número. Así que la
+ * caja lee el folio con esto JUSTO ANTES de imprimir, cuando la orden ya se
+ * pagó y el folio existe. Devuelve null si todavía no tiene (no debería pasar
+ * en el momento de imprimir una venta ya cobrada).
+ */
+export async function folioDeOrden(sb: ClienteLily, ordenId: string): Promise<number | null> {
+  // NUNCA truena: esto se llama DESPUÉS de que el cobro ya pasó, así que un
+  // parpadeo de red aquí no debe verse como «falló el cobro» (el cajero
+  // recobraría y sería doble cargo). Si no se pudo leer, devuelve null y quien
+  // llama usa el folio de respaldo.
+  try {
+    const f = await rpc<number | null>(sb, 'fn_folio_de_orden', { p_orden_id: ordenId })
+    return f ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function cancelarOrden(sb: ClienteLily, ordenId: string): Promise<void> {
   const { error } = await sb.from('ordenes').update({ estado: 'cancelada' }).eq('id', ordenId)
   if (error) throw error
