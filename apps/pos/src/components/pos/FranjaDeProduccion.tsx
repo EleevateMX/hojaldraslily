@@ -7,6 +7,7 @@ import {
   type Encargo,
 } from '@lily/supabase'
 import { sb } from '@/lib/sb'
+import { Llama, Reloj, Caja } from './IconosUI'
 
 /**
  * La franja de estado de la caja (dirección A, «para un mejor manejo»).
@@ -53,10 +54,10 @@ export interface FranjaDeProduccionProps {
   onEncargos: () => void
 }
 
-function Segmento({ icono, children }: { icono: string; children: React.ReactNode }) {
+function Segmento({ icono, children }: { icono: React.ReactNode; children: React.ReactNode }) {
   return (
     <span className="flex items-center gap-2 whitespace-nowrap">
-      <span aria-hidden className="text-sm opacity-80">{icono}</span>
+      <span aria-hidden className="opacity-80">{icono}</span>
       {children}
     </span>
   )
@@ -81,8 +82,8 @@ export function FranjaDeProduccion({
   return (
     <div className="flex-shrink-0 bg-sa-green-deep text-sa-cream border-t border-sa-cream/10">
       <div className="flex items-center gap-x-6 gap-y-1 flex-wrap px-4 lg:px-5 py-2">
-        {/* 🔥 EN EL HORNO */}
-        <Segmento icono="🔥">
+        {/* EN EL HORNO */}
+        <Segmento icono={<Llama className="w-4 h-4" />}>
           <span className="font-mono text-[11px] uppercase tracking-wide text-sa-cream/70">
             En el horno
           </span>
@@ -96,18 +97,18 @@ export function FranjaDeProduccion({
           )}
         </Segmento>
 
-        {/* ⏱ SE PASÓ — solo cuando lo hay; es la alarma, va en pastilla clara. */}
+        {/* SE PASÓ — solo cuando lo hay; es la alarma, va en pastilla clara. */}
         {tarde > 0 && (
-          <Segmento icono="⏱">
+          <Segmento icono={<Reloj className="w-4 h-4" />}>
             <Pastilla alarma>
               {tarde} se pasó de su hora
             </Pastilla>
           </Segmento>
         )}
 
-        {/* 📦 ENCARGOS DE HOY — toca para ir a la pantalla de encargos. */}
+        {/* ENCARGOS DE HOY — toca para ir a la pantalla de encargos. */}
         <button onClick={onEncargos} className="flex items-center gap-2 whitespace-nowrap hover:brightness-110">
-          <span aria-hidden className="text-sm opacity-80">📦</span>
+          <span aria-hidden className="opacity-80"><Caja className="w-4 h-4" /></span>
           <span className="font-mono text-[11px] uppercase tracking-wide text-sa-cream/70">
             Encargos de hoy
           </span>

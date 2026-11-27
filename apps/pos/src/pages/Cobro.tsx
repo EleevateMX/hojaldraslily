@@ -11,6 +11,7 @@ import {
   folioDeOrden,
 } from '@lily/supabase'
 import { obtenerTerminal, type VoucherTerminal } from '@lily/payments'
+import { Nota } from '../components/pos/IconosUI'
 import { type TicketData } from '@lily/ui'
 import { sacarTicket, imprimirComprobanteRechazo, imprimirVoucherBanorte, modoVoucher } from '../lib/ticket'
 import { mxn, mensajeDeError } from '@lily/utils'
@@ -1081,7 +1082,10 @@ export function Cobro() {
                   <span className="font-medium text-sa-green-ink flex-shrink-0">{mxn(precioDe(l.producto) * l.cantidad)}</span>
                 </div>
                 {l.personalizacion && (
-                  <p className="text-xs text-sa-strawberry leading-snug">📝 {l.personalizacion}</p>
+                  <p className="flex items-start gap-1 text-xs text-sa-strawberry leading-snug">
+                    <Nota className="w-3 h-3 shrink-0 mt-0.5" />
+                    {l.personalizacion}
+                  </p>
                 )}
               </div>
             ))}

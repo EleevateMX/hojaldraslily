@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { usePosStore } from '@/store/posStore'
 import { mxn, urlDeFoto } from '@lily/utils'
 import { ModalDescuento } from './ModalDescuento'
+import { Etiqueta, Nota } from './IconosUI'
 import { SugerenciaVenta } from './SugerenciaVenta'
 import type { ProductoVenta } from '@lily/supabase'
 
@@ -106,8 +107,9 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
                     <p className="text-sm font-semibold text-sa-green-ink leading-tight">{l.producto.nombre}</p>
                     <p className="font-mono text-xs text-sa-green-ink/50">{mxn(precioDe(l.producto))} c/u</p>
                     {l.personalizacion && (
-                      <p className="font-mono text-xs text-sa-green-deep mt-0.5 leading-snug">
-                        📝 {l.personalizacion}
+                      <p className="flex items-start gap-1 font-mono text-xs text-sa-green-deep mt-0.5 leading-snug">
+                        <Nota className="w-3 h-3 shrink-0 mt-0.5" />
+                        {l.personalizacion}
                       </p>
                     )}
                   </div>
@@ -163,7 +165,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
               onClick={() => setModalDescuento(true)}
               className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-sa-green-deep hover:brightness-110"
             >
-              <span aria-hidden>🏷️</span>
+              <Etiqueta className="w-3.5 h-3.5" />
               {descuentoManual
                 ? descuentoManual.tipo === 'porcentaje'
                   ? `Descuento ${descuentoManual.valor}%`

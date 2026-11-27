@@ -4,6 +4,8 @@ import { mxn } from '@lily/utils'
 import type { ProductoVenta, ExtraDeProducto } from '@lily/supabase'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import { ModalPersonalizar } from './ModalPersonalizar'
+import { IconoCategoria } from './IconosCategoria'
+import { Lupa } from './IconosUI'
 import { nombreParaOrdenar, partirNombreDeVenta } from '@lily/supabase'
 import { urlDeFoto, medidaDeVenta } from '@lily/utils'
 
@@ -149,7 +151,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
       {/* Buscador */}
       <div className="px-4 pt-4 pb-2">
         <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sa-green-ink/50 text-lg">🔍</span>
+          <Lupa className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-sa-green-ink/40" />
           <input
             type="text"
             value={busqueda}
@@ -191,7 +193,7 @@ export function CatalogoBusqueda({ productos, categorias, extras, productosExtra
                 : 'bg-sa-cream-soft text-sa-green-ink/70 hover:bg-sa-cream-warm'
             }`}
           >
-            {cat.cocinas && <span>{cat.cocinas.slug === 'alimentos' ? '🍽️' : '🥤'}</span>}
+            <IconoCategoria nombre={cat.nombre} className="w-4 h-4 shrink-0" />
             {cat.nombre}
           </button>
         ))}
