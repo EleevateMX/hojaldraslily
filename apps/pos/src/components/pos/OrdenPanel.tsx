@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { usePosStore } from '@/store/posStore'
-import { mxn } from '@lily/utils'
+import { mxn, urlDeFoto } from '@lily/utils'
 import { ModalDescuento } from './ModalDescuento'
 import { SugerenciaVenta } from './SugerenciaVenta'
 import type { ProductoVenta } from '@lily/supabase'
@@ -16,31 +16,32 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
     items, incrementar, decrementar, quitarItem, limpiarOrden,
     descuentoManual, setDescuentoManual,
     subtotal, descuentoManualMonto, neto, aCobrar, totalItems,
-    precioDe, encargo,
+    precioDe, encargo, nombreCliente, setNombreCliente,
   } = usePosStore()
 
   const [modalDescuento, setModalDescuento] = useState(false)
 
   const dManual = descuentoManualMonto()
+  const n = totalItems()
 
   return (
     <div className="flex flex-col h-full">
-      {/* Encabezado */}
+      {/* Encabezado: «Ticket · N pzas» (como el prototipo). */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-sa-green-ink/10 flex-shrink-0">
         <div className="flex items-center gap-2">
           <h2 className="font-display text-xl text-sa-green-ink">
-            {encargo ? 'Entregando un encargo' : 'Orden actual'}
+            {encargo ? 'Entregando un encargo' : 'Ticket'}
           </h2>
-          {totalItems() > 0 && (
-            <span className="font-mono text-xs bg-sa-green text-sa-cream px-2 py-0.5 rounded-full">
-              {totalItems()}
+          {n > 0 && (
+            <span className="font-mono text-xs font-semibold bg-sa-green text-sa-cream px-2.5 py-0.5 rounded-full">
+              {n} {n === 1 ? 'pza' : 'pzas'}
             </span>
           )}
         </div>
         {items.length > 0 && (
           <button
             onClick={() => limpiarOrden()}
-            className="font-mono text-xs uppercase tracking-wide text-sa-strawberry hover:brightness-110"
+            className="font-mono text-xs uppercase tracking-wide text-sa-green-deep hover:brightness-110"
           >
             Cancelar
           </button>
@@ -48,11 +49,10 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
       </div>
 
       {/* De quién es este ticket.
-          Va arriba de todo y no entre los totales porque cambia lo que el
-          cajero está haciendo: no es una venta de mostrador, es la entrega de
-          un encargo con nombre. Si no se ve, se cobra como si fuera de
-          cualquiera y el encargo se queda apartado. */}
-      {encargo && (
+          En un encargo, el nombre es el del encargo (banda amarilla). En una
+          venta de mostrador es opcional —para gritar el pedido cuando esté
+          listo—: si no, queda en blanco y no pasa nada. */}
+      {encargo ? (
         <div className="bg-sa-banana/25 border-b border-sa-banana px-5 py-3 flex-shrink-0">
           <p className="font-display text-lg text-sa-green-ink leading-tight">
             Encargo #{encargo.folio} · {encargo.cliente}
@@ -64,6 +64,16 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
             {' · se cobra todo en un solo ticket'}
           </p>
         </div>
+      ) : (
+        <div className="px-4 pt-3 flex-shrink-0">
+          <input
+            type="text"
+            value={nombreCliente}
+            onChange={(e) => setNombreCliente(e.target.value)}
+            placeholder="¿A nombre de quién? (opcional)"
+            className="w-full px-4 py-2.5 bg-sa-cream-soft rounded-sa-lg text-sm text-sa-green-ink placeholder:font-mono placeholder:text-sa-green-ink/40 placeholder:text-xs focus:outline-none focus:ring-2 focus:ring-sa-green/30 border border-sa-green-ink/10"
+          />
+        </div>
       )}
 
       {/* Lista de ítems */}
@@ -72,7 +82,7 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
           <div className="flex flex-col items-center justify-center h-full text-sa-green-ink/40 gap-3 pb-10 px-6">
             <img src={`${import.meta.env.BASE_URL}hojaldra.png`} alt="Hojaldra de la casa" className="w-32 h-32 opacity-80" />
             <p className="font-display text-lg text-sa-green-ink/60 text-center leading-tight">
-              Aún no hay nada en la orden
+              Aún no hay nada en el ticket
             </p>
             <p className="font-mono text-xs uppercase tracking-wide text-sa-green-ink/40 text-center">
               Toca un producto para empezar
@@ -80,107 +90,110 @@ export function OrdenPanel({ onCobrar, productos }: Props) {
           </div>
         ) : (
           <div className="px-3 py-3 space-y-2">
-            {items.map((l) => (
-              <div key={l.lineaId} className="flex items-center gap-2 bg-sa-cream-soft rounded-sa px-3 py-2.5">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-sa-green-ink truncate">{l.producto.nombre}</p>
-                  <p className="font-mono text-xs text-sa-green-ink/50">{mxn(precioDe(l.producto))} c/u</p>
-                  {l.personalizacion && (
-                    <p className="font-mono text-xs text-sa-strawberry mt-0.5 leading-snug">
-                      📝 {l.personalizacion}
-                    </p>
+            {items.map((l) => {
+              const foto = urlDeFoto(l.producto.imagen_url, import.meta.env.BASE_URL)
+              return (
+                <div key={l.lineaId} className="flex items-center gap-2.5 bg-sa-cream-soft rounded-sa-lg px-3 py-2.5">
+                  {foto && (
+                    <img
+                      src={foto}
+                      alt=""
+                      className="w-10 h-10 object-contain flex-shrink-0 bg-white rounded-sa p-0.5"
+                      draggable={false}
+                    />
                   )}
-                </div>
-                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-sa-green-ink leading-tight">{l.producto.nombre}</p>
+                    <p className="font-mono text-xs text-sa-green-ink/50">{mxn(precioDe(l.producto))} c/u</p>
+                    {l.personalizacion && (
+                      <p className="font-mono text-xs text-sa-green-deep mt-0.5 leading-snug">
+                        📝 {l.personalizacion}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-shrink-0">
+                    <button
+                      onClick={() => decrementar(l.lineaId)}
+                      className="w-8 h-8 rounded-full bg-white hover:bg-sa-green-deep/10 text-sa-green-ink text-base flex items-center justify-center font-bold transition-colors border border-sa-green-ink/10"
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center font-mono text-base font-semibold text-sa-green-ink">
+                      {l.cantidad}
+                    </span>
+                    <button
+                      onClick={() => incrementar(l.lineaId)}
+                      className="w-8 h-8 rounded-full bg-sa-green hover:bg-sa-green-deep text-sa-cream text-base flex items-center justify-center font-bold transition-colors"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="w-16 text-right flex-shrink-0">
+                    <p className="font-mono text-sm font-bold text-sa-green-ink">
+                      {mxn(precioDe(l.producto) * l.cantidad)}
+                    </p>
+                  </div>
                   <button
-                    onClick={() => decrementar(l.lineaId)}
-                    className="w-7 h-7 rounded-full bg-white hover:bg-sa-strawberry/10 text-sa-green-ink hover:text-sa-strawberry text-sm flex items-center justify-center font-bold transition-colors border border-sa-green-ink/10"
+                    onClick={() => quitarItem(l.lineaId)}
+                    className="text-sa-green-ink/30 hover:text-sa-green-deep transition-colors flex-shrink-0"
+                    aria-label="Quitar"
                   >
-                    −
-                  </button>
-                  <span className="w-6 text-center font-mono text-sm font-medium text-sa-green-ink">
-                    {l.cantidad}
-                  </span>
-                  <button
-                    onClick={() => incrementar(l.lineaId)}
-                    className="w-7 h-7 rounded-full bg-sa-green hover:bg-sa-green-deep text-sa-cream text-sm flex items-center justify-center font-bold transition-colors"
-                  >
-                    +
+                    ✕
                   </button>
                 </div>
-                <div className="w-16 text-right flex-shrink-0">
-                  <p className="font-mono text-sm font-medium text-sa-green-ink">
-                    {mxn(precioDe(l.producto) * l.cantidad)}
-                  </p>
-                </div>
-                <button
-                  onClick={() => quitarItem(l.lineaId)}
-                  className="text-sa-green-ink/30 hover:text-sa-strawberry transition-colors ml-1 flex-shrink-0"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
 
-      {/* Pie: cupón + descuento + totales + cobrar */}
+      {/* Pie: descuento + totales + cobrar */}
       {items.length > 0 && (
-        <div className="border-t border-sa-green-ink/10 flex-shrink-0 bg-sa-cream-paper/30">
-          {/* Descuento manual. El boton de "Cliente" que iba aqui al lado
-              era para identificar a un cliente de lealtad; la panaderia no
-              opera lealtad, asi que el descuento se queda con todo el ancho. */}
-          <div className="flex gap-2 px-4 py-3">
-            <button
-              onClick={() => setModalDescuento(true)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-full font-mono text-xs uppercase tracking-wide transition-colors ${
-                descuentoManual
-                  ? 'bg-sa-banana/30 text-sa-green-ink border border-sa-banana'
-                  : 'bg-white text-sa-green-ink/70 border border-sa-green-ink/15 hover:bg-sa-cream-soft'
-              }`}
-            >
-              <span>🏷️</span>
-              {descuentoManual
-                ? descuentoManual.tipo === 'porcentaje'
-                  ? `${descuentoManual.valor}% off`
-                  : `-${mxn(descuentoManual.valor)}`
-                : 'Descuento'}
-            </button>
-          </div>
-
+        <div className="border-t border-sa-green-ink/10 flex-shrink-0 bg-white">
           <SugerenciaVenta productos={productos} />
 
           {/* Totales */}
-          <div className="px-5 py-3 space-y-1.5">
-            <div className="flex justify-between text-sm">
+          <div className="px-5 pt-4 pb-1 space-y-1.5">
+            <div className="flex justify-between items-center text-sm">
               <span className="text-sa-green-ink/60">Subtotal</span>
               <span className="font-mono text-sa-green-ink/70">{mxn(subtotal())}</span>
             </div>
+            {/* Descuento manual, como enlace (estilo del prototipo). */}
+            <button
+              onClick={() => setModalDescuento(true)}
+              className="flex items-center gap-1.5 font-mono text-xs uppercase tracking-wide text-sa-green-deep hover:brightness-110"
+            >
+              <span aria-hidden>🏷️</span>
+              {descuentoManual
+                ? descuentoManual.tipo === 'porcentaje'
+                  ? `Descuento ${descuentoManual.valor}%`
+                  : `Descuento −${mxn(descuentoManual.valor)}`
+                : 'Aplicar descuento'}
+            </button>
             {dManual > 0 && (
               <div className="flex justify-between text-sm">
-                <span className="text-sa-strawberry">Descuento</span>
-                <span className="font-mono text-sa-strawberry">−{mxn(dManual)}</span>
+                <span className="text-sa-green-deep">Descuento</span>
+                <span className="font-mono text-sa-green-deep">−{mxn(dManual)}</span>
               </div>
             )}
-            {/* El anticipo NO es un descuento: ese dinero sí entró, en el
-                corte del día en que se recibió. Por eso va en su propio
-                renglón y no sumado al de arriba. */}
+            {/* El anticipo NO es un descuento: ese dinero sí entró, en el corte
+                del día en que se recibió. Va en su propio renglón. */}
             {encargo && encargo.anticipo > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-sa-green-ink/60">Ya pagó de anticipo</span>
                 <span className="font-mono text-sa-green-ink/70">−{mxn(encargo.anticipo)}</span>
               </div>
             )}
-            <div className="flex justify-between items-baseline pt-2 border-t border-sa-green-ink/10">
-              <span className="font-display text-lg text-sa-green-ink">
-                {encargo && encargo.anticipo > 0 ? 'Le falta' : 'Total'}
-              </span>
-              <span className="font-display text-3xl text-sa-green-ink">{mxn(aCobrar())}</span>
-            </div>
           </div>
 
-          {/* Botón de cobro */}
+          <div className="px-5 pt-2 pb-3 flex justify-between items-baseline border-t border-sa-green-ink/10 mx-5">
+            <span className="font-display text-xl text-sa-green-ink">
+              {encargo && encargo.anticipo > 0 ? 'Le falta' : 'Total'}
+            </span>
+            <span className="font-display text-4xl text-sa-green-ink leading-none">{mxn(aCobrar())}</span>
+          </div>
+
+          {/* Botón de cobro. En carmín, el botón más importante del sistema. */}
           <div className="px-4 pb-4">
             <button
               onClick={onCobrar}

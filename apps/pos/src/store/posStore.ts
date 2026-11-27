@@ -102,6 +102,15 @@ interface PosStore {
   setModificacion: (m: { ordenVieja: string; folioVieja: number; credito: number; autorizadoPor: string } | null) => void
 
   /**
+   * Nombre opcional para el ticket de mostrador —«¿a nombre de quién?»—, para
+   * gritarlo cuando esté listo. NO es un cliente de lealtad ni un encargo:
+   * viaja solo como `nombre_cliente` de la orden. En un encargo no se usa (ahí
+   * el nombre es el del encargo).
+   */
+  nombreCliente: string
+  setNombreCliente: (n: string) => void
+
+  /**
    * Mete un producto al ticket. `cuantos` existe para las piezas sueltas:
    * "+3 piezas" es un toque, no tres.
    */
@@ -141,6 +150,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       corte: null,
       items: [],
       descuentoManual: null,
+      nombreCliente: '',
       encargo: null,
       modificacion: null,
     }),
@@ -213,6 +223,9 @@ export const usePosStore = create<PosStore>((set, get) => ({
 
   setDescuentoManual: (descuentoManual) => set({ descuentoManual }),
 
+  nombreCliente: '',
+  setNombreCliente: (nombreCliente) => set({ nombreCliente }),
+
   limpiarOrden: () =>
     // El canal vuelve a mostrador a proposito: dejarlo en Rappi despues de
     // cobrar le cobraria el precio de plataforma al siguiente cliente que
@@ -221,6 +234,7 @@ export const usePosStore = create<PosStore>((set, get) => ({
       canal: 'pos',
       items: [],
       descuentoManual: null,
+      nombreCliente: '',
       // El encargo se suelta con el ticket. Dejarlo pegado le cobraría el
       // encargo de alguien más al siguiente cliente del mostrador, que es el
       // mismo daño que dejar el canal en Rappi.

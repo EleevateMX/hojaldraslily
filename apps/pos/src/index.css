@@ -9,4 +9,8 @@ body {
   color: var(--sa-green-ink);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* `manipulation` quita el zoom por DOBLE TOQUE (deja el desplazamiento). El
+     pinch (dos dedos / la hoja tocando la pantalla) lo bloquea el viewport con
+     user-scalable=no. Juntos: la caja ya no se amplía sola a media venta. */
+  touch-action: manipulation;
 }

@@ -125,7 +125,7 @@ export function Cobro() {
     empleado, almacen, corte,
     items, encargo, modificacion,
     subtotal, descuentoTotal, neto, aCobrar, limpiarOrden,
-    canal, precioDe,
+    canal, precioDe, nombreCliente,
   } = usePosStore()
 
   const [metodo, setMetodo] = useState<MetodoPago>('efectivo')
@@ -250,7 +250,7 @@ export function Cobro() {
         ? encargo.folio != null
           ? `${encargo.cliente} (encargo #${encargo.folio})`
           : encargo.cliente
-        : undefined,
+        : (nombreCliente.trim() || undefined),
       metodoPago: mixto
         ? `Efectivo ${mxn(efectivoMixto)} + Terminal 1 ${mxn(tarjetaMixto)}`
         : etiquetaEnTicket(metodo),
@@ -387,6 +387,7 @@ export function Cobro() {
               canal,
               corte_id: corte!.id,
               cliente_id: null,
+              nombre_cliente: nombreCliente.trim() || null,
               empleado_id: empleado?.id ?? null,
               descuento: descuentoTotal(),
             },
@@ -493,6 +494,7 @@ export function Cobro() {
                 canal,
                 corte_id: corte!.id,
                 cliente_id: null,
+                nombre_cliente: nombreCliente.trim() || null,
                 empleado_id: empleado?.id ?? null,
                 descuento: descuentoTotal(),
               },
@@ -593,6 +595,7 @@ export function Cobro() {
               canal,
               corte_id: corte!.id,
               cliente_id: null,
+              nombre_cliente: nombreCliente.trim() || null,
               empleado_id: empleado?.id ?? null,
               descuento: descuentoTotal(),
             },

@@ -3,9 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <!-- viewport-fit=cover: en iPad con esquinas redondeadas evita que la barra
-         inferior del sistema tape los botones de cobro. El zoom NO se bloquea a
-         propósito: si el cajero necesita acercar para leer, debe poder. -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+         inferior del sistema tape los botones de cobro.
+         El zoom SÍ se bloquea (maximum-scale=1, user-scalable=no): la casa
+         reportó que al tocar la pantalla táctil con la hoja de pan, o con un
+         doble toque, la caja se amplía sola y se desacomoda a media venta. En
+         una caja táctil eso es un estorbo, no una ayuda; ahora el catálogo ya
+         es grande y legible (lo pidió la casa), así que no hace falta acercar. -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 
     <!-- Con esto, al agregarla a la pantalla de inicio del iPad se abre a
          pantalla completa como app, sin las barras de Safari. -->
