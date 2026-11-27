@@ -57,7 +57,7 @@ const btn =
  * apartado, nada más leerlo si ya se entregó— pero lo que DICE es lo mismo, y
  * escrito dos veces se separa en cuanto alguien toque una de las dos.
  */
-function Tarjeta({
+export function Tarjeta({
   e,
   acciones,
   conFecha = false,
