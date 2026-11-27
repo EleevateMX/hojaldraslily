@@ -4,6 +4,7 @@ import { AvisoDeConexion } from './AvisoDeConexion'
 import { CatalogoBusqueda } from './CatalogoBusqueda'
 import { OrdenPanel } from './OrdenPanel'
 import { PanelDeProduccion } from './PanelDeProduccion'
+import { FranjaProduccionCaja } from './FranjaDeProduccion'
 import type { CategoriaPOS } from '@/hooks/useProductosPOS'
 import type { ProductoVenta, ExtraDeProducto, CanalDeVenta } from '@lily/supabase'
 import { mxn } from '@lily/utils'
@@ -96,7 +97,7 @@ export function PantallaDeVenta({
           </button>
         </div>
       )}
-      <header className="flex items-center justify-between gap-2 px-3 lg:px-5 py-2 lg:py-2.5 bg-sa-green-deep text-sa-cream flex-shrink-0 border-b border-sa-cream/10">
+      <header className="flex items-center justify-between gap-2 px-3 lg:px-5 py-2 lg:py-2.5 bg-sa-green text-sa-cream flex-shrink-0">
         <div className="flex items-center gap-2 lg:gap-3 min-w-0">
           {/* En el teléfono no cabe el logotipo junto a los controles: a 390
               px salía aplastado a una tira de dos dedos, que es peor que no
@@ -163,6 +164,11 @@ export function PantallaDeVenta({
           </div>
         </div>
       </header>
+
+      {/* La franja de estado (dirección A): el horno, lo que se pasó y los
+          encargos de hoy, siempre a la vista para «un mejor manejo». Lee la
+          misma fuente que el panel «Producción» de la cabecera. */}
+      <FranjaProduccionCaja onEncargos={() => onIr('/encargos')} />
 
       <div className="flex-1 flex overflow-hidden gap-3 p-2 lg:p-3">
         <div className="flex-1 flex flex-col overflow-hidden bg-sa-cream-soft rounded-sa shadow-sa-sm">
