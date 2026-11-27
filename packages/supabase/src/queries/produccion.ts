@@ -1451,7 +1451,13 @@ export function diasHasta(fecha: string, hoy = new Date()): number {
 export function tituloDelDia(fecha: string | null, hoy = new Date()): string {
   if (!fecha) return 'Sin fecha'
   const dia = new Date(fecha + 'T12:00:00')
-  const largo = dia.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric' })
+  // El MES va siempre: la casa pidió que no se confunda «jueves 24» de
+  // diciembre con «jueves 24» de enero, que es lo que pasaba cuando el rótulo
+  // solo traía el día y el número. Se arma a mano para controlar el formato
+  // («miércoles 21 de noviembre», sin la coma que mete toLocaleDateString).
+  const semana = dia.toLocaleDateString('es-MX', { weekday: 'long' })
+  const mes = dia.toLocaleDateString('es-MX', { month: 'long' })
+  const largo = `${semana} ${dia.getDate()} de ${mes}`
   const conMayuscula = largo.charAt(0).toUpperCase() + largo.slice(1)
   const d = diasHasta(fecha, hoy)
   if (d === 0) return `Hoy · ${largo}`

@@ -205,11 +205,13 @@ describe('encargosPorDia', () => {
     expect(dias.map((d) => d.fecha)).toEqual(['2026-10-20', '2026-10-21', '2026-10-22'])
   })
 
-  it('rotula con el día y el número, que es lo que pidió la casa', () => {
+  it('rotula con el día, el número y el MES, que es lo que pidió la casa', () => {
     const dias = encargosPorDia([enc(1, '2026-10-20'), enc(2, '2026-10-21'), enc(3, '2026-10-22')], hoy)
-    expect(dias[0].titulo).toBe('Hoy · martes 20')
-    expect(dias[1].titulo).toBe('Mañana · miércoles 21')
-    expect(dias[2].titulo).toBe('Jueves 22')
+    // El mes va siempre: «jueves 22» a secas se confunde entre meses cuando
+    // el encargo es para dentro de varias semanas (dic contra ene).
+    expect(dias[0].titulo).toBe('Hoy · martes 20 de octubre')
+    expect(dias[1].titulo).toBe('Mañana · miércoles 21 de octubre')
+    expect(dias[2].titulo).toBe('Jueves 22 de octubre')
   })
 
   it('lo que se pasó de su día queda marcado', () => {

@@ -4,6 +4,7 @@ import {
   listarEncargos,
   historialDeEncargos,
   encargosPorDia,
+  loQueHayQueEmpacar,
   diasHasta,
   crearEncargo,
   editarEncargo,
@@ -877,25 +878,54 @@ export function Encargos() {
           <div className="space-y-5">
             {porDia.map((d) => (
               <div key={d.fecha ?? 'sin-fecha'} className="space-y-3">
-                <div className="flex items-baseline gap-3">
-                  <p
-                    className={[
-                      'font-display text-xl leading-none',
-                      // Lo que se pasó de su día va en carmín profundo, no en
-                      // el rosa salmón: ese rosa es un acento de la marca y a
-                      // un metro de distancia se ve despintado -- justo lo
-                      // que no puede pasarle a lo único urgente de la lista.
-                      d.vencido
-                        ? 'text-sa-green-deep bg-sa-strawberry/25 rounded-full px-3 py-1'
-                        : 'text-sa-green-ink',
-                    ].join(' ')}
-                  >
-                    {d.titulo}
-                  </p>
-                  <span className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45">
+                {/* Encabezado del día: grande y centrado, para leerlo de
+                    lejos (lo pidió la casa). Debajo, el resumen de lo que hay
+                    que empacar ESE día sumado por producto —la pregunta de
+                    quien prepara, sin sumar a mano las tarjetas de abajo. */}
+                <div className="text-center space-y-2 pt-1">
+                  <div className="flex items-center justify-center gap-3">
+                    <span className="hidden sm:block flex-1 border-b border-sa-green-ink/10" />
+                    <p
+                      className={[
+                        'font-display text-2xl lg:text-3xl leading-none',
+                        // Lo que se pasó de su día va en carmín profundo, no en
+                        // el rosa salmón: ese rosa es un acento de la marca y a
+                        // un metro de distancia se ve despintado -- justo lo
+                        // que no puede pasarle a lo único urgente de la lista.
+                        d.vencido
+                          ? 'text-sa-green-deep bg-sa-strawberry/25 rounded-full px-4 py-1.5'
+                          : 'text-sa-green-ink',
+                      ].join(' ')}
+                    >
+                      {d.titulo}
+                    </p>
+                    <span className="hidden sm:block flex-1 border-b border-sa-green-ink/10" />
+                  </div>
+                  <p className="font-mono text-[11px] uppercase tracking-wide text-sa-green-ink/45">
                     {d.encargos.length} encargo{d.encargos.length === 1 ? '' : 's'}
-                  </span>
-                  <span className="flex-1 border-b border-sa-green-ink/10" />
+                  </p>
+                  {/* Resumen por producto del día: «4 Jamón y Queso · Chica ·
+                      6 Fiesta · Mini…». Es lo que hay que cortar ese día,
+                      sumado de todas las tarjetas de abajo. */}
+                  <div className="flex flex-wrap justify-center gap-1.5">
+                    {loQueHayQueEmpacar(d.encargos).map((p) => {
+                      const { sabor, medida } = partirNombreDeVenta(p.producto)
+                      return (
+                        <span
+                          key={p.producto_id}
+                          className="inline-flex items-baseline gap-1 bg-white border border-sa-green-ink/10 rounded-full px-3 py-1"
+                        >
+                          <span className="font-display text-base text-sa-green leading-none">
+                            {p.cantidad}
+                          </span>
+                          <span className="font-body text-sm text-sa-green-ink">{sabor}</span>
+                          {medida && (
+                            <span className="font-body text-xs text-sa-green-ink/50">· {medida}</span>
+                          )}
+                        </span>
+                      )
+                    })}
+                  </div>
                 </div>
                 {/* Y dentro del día, por hora. La pregunta del mostrador a
                     media mañana es «¿qué sale a las 12?», y sumar con el dedo
