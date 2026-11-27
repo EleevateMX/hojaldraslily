@@ -820,11 +820,21 @@ export async function clientePorTelefono(
  * El servidor acota el monto contra el total del encargo, así que no se puede
  * anticipar más de lo que se debe. Regresa el anticipo acumulado.
  */
+/**
+ * Los métodos con los que se puede recibir un anticipo.
+ *
+ * Son los mismos que el mostrador cobra a mano y que el corte sabe separar:
+ * efectivo (al cajón), `tarjeta` (Terminal 1, Banorte), `transferencia` e
+ * `inbursa` (Terminal 2). No va `rappi` —la plataforma paga el pedido entero,
+ * no abona— ni los internos (`clip`, `cortesia`, `otro`).
+ */
+export type MetodoAnticipo = 'efectivo' | 'tarjeta' | 'transferencia' | 'inbursa'
+
 export async function registrarAnticipo(
   sb: ClienteLily,
   encargoId: string,
   monto: number,
-  metodo: 'efectivo' | 'tarjeta' = 'efectivo',
+  metodo: MetodoAnticipo = 'efectivo',
 ): Promise<number> {
   const { data, error } = await sb.rpc('fn_encargo_anticipo', {
     p_encargo_id: encargoId,

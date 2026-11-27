@@ -24,12 +24,14 @@ import {
   type Encargo,
   type ProductoDelDia,
   type OrdenConTiempo,
+  type MetodoAnticipo,
 } from '@lily/supabase'
 import { SelectorDeHora, type TicketData } from '@lily/ui'
 import { usePosStore } from '@/store/posStore'
 import { mxn, mensajeDeError, urlDeFoto, medidaDeVenta } from '@lily/utils'
 import { sb } from '@/lib/sb'
 import { sacarTicket } from '@/lib/ticket'
+import { ModalAnticipo } from '@/components/pos/ModalAnticipo'
 
 /**
  * Encargos, desde la caja.
@@ -199,6 +201,9 @@ export function Encargos() {
   // sus renglones ya no está en el menú, se cobra aquí mismo (efectivo o
   // terminal) y la nota sale por el navegador. Guarda a cuál encargo aplica.
   const [cobroDirecto, setCobroDirecto] = useState<string | null>(null)
+  // El encargo al que se le está recibiendo un anticipo (abre el modal que
+  // pregunta cuánto y con qué método). Null = cerrado.
+  const [anticipoPara, setAnticipoPara] = useState<Encargo | null>(null)
 
   // Formulario de apartar / editar. `editando` guarda el id del encargo que se
   // está editando (null = se está apartando uno nuevo): el mismo formulario
@@ -492,25 +497,30 @@ export function Encargos() {
     }
   }
 
-  async function anticipo(e: Encargo) {
-    const falta = e.total - e.anticipo
-    const txt = window.prompt(
-      `Anticipo de ${e.cliente}. Faltan ${mxn(falta)} de ${mxn(e.total)}.\n` +
-        `¿Cuánto deja? El dinero entra al corte de este turno.`,
-    )
-    if (txt === null) return
-    const monto = Number(txt.replace(/[^\d.]/g, ''))
-    if (!Number.isFinite(monto) || monto <= 0) {
-      setError('El anticipo tiene que ser un monto mayor que cero.')
-      return
-    }
+  /**
+   * Registra el anticipo que el modal reunió (monto + método). El dinero ya se
+   * cobró a mano en su aparato/cuenta; esto solo lo mete al corte con su
+   * método. El servidor acota el monto contra el total del encargo.
+   */
+  async function confirmarAnticipo(monto: number, metodo: MetodoAnticipo) {
+    const e = anticipoPara
+    if (!e) return
     setOcupado(e.id)
     try {
-      const acumulado = await registrarAnticipo(sb, e.id, monto, 'efectivo')
+      const acumulado = await registrarAnticipo(sb, e.id, monto, metodo)
+      const comoPago =
+        metodo === 'efectivo'
+          ? 'en efectivo'
+          : metodo === 'tarjeta'
+            ? 'con terminal'
+            : metodo === 'inbursa'
+              ? 'con Inbursa'
+              : 'por transferencia'
       setAviso(
-        `${e.cliente} dejó ${mxn(monto)}. Lleva ${mxn(acumulado)} de ${mxn(e.total)} ` +
+        `${e.cliente} dejó ${mxn(monto)} ${comoPago}. Lleva ${mxn(acumulado)} de ${mxn(e.total)} ` +
           `y entró al corte del turno.`,
       )
+      setAnticipoPara(null)
       await cargar(false)
       setError(null)
     } catch (err) {
@@ -983,7 +993,7 @@ export function Encargos() {
                                       nota. Se esconde cuando ya está cubierto. */}
                                   {e.anticipo < e.total && (
                                     <button
-                                      onClick={() => void anticipo(e)}
+                                      onClick={() => setAnticipoPara(e)}
                                       disabled={ocupado === e.id}
                                       className={`${btn} border border-sa-green-ink/15 text-sa-green-ink/70`}
                                     >
@@ -1038,6 +1048,16 @@ export function Encargos() {
           </div>
         )}
       </div>
+
+      <ModalAnticipo
+        open={anticipoPara !== null}
+        cliente={anticipoPara?.cliente ?? ''}
+        total={anticipoPara?.total ?? 0}
+        yaAnticipado={anticipoPara?.anticipo ?? 0}
+        ocupado={anticipoPara != null && ocupado === anticipoPara.id}
+        onClose={() => setAnticipoPara(null)}
+        onCobrar={(monto, metodo) => void confirmarAnticipo(monto, metodo)}
+      />
     </div>
   )
 }
